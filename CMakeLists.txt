@@ -18,9 +18,11 @@ include_directories(SYSTEM /opt/3rd/common/include)
 include_directories(base/include)
 include_directories(tool/include)
 include_directories(include)
+include_directories(SYSTEM /opt/3rd/Eigen)
 
 link_directories(/opt/3rd/common/lib)
 
 install(DIRECTORY include/ DESTINATION ornate/include)
 
+add_subdirectory(example)
 #add_subdirectory(test)
