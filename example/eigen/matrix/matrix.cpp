@@ -12,20 +12,34 @@ using namespace std;
  * typedef Matrix<int, Dynamic, 1> VectorXi;            // m * 1
  */
 
+void init();
 void addition();
 void scalar_multiplication();
 void transpose();
 void multiplication();
 void product();
-void reduction();
 
 int main() {
+    init();
     addition();
     scalar_multiplication();
     transpose();
     multiplication();
     product();
-    reduction();
+}
+
+void init() {
+    MatrixXf matA(2, 2);
+    matA << 1, 2, 3, 4;
+    MatrixXf matB(4, 4);
+    matB << matA, matA / 10, matA / 10, matA;
+    std::cout << "comma init from 4 sub matrix:\n" << matB << std::endl;
+
+    Matrix3f m1;
+    m1.row(0) << 1, 2, 3;
+    m1.block(1, 0, 2, 2) << 4, 5, 7, 8;
+    m1.col(2).tail(2) << 6, 9;
+    std::cout << "init from 3 pieces:\n" << m1 << std::endl;
 }
 
 void addition() {
@@ -84,20 +98,4 @@ void product() {
     Vector3d w(0, 1, 2);
     cout << "Dot product: " << v.dot(w) << endl;
     cout << "Cross product:\n" << v.cross(w) << endl;
-}
-
-void reduction() {
-    std::cout << "\nreduction operations to reduce a given matrix or vector to a single value" << std::endl;
-    Eigen::Matrix2d mat;
-    mat << 1, 2, 3, 4;
-    cout << "Here is mat.sum():       " << mat.sum() << endl;
-    cout << "Here is mat.prod():      " << mat.prod() << endl;
-    cout << "Here is mat.mean():      " << mat.mean() << endl;
-    cout << "Here is mat.minCoeff():  " << mat.minCoeff() << endl;
-    cout << "Here is mat.maxCoeff():  " << mat.maxCoeff() << endl;
-    cout << "Here is mat.trace():     " << mat.trace() << endl;
-
-    std::ptrdiff_t i, j;
-    double minOfM = mat.minCoeff(&i, &j);
-    cout << "Its minimum coefficient (" << minOfM << ") is at position (" << i << "," << j << ")\n";
 }

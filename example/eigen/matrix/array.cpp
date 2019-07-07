@@ -5,11 +5,12 @@ using namespace Eigen;
 using namespace std;
 
 /**
- * the Array class provides an easy way to perform coefficient-wise operations,
- * which might not have a linear algebraic meaning, such as adding a constant to every coefficient in the array
- * or multiplying two arrays coefficient-wise
+ * the Array class provides an easy way to perform element-wise operations,
+ * which might not have a linear algebraic meaning, such as adding a constant to every element in the array
+ * or multiplying two arrays element-wise
  */
 
+void init();
 void addition();
 void multiplication();
 void coefficient_wise_operations();
@@ -17,11 +18,24 @@ void array_matrix_convert1();
 void array_matrix_convert2();
 
 int main() {
+    init();
     addition();
     multiplication();
     coefficient_wise_operations();
     array_matrix_convert1();
     array_matrix_convert2();
+}
+
+void init() {
+    RowVectorXd vec1(3);
+    vec1 << 1, 2, 3;
+    std::cout << "vec1 = " << vec1 << std::endl;
+    RowVectorXd vec2(4);
+    vec2 << 1, 4, 9, 16;
+    std::cout << "vec2 = " << vec2 << std::endl;
+    RowVectorXd joined(7);
+    joined << vec1, vec2;
+    std::cout << "joined = " << joined << std::endl;
 }
 
 void addition() {
@@ -39,7 +53,7 @@ void multiplication() {
     ArrayXXf b(2, 2);
     a << 1, 2, 3, 4;
     b << 5, 6, 7, 8;
-    // arrays interpret multiplication as coefficient-wise product
+    // arrays interpret multiplication as element-wise product
     cout << "a * b = " << endl << a * b << endl << endl;
 }
 
