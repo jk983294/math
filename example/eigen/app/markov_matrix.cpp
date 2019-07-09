@@ -16,6 +16,7 @@ using namespace std;
 
 VectorXd naive_multiply_method(const MatrixXd& mat, const VectorXd& y, int times);
 VectorXd eigen_value_method(const MatrixXd& mat, const VectorXd& y);
+VectorXd eigen_value_1_method(const MatrixXd& mat, const VectorXd& y);
 
 int main() {
     MatrixXd m(2, 2);
@@ -26,8 +27,11 @@ int main() {
     VectorXd result100 = naive_multiply_method(m, y, 20);
     cout << "result:\n" << result100 << endl;
 
-    VectorXd result = eigen_value_method(m, y);
+    VectorXd result = eigen_value_method(m, y);     // the accuracy is not good
     cout << "result:\n" << result << endl;
+
+    VectorXd result1 = eigen_value_1_method(m, y);  // this solution is best
+    cout << "result:\n" << result1 << endl;
 }
 
 VectorXd naive_multiply_method(const MatrixXd& mat, const VectorXd& y, int times) {
@@ -52,6 +56,14 @@ VectorXd eigen_value_method(const MatrixXd& mat, const VectorXd& y) {
     cout << "The eigenvalues of A are:\n" << eigens << endl;
     cout << "the max eigen value of A are: " << maxEigen << " and its pos is " << maxIndex << endl;
     VectorXd distribution = eigenSolver.eigenvectors().col(maxIndex);
-    cout << "corresponding to these eigen values:\n" << distribution << endl;
+    cout << "corresponding to these eigen vector:\n" << distribution << endl;
+    return (distribution.array() / distribution.array().sum()) * y.array().sum();
+}
+
+VectorXd eigen_value_1_method(const MatrixXd& mat, const VectorXd& y) {
+    MatrixXd minus1mat = mat - MatrixXd::Identity(mat.rows(), mat.cols()); // |A - lambda * I|
+    FullPivLU<MatrixXd> lu_decomp(minus1mat);
+    VectorXd distribution = lu_decomp.kernel().col(0);
+    cout << "eigen value 1's eigen vector:\n" << distribution << endl;
     return (distribution.array() / distribution.array().sum()) * y.array().sum();
 }
