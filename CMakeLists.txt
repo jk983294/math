@@ -17,6 +17,9 @@ SET(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS)
 include_directories(SYSTEM /opt/3rd/common/include)
 include_directories(include)
 include_directories(SYSTEM /opt/3rd/Eigen)
+include_directories(SYSTEM /opt/3rd/gcem)
+include_directories(SYSTEM /opt/3rd/stats)
+include_directories(/opt/version/latest/zergtool/include)
 
 link_directories(/opt/3rd/common/lib)
 
