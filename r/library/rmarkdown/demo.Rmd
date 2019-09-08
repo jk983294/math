@@ -1,0 +1,108 @@
+---
+title: "demo"
+author: "kun"
+date: "9/3/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE) # global config
+```
+
+## r code
+```{r echo=FALSE}
+x = 5
+```
+
+inline data `r x`, math on it `r pi * x^2`.
+
+```{r cars, echo=TRUE}
+summary(cars)
+```
+
+## plot
+
+```{r pressure, tidy=TRUE, echo=FALSE}
+plot(pressure)
+```
+
+```{r out.width='.49\\linewidth', fig.width=3, fig.height=3, fig.show='hold', fig.align='center', echo=FALSE}
+par(mar = c(4, 4, 0.2, 0.1))
+plot(cars, pch = 19)
+plot(pressure, pch = 17)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(grid)
+library(gridExtra)
+p1 <- ggplot(mtcars) + aes(x = hp, y = mpg) + geom_point()
+p2 <- ggplot(mtcars) + aes(x = factor(cyl), y = mpg) + geom_boxplot() +
+    geom_smooth(aes(group = 1), se = FALSE)
+grid.arrange(p1, p2, ncol = 2)
+```
+
+
+## plain
+End a line with two spaces  
+to start a new paragraph.
+
+*italics* and **bold**
+
+`verbatim code`
+
+sub/superscript^2^~2~
+
+~~strikethrough~~
+
+escaped: \* \_ \\
+
+endash: --, emdash: ---
+
+## table
+| Right | Left | Default | Center |
+|------:|:-----|---------|:------:|
+| 12 | 12 | 12 | 12 |
+| 123 | 123 | 123 | 123 |
+| 1 | 1 | 1 | 1 |
+
+## math
+inline LaTeX equations $f(k) = {n \choose k} p^{k} (1-p)^{n-k}$ within single dollar
+
+equation block: $$f(k) = {n \choose k} p^{k} (1-p)^{n-k}$$
+
+$$\begin{array}{ccc}
+x_{11} & x_{12} & x_{13}\\
+x_{21} & x_{22} & x_{23}
+\end{array}$$
+
+$$X = \begin{bmatrix}1 & x_{1}\\
+1 & x_{2}\\
+1 & x_{3}
+\end{bmatrix}$$
+
+$$\Theta = \begin{pmatrix}\alpha & \beta\\
+\gamma & \delta
+\end{pmatrix}$$
+
+$$\begin{vmatrix}a & b\\
+c & d
+\end{vmatrix}=ad-bc$$
+
+## unordered list
+- one item
+- one item
+    - one more item
+    - one more item
+
+## ordered list
+1. the first item
+2. the second item
+    - one more item
+    - one more item
+
+## blockquote
+> "I thoroughly disapprove of duels. If a man should challenge me,
+  I would take him kindly and forgivingly by the hand and lead him
+  to a quiet place and kill him."
+>
+> --- Mark Twain

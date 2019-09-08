@@ -34,3 +34,14 @@
 cmake-build-debug/
 .idea/
 install/
+
+**/*.log
+
+**/.Rhistory
+**/.RData
+**/*.Rproj
+**/*.html
+**/*.pdf
+**/*.tex
+**/.Rproj.user
+.Rproj.user

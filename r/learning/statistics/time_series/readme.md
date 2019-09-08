@@ -1,0 +1,27 @@
+## functions
+| 函数        | 程序包   |  用途  |
+| --------   | -----:  | :----:  |
+| ts()           | stats       | 生成时序对象 |
+| plot()         | graphics    | 画出时间序列的折线图 |
+| start()        | stats       | 返回时间序列的开始时间 |
+| end()          | stats       | 返回时间序列的结束时间 |
+| frequency()    | stats       | 返回时间序列中时间点的个数 |
+| window()       | stats       | 对时序对象取子集 |
+| ma()           | forecast    | 拟合一个简单的移动平均模型 |
+| stl()          | stats       | 用LOESS光滑将时序分解为季节项、趋势项和随机项 |
+| monthplot()    | stats       | 画出时序中的季节项 |
+| seasonplot()   | forecast    | 生成季节图 |
+| HoltWinters()  | stats       | 拟合指数平滑模型 |
+| forecast()     | forecast    | 预测时序的未来值 |
+| accuracy()     | forecast    | 返回时序的拟合优度度量 |
+| ets()          | forecast    | 拟合指数平滑模型,同时也可以自动选取最优模型 |
+| lag()          | stats       | 返回取过指定滞后项后的时序 |
+| Acf()          | forecast    | 估计自相关函数 |
+| Pacf()         | forecast    | 估计偏自相关函数 |
+| diff()         | base        | 返回取过滞后项和(或)差分后的序列 |
+| ndiffs()       | forecast    | 找到最优差分次数以移除序列中的趋势项 |
+| adf.test()     | tseries     | 对序列做ADF检验以判断其是否平稳 |
+| arima()        | stats       | 拟合ARIMA模型 |
+| Box.test()     | stats       | 进行Ljung-Box检验以判断模型的残差是否独立 |
+| bds.test()     | tseries     | 进行BDS检验以判断序列中的随机变量是否服从独立同分布 |
+| auto.arima()   | forecast    | 自动选择ARIMA模型 |
