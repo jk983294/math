@@ -11,6 +11,7 @@ apply(df, 2, sum)  # column wise sum up
 
 # lapply function returns list as output
 lapply(df, sum)  # column wise
+unlist(lapply(df, sum)) # same as sapply(df, sum)
 
 # sapply similar to lapply function but returns vector as output
 sapply(df, sum)  # column wise

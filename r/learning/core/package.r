@@ -6,6 +6,7 @@ install.packages("RColorBrewer")  # color set
 install.packages("vioplot")  # 小提琴图
 install.packages("gplots")  # 带有置信区间的组均值图形
 install.packages("scatterplot3d")
+install.packages("coefplot")  # coefficient plot for the VAR model
 # sudo apt-get install xorg libx11-dev libglu1-mesa-dev # rgl dependency
 install.packages("rgl")  # 3d plot
 install.packages("corrgram")  # correlogram
@@ -36,6 +37,8 @@ install.packages("qcc")  # 泊松模型过度离势的检验方法
 install.packages("psych")  # 主成分分析, 因子分析
 install.packages("GPArotation")  # 因子分析
 install.packages("forecast")  # 时序分析
+install.packages("rugarch")  # ARCH and GARCH model
+install.packages("vars")  # VAR model
 install.packages(c("VIM", "mice"))  # missing data
 install.packages("xts")  # time series
 install.packages(c("sandwich", "lmtest"))  # robust standard error for lm
