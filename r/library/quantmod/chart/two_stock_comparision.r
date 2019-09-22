@@ -1,7 +1,7 @@
 source("utils/utils.r")
 
 stk <- read_stock_data()
-idx <- read_index_data()
+idx <- read_tushare_stock_daily("~/data/399300.SZ")
 
 NS <- function(xdat) xdat/coredata(xdat)[1]
 s <- NS(Cl(stk)) - 1
