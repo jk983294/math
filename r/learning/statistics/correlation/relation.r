@@ -17,6 +17,5 @@ cor(x, y)  # pearson相关系数
 
 # 偏相关是指在控制一个或多个定量变量时,另外两个定量变量之间的相互关系
 library(ggm)
-# partial correlation of population and murder rate, controlling for income,
-# illiteracy rate, and HS graduation rate
+# partial correlation of population and murder rate, controlling for income, illiteracy rate, and HS graduation rate
 pcor(c(1, 5, 2, 3, 6), cov(states))

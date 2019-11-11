@@ -43,6 +43,8 @@ install.packages(c("VIM", "mice"))  # missing data
 install.packages("xts")  # time series
 install.packages(c("sandwich", "lmtest"))  # robust standard error for lm
 install.packages("PerformanceAnalytics")  # a collection of econometric functions for performance and risk analysis
+install.packages("astsa")  # Applied Statistical Time Series Analysis
+install.packages("TSA")  # Time Series Analysis
 
 # core
 install.packages("doParallel", repos = "https://mirrors.tuna.tsinghua.edu.cn/CRAN/")

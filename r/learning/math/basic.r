@@ -8,6 +8,12 @@ max(1:10)  # 10
 min(1:10)  # 1
 which.max(1:10)  # position 10
 which.min(1:10)  # position 1
+diff(seq(1, 10, 2))  # [2 2 2 2]
+
+## remove first/last element
+(1:5)[-1]  # [2 3 4 5]
+(1:5)[-5]  # [1 2 3 4]
+diffs <- (1:5)[-1] - (1:5)[-5]  # [1 1 1 1]
 
 # column wise min max
 x <- c(3, 26, 122, 6)
