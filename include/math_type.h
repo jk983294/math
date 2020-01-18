@@ -4,6 +4,10 @@
 #include <cmath>
 #include <cstdint>
 
+#define IN
+#define OUT
+#define INOUT
+
 namespace ornate {
 
 typedef int32_t int32;
@@ -29,6 +33,17 @@ constexpr int8_t int8_nan = 0x80;
 constexpr float float32_nan = NAN;
 constexpr double double64_nan = NAN;
 constexpr double float64_nan = NAN;
+
+bool inline isvalid(float n) { return std::isfinite(n); }
+bool inline isvalid(double n) { return std::isfinite(n); }
+bool inline isvalid(uint32_t n) { return (n != uint32_nan); }
+bool inline isvalid(int32_t n) { return (n != int32_nan); }
+bool inline isvalid(uint16_t n) { return (n != uint16_nan); }
+bool inline isvalid(int16_t n) { return (n != int16_nan); }
+bool inline isvalid(uint8_t n) { return (n != uint8_nan); }
+bool inline isvalid(int8_t n) { return (n != int8_nan); }
+bool inline isvalid(bool n) { return ((uint8)n != bool_nan); }
+bool inline isvalid(const char *n) { return (n != nullptr && n[0] != 0); }
 
 }  // namespace ornate
 

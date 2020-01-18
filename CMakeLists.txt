@@ -8,7 +8,8 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 
-SET(CMAKE_CXX_FLAGS "-std=c++14 -O3 -Wall -Werror")
+# SET(CMAKE_CXX_FLAGS "-std=c++14 -O3 -Wall -Werror")
+SET(CMAKE_CXX_FLAGS "-std=c++14 -g -Wall -Werror")
 message ("cxx Flags: " ${CMAKE_CXX_FLAGS})
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 SET(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS)
@@ -26,4 +27,4 @@ link_directories(/opt/3rd/common/lib)
 install(DIRECTORY include/ DESTINATION ornate/include)
 
 add_subdirectory(example)
-#add_subdirectory(test)
+add_subdirectory(test)
