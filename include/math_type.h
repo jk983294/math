@@ -2,6 +2,7 @@
 #define __MATH_TYPE_H_
 
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 
 #define IN
