@@ -2,6 +2,7 @@
 #define ORNATE_MATH_STATS_H
 
 #include "math_utils.h"
+#include "math_vector.h"
 
 using std::isfinite;
 
@@ -12,40 +13,6 @@ using std::isfinite;
  */
 
 namespace ornate {
-
-template <typename T>
-float mean(IN const std::vector<T> &n, int32_t start_idx = -1, int32_t end_idx = -1) {
-    T ret = 0;
-    if (start_idx < 0) start_idx = 0;
-    if (end_idx < 0) end_idx = static_cast<int32_t>(n.size());
-    uint32_t count = 0;
-    for (int32_t i = start_idx; i < end_idx; ++i) {
-        if (isvalid(n[i])) {
-            ret += n[i];
-            count++;
-        }
-    }
-    if (count > 0)
-        return ret / (float)count;
-    else
-        return NAN;
-}
-
-template <typename T>
-T mean(const T *data, size_t n) {
-    T sum = 0;
-    size_t count = 0;
-    for (size_t i = 0; i < n; ++i) {
-        if (IsValidData(data[i])) {
-            ++count;
-            sum += data[i];
-        }
-    }
-    if (count == 0)
-        return NAN;
-    else
-        return sum / count;
-}
 
 template <typename R = double, typename T1, typename T2>
 R mean_weighted(const T1 *data, const T2 *weight, size_t n) {

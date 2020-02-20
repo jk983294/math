@@ -15,6 +15,9 @@ static uint32_t shift_count = data.size() - small_window;
 TEST_CASE("mean", "[MathStats]") {
     REQUIRE(ornate::mean(data.data(), data.size()) == 3.5);
     REQUIRE(ornate::mean_weighted(data.data(), weight.data(), data.size()) == 3.5);
+
+    vector<float> x{3, 2, NAN, 1, NAN};
+    REQUIRE(ornate::mean(x) == 2);
 }
 
 TEST_CASE("variance", "[MathStats]") {
