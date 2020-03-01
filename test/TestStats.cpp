@@ -27,71 +27,15 @@ TEST_CASE("variance", "[MathStats]") {
     REQUIRE(variance_weighted(data.data(), weight.data(), data.size()) == 3.5);
 }
 
-TEST_CASE("variance online", "[MathStats]") {
-    double var = 0, mean = 0;
-    size_t count = 1;
-    for (auto obv : data) ornate::variance_online(var, mean, obv, count);
-    REQUIRE(var == 3.5);
-    REQUIRE(mean == 3.5);
-    REQUIRE(count == 7);
-
-    ornate::variance_rolling<> vr(data.size());
-    for (auto obv : data) vr(obv);
-    REQUIRE(vr.variance == 3.5);
-    REQUIRE(vr.mean == 3.5);
-    REQUIRE(vr.count == 6);
-}
-
 TEST_CASE("covariance", "[MathStats]") {
     REQUIRE(ornate::covariance(data.data(), data2.data(), data.size()) == -3.5);
     REQUIRE(ornate::covariance_one_pass(data.data(), data2.data(), data.size()) == -3.5);
     REQUIRE(ornate::covariance_two_pass(data.data(), data2.data(), data.size()) == -3.5);
 }
 
-TEST_CASE("covariance online", "[MathStats]") {
-    double covariance = 0, mean1 = 0, mean2 = 0;
-    size_t count = 1;
-    for (size_t i = 0; i < data.size(); ++i) {
-        ornate::covariance_online(covariance, mean1, mean2, data[i], data2[i], count);
-    }
-    REQUIRE(covariance == -3.5);
-    REQUIRE(mean1 == 3.5);
-    REQUIRE(mean2 == 3.5);
-    REQUIRE(count == 7);
-
-    ornate::covariance_rolling<> cvr(data.size());
-    for (size_t i = 0; i < data.size(); ++i) {
-        cvr(data[i], data2[i]);
-    }
-    REQUIRE(cvr.covariance == -3.5);
-    REQUIRE(cvr.meanA == 3.5);
-    REQUIRE(cvr.meanB == 3.5);
-    REQUIRE(cvr.count == 6);
-}
-
-TEST_CASE("covariance online small window", "[MathStats]") {
-    double expected = -1.6666666666667;
-    ornate::covariance_rolling<> cvr(small_window);
-    for (size_t i = 0; i < data.size(); ++i) {
-        cvr(data[i], data2[i]);
-    }
-    REQUIRE(FloatEqual(cvr.covariance, expected));
-    REQUIRE(cvr.meanA == 4.5);
-    REQUIRE(cvr.meanB == 2.5);
-    REQUIRE(cvr.count == 4);
-
-    REQUIRE(FloatEqual(covariance(data.data() + shift_count, data2.data() + shift_count, small_window), expected));
-}
-
 TEST_CASE("corr", "[MathStats]") {
     REQUIRE(FloatEqual(ornate::corr(data, data2), -1.0));
     REQUIRE(FloatEqual(ornate::cov(data, data2), -2.9166667));
-
-    OnlineCorrelation oc;
-    for (size_t i = 0; i < data.size(); ++i) {
-        oc.Push(data[i], data2[i]);
-    }
-    REQUIRE(FloatEqual(oc.Result(), -1.0));
 }
 
 TEST_CASE("std", "[MathStats]") {
