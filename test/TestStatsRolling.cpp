@@ -72,3 +72,13 @@ TEST_CASE("corr online", "[MathStatsRolling]") {
     }
     REQUIRE(FloatEqual(oc.Result(), -1.0));
 }
+
+TEST_CASE("corr rolling", "[MathStatsRolling]") {
+    corr_rolling cr(data.size());
+
+    double ret = 0;
+    for (size_t i = 0; i < data.size(); ++i) {
+        ret = cr(data[i], data2[i]);
+    }
+    REQUIRE(FloatEqual(ret, -1.0));
+}

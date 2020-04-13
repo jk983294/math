@@ -237,20 +237,6 @@ struct OnlineCorrelation {
     size_t n{1}, nA{1}, nB{1};
     double varA{0}, varB{0}, cov{0};
 
-    void reset() {
-        m_correlation = 0;
-        meanA = 0;
-        meanB = 0;
-        meanAA = 0;
-        meanBB = 0;
-        n = 1;
-        nA = 1;
-        nB = 1;
-        varA = 0;
-        varB = 0;
-        cov = 0;
-    }
-
     void Push(double dataA, double dataB) {
         if (!isfinite(dataA) || !isfinite(dataB)) {
             dataA = dataB = NAN;
@@ -268,6 +254,34 @@ struct OnlineCorrelation {
         return m_correlation;
     }
 };
+
+    struct corr_rolling {
+        size_t window_size;
+        covariance_rolling<> cov_rolling;
+        variance_rolling<> var_rolling_a;
+        variance_rolling<> var_rolling_b;
+
+        explicit corr_rolling(size_t size)
+            : window_size{size}, cov_rolling(size), var_rolling_a(size), var_rolling_b(size) {}
+
+        double operator()(double dataA, double dataB) {
+            if (!isfinite(dataA) || !isfinite(dataB)) {
+                dataA = dataB = NAN;
+            }
+            auto cov = cov_rolling(dataA, dataB);
+            auto var1 = var_rolling_a(dataA);
+            auto var2 = var_rolling_b(dataA);
+            if (std::isfinite(var1) && std::isfinite(var2)) {
+                double numerator = sqrt(var1) * sqrt(var2);
+                if (numerator < 1e-7)
+                    return NAN;
+                else
+                    return cov / numerator;
+            } else {
+                return NAN;
+            }
+        }
+    };
 
 }  // namespace ornate
 
