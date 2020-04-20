@@ -82,3 +82,36 @@ TEST_CASE("corr rolling", "[MathStatsRolling]") {
     }
     REQUIRE(FloatEqual(ret, -1.0));
 }
+
+static double calc_skew(const vector<double>& data_) {
+    auto mean_ = mean(data_);
+    auto std_ = ornate::std(data_);
+    double ret = 0;
+    for (double i : data_) {
+        ret += std::pow((i - mean_) / std_, 3);
+    }
+    return ret / data_.size();
+}
+
+TEST_CASE("skew rolling", "[MathStatsRolling]") {
+    auto x = data;
+    x.push_back(8);
+    skew_rolling<> sr(x.size());
+
+    double ret = 0;
+    for (double i : x) {
+        ret = sr(i);
+    }
+    double expected = calc_skew(x);
+    REQUIRE(FloatEqual(ret, expected));
+}
+
+TEST_CASE("mean rolling", "[MathStatsRolling]") {
+    mean_rolling<> sr(4);
+
+    double ret = 0;
+    for (double i : data) {
+        ret = sr(i);
+    }
+    REQUIRE(FloatEqual(ret, 4.5));
+}

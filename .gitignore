@@ -45,3 +45,4 @@ install/
 **/*.tex
 **/.Rproj.user
 .Rproj.user
+**/.vscode
