@@ -1,3 +1,6 @@
+#ifndef MATH_MONO_QUEUE_
+#define MATH_MONO_QUEUE_
+
 #include <math_utils.h>
 #include <functional>
 
@@ -9,27 +12,26 @@ namespace ornate {
 template<typename TData, typename TCmp=std::greater<TData> >
 struct MonotoneQueue {
     struct Cell {
-        int seq;
+        int seq{-1};
         TData data;
+
+        Cell(): data{TData()} {}
     };
     
-    const int capacity = 0;
+    int capacity = 0;
     int front = 0;
     int rear = 0;
     int seq = -1;
-    Cell* _data = nullptr;
+    std::vector<Cell> _data;
     TCmp cmp;
 
-    MonotoneQueue(int size): capacity{size + 1}, cmp() {
-        _data = new Cell[capacity];
+    MonotoneQueue(int size): capacity{size + 1} {
+        _data.resize(capacity);
+        cmp = TCmp();
     }
 
-    ~MonotoneQueue() {
-        delete[] _data;
-    }
-
-    Cell* operator[](int i){
-        return _data + i;
+    Cell& operator[](int i){
+        return _data[i];
     }
 
     Cell& GetCell(int i) {
@@ -87,3 +89,5 @@ struct MonotoneQueue {
 };
 
 }
+
+#endif
