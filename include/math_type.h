@@ -46,6 +46,12 @@ bool inline isvalid(int8_t n) { return (n != int8_nan); }
 bool inline isvalid(bool n) { return ((uint8)n != bool_nan); }
 bool inline isvalid(const char *n) { return (n != nullptr && n[0] != 0); }
 
+template <typename T> inline T get_nan() { return 0; }
+template <> inline float get_nan<float>() { return NAN; }
+template <> inline double get_nan<double>() { return NAN; }
+template <> inline int32_t get_nan<int32_t>() { return int32_nan; }
+template <> inline uint32_t get_nan<uint32_t>() { return uint32_nan; }
+
 }  // namespace ornate
 
 #endif
