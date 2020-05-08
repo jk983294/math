@@ -270,7 +270,7 @@ struct corr_rolling {
         }
         auto cov = cov_rolling(dataA, dataB);
         auto var1 = var_rolling_a(dataA);
-        auto var2 = var_rolling_b(dataA);
+        auto var2 = var_rolling_b(dataB);
         if (std::isfinite(var1) && std::isfinite(var2)) {
             double numerator = sqrt(var1) * sqrt(var2);
             if (numerator < 1e-7)
