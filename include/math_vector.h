@@ -232,12 +232,16 @@ void rank(INOUT std::vector<T>& n) {
     if (s >= 2) {
         int start = 0;
         while (start < s) {
-            int end = start + 1;
-            while (end < s && n2[sorted[start]] == n2[sorted[end]]) ++end;
-            for (int jj = start; jj < end; ++jj) {
-                output[index[sorted[jj]]] = (start + end - 1) / (2.0 * (s - 1));
+            int end_ = start + 1;
+            auto curr_val = n2[sorted[start]];
+            while (end_ < s){
+                if(std::fabs(n2[sorted[end_]] - curr_val) > 1e-14) break;
+                ++end_;
             }
-            start = end;
+            for (int jj = start; jj < end_; ++jj) {
+                output[index[sorted[jj]]] = (start + end_ - 1) / (2.0 * (s - 1));
+            }
+            start = end_;
         }
     }
     n = output;
