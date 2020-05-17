@@ -27,6 +27,62 @@ TEST_CASE("variance online", "[MathStatsRolling]") {
     REQUIRE(vr.count == 6);
 }
 
+void test_variance_rolling(const vector<double>& _data, int window) {
+    ornate::variance_rolling<> vr(window);
+    for (int i = 0; i < 6; ++i) {
+        int to = i + 1;
+        int from = to - window;
+        if(from < 0) from = 0;
+        double std_naive = ornate::std(_data.data() + from, to - from);
+        double s = sqrtf(vr(_data[i]));
+        if(std::isnan(std_naive)) {
+            REQUIRE(std::isnan(s));
+        } else {
+            REQUIRE(sqrtf(vr.variance) == std_naive);
+        }
+    }
+}
+
+TEST_CASE("variance rolling", "[MathStatsRolling]") {
+    vector<double> _data1{1, 2, 3, 4, 5, 6};
+    test_variance_rolling(_data1, 3);
+    test_variance_rolling(_data1, 5);
+
+    vector<double> _data2{1, 2, NAN, 4, NAN, 6, 7, 8, 9, 10};
+    test_variance_rolling(_data2, 3);
+    test_variance_rolling(_data2, 5);
+
+    vector<double> _data3{1.12, 1.13, NAN, 1.14, NAN, 1.12, 1.12, 1.13, 1.14, 1.12};
+    test_variance_rolling(_data2, 3);
+    test_variance_rolling(_data2, 5);
+}
+
+void test_covariance_rolling(const vector<double>& _data1, const vector<double>& _data2, int window) {
+    ornate::covariance_rolling<> cvr(window);
+    for (int i = 0; i < 6; ++i) {
+        int to = i + 1;
+        int from = to - window;
+        if(from < 0) from = 0;
+        double cov_naive = ornate::cov(_data1.data() + from, _data2.data() + from, to - from);
+        double s = cvr(_data1[i], _data2[i]);
+        if(std::isnan(cov_naive)) {
+            REQUIRE(std::isnan(s));
+        } else {
+            REQUIRE(FloatEqual(cvr.covariance, cov_naive));
+        }
+    }
+}
+
+TEST_CASE("covariance rolling", "[MathStatsRolling]") {
+    test_covariance_rolling(data, data2, 3);
+    test_covariance_rolling(data, data2, 5);
+
+    vector<double> _data1{1, 2, NAN, 4, NAN, 6, 7, 8, 9, 10};
+    vector<double> _data2{1.12, NAN, 1.13, 1.14, NAN, 1.12, 1.12, 1.13, 1.14, 1.12};
+    test_covariance_rolling(_data1, _data2, 3);
+    test_covariance_rolling(_data1, _data2, 5);
+}
+
 TEST_CASE("covariance online", "[MathStatsRolling]") {
     double covariance = 0, mean1 = 0, mean2 = 0;
     size_t count = 1;
@@ -64,13 +120,29 @@ TEST_CASE("covariance online small window", "[MathStatsRolling]") {
 
 TEST_CASE("corr online", "[MathStatsRolling]") {
     REQUIRE(FloatEqual(ornate::corr(data, data2), -1.0));
-    REQUIRE(FloatEqual(ornate::cov(data, data2), -2.9166667));
+    REQUIRE(FloatEqual(ornate::cov(data, data2), -3.5));
 
     OnlineCorrelation oc;
     for (size_t i = 0; i < data.size(); ++i) {
         oc.Push(data[i], data2[i]);
     }
     REQUIRE(FloatEqual(oc.Result(), -1.0));
+}
+
+void test_corr_rolling(const vector<double>& _data1, const vector<double>& _data2, int window) {
+    ornate::corr_rolling cvr(window);
+    for (int i = 0; i < 6; ++i) {
+        int to = i + 1;
+        int from = to - window;
+        if(from < 0) from = 0;
+        double corr_naive = ornate::corr(_data1.data() + from, _data2.data() + from, to - from);
+        double s = cvr(_data1[i], _data2[i]);
+        if(std::isnan(corr_naive)) {
+            REQUIRE(std::isnan(s));
+        } else {
+            REQUIRE(FloatEqual(s, corr_naive));
+        }
+    }
 }
 
 TEST_CASE("corr rolling", "[MathStatsRolling]") {
@@ -81,6 +153,14 @@ TEST_CASE("corr rolling", "[MathStatsRolling]") {
         ret = cr(data[i], data2[i]);
     }
     REQUIRE(FloatEqual(ret, -1.0));
+
+    test_corr_rolling(data, data2, 3);
+    test_corr_rolling(data, data2, 5);
+
+    vector<double> _data1{1, 2, NAN, 4, NAN, 6, 7, 8, 9, 10};
+    vector<double> _data2{1.12, NAN, 1.13, 1.14, NAN, 1.12, 1.12, 1.13, 1.14, 1.12};
+    test_corr_rolling(_data1, _data2, 3);
+    test_corr_rolling(_data1, _data2, 5);
 }
 
 static double calc_skew(const vector<double>& data_) {

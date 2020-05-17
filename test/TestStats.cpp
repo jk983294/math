@@ -35,7 +35,7 @@ TEST_CASE("covariance", "[MathStats]") {
 
 TEST_CASE("corr", "[MathStats]") {
     REQUIRE(FloatEqual(ornate::corr(data, data2), -1.0));
-    REQUIRE(FloatEqual(ornate::cov(data, data2), -2.9166667));
+    REQUIRE(FloatEqual(ornate::cov(data, data2), -3.5));
 }
 
 TEST_CASE("std", "[MathStats]") {

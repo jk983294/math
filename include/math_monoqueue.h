@@ -56,6 +56,11 @@ struct MonotoneQueue {
         int ptr = front;
         for (; ptr != rear && GetCellSeq(ptr) <= oldest_seq; ptr = (ptr + 1) % capacity);
         front = ptr; // take the front to the left boundary, (lazy delete)
+
+        if(!isvalid(value)) {
+            ++seq;
+            return;
+        }
         
         // push new data
         ptr = (rear + capacity - 1) % capacity;
@@ -76,6 +81,11 @@ struct MonotoneQueue {
 
     int TopIndex() {
         if(empty()) return -1;
+        return seq - GetCell(front).seq;
+    }
+
+    float TopIndexFloat() {
+        if(empty()) return NAN;
         return seq - GetCell(front).seq;
     }
 

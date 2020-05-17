@@ -141,9 +141,9 @@ R covariance(const T1 *data1, const T2 *data2, size_t n) {
 }
 
 template <typename T = float>
-size_t __cov(const T *x, const T *y, size_t num, T &cov_, T &std_x, T &std_y) {
-    T sum_x = 0, sum_x2 = 0, sum_xy = 0, sum_y = 0, sum_y2 = 0;
-    size_t count = 0;
+int __cov(const T *x, const T *y, size_t num, T &cov_, T &std_x, T &std_y) {
+    double sum_x = 0, sum_x2 = 0, sum_xy = 0, sum_y = 0, sum_y2 = 0;
+    int count = 0;
     for (size_t i = 0; i < num; ++i) {
         if (!std::isfinite(x[i]) || !std::isfinite(y[i])) continue;
         ++count;
@@ -154,37 +154,37 @@ size_t __cov(const T *x, const T *y, size_t num, T &cov_, T &std_x, T &std_y) {
         sum_xy += x[i] * y[i];
     }
     if (count < 2) return count;
-    T mean_x = sum_x / count;
-    T mean_y = sum_y / count;
-    cov_ = sum_xy / count - mean_x * mean_y;
-    std_x = sqrtf(sum_x2 / count - mean_x * mean_x);
-    std_y = sqrtf(sum_y2 / count - mean_y * mean_y);
+    double mean_x = sum_x / count;
+    double mean_y = sum_y / count;
+    cov_ = (sum_xy - mean_x * mean_y * count) / (count - 1);
+    std_x = sqrtf((sum_x2 - mean_x * mean_x * count) / (count - 1));
+    std_y = sqrtf((sum_y2 - mean_y * mean_y * count) / (count - 1));
     return count;
 }
 
 template <typename T = float>
-T corr(const T *x, const T *y, size_t num) {
-    T cov_, std_x, std_y;
+double corr(const T *x, const T *y, size_t num) {
+    double cov_, std_x, std_y;
     if (__cov(x, y, num, cov_, std_x, std_y) < 2) return NAN;
-    if (std_x < 0.000001 || std_y < 0.000001) return NAN;
+    if (std_x < epsilon || std_y < epsilon) return NAN;
     return cov_ / std_x / std_y;
 }
 
 template <typename T = float>
-T corr(const std::vector<T> &x, const std::vector<T> &y) {
+double corr(const std::vector<T> &x, const std::vector<T> &y) {
     return corr(&x[0], &y[0], x.size());
 }
 
 template <typename T = float>
-T cov(const T *x, const T *y, size_t num) {
-    T cov_, std_x, std_y;
+double cov(const T *x, const T *y, size_t num) {
+    double cov_, std_x, std_y;
     if (__cov(x, y, num, cov_, std_x, std_y) < 2) return NAN;
-    if (std_x < 0.000001 || std_y < 0.000001) return NAN;
+    if (std_x < epsilon || std_y < epsilon) return NAN;
     return cov_;
 }
 
 template <typename T = float>
-T cov(const std::vector<T> &x, const std::vector<T> &y) {
+double cov(const std::vector<T> &x, const std::vector<T> &y) {
     return cov(&x[0], &y[0], x.size());
 }
 
