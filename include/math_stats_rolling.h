@@ -1,6 +1,7 @@
 #ifndef ORNATE_MATH_STATS_ROLLING_H
 #define ORNATE_MATH_STATS_ROLLING_H
 
+#include "math_stats_rolling_rb.h"
 #include "math_utils.h"
 #include "math_vector.h"
 
@@ -65,8 +66,10 @@ struct variance_rolling {
                     m_data.pop_front();
                 }
             }
-            if (count < 2) variance = NAN;
-            else variance = SSE / (count - dof);
+            if (count < 2)
+                variance = NAN;
+            else
+                variance = SSE / (count - dof);
             return variance;
         }
 
@@ -273,7 +276,7 @@ struct corr_rolling {
         auto var2 = var_rolling_b(dataB);
         if (std::isfinite(var1) && std::isfinite(var2)) {
             double numerator = sqrt(var1) * sqrt(var2);
-            if (numerator < 1e-7)
+            if (numerator < epsilon)
                 return NAN;
             else
                 return cov / numerator;
@@ -306,10 +309,9 @@ struct skew_rolling {
             }
         }
 
-
         if (count < 2) return NAN;
         R a = 0, b = 0;
-        for(auto d : m_data) {
+        for (auto d : m_data) {
             a += std::pow(d - mean, 3);
             b += (d - mean) * (d - mean);
         }

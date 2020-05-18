@@ -141,7 +141,7 @@ R covariance(const T1 *data1, const T2 *data2, size_t n) {
 }
 
 template <typename T = float>
-int __cov(const T *x, const T *y, size_t num, T &cov_, T &std_x, T &std_y) {
+int __cov(const T *x, const T *y, size_t num, double &cov_, double &std_x, double &std_y) {
     double sum_x = 0, sum_x2 = 0, sum_xy = 0, sum_y = 0, sum_y2 = 0;
     int count = 0;
     for (size_t i = 0; i < num; ++i) {

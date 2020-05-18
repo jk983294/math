@@ -29,16 +29,20 @@ TEST_CASE("variance online", "[MathStatsRolling]") {
 
 void test_variance_rolling(const vector<double>& _data, int window) {
     ornate::variance_rolling<> vr(window);
+    rolling_variance_rb rvr(window);
     for (int i = 0; i < 6; ++i) {
         int to = i + 1;
         int from = to - window;
-        if(from < 0) from = 0;
+        if (from < 0) from = 0;
         double std_naive = ornate::std(_data.data() + from, to - from);
         double s = sqrtf(vr(_data[i]));
-        if(std::isnan(std_naive)) {
+        rvr(_data[i]);
+        if (std::isnan(std_naive)) {
             REQUIRE(std::isnan(s));
+            REQUIRE(std::isnan(rvr.variance));
         } else {
             REQUIRE(sqrtf(vr.variance) == std_naive);
+            REQUIRE(sqrtf(rvr.variance) == std_naive);
         }
     }
 }
@@ -59,16 +63,20 @@ TEST_CASE("variance rolling", "[MathStatsRolling]") {
 
 void test_covariance_rolling(const vector<double>& _data1, const vector<double>& _data2, int window) {
     ornate::covariance_rolling<> cvr(window);
+    rolling_cov_rb rcr(window);
     for (int i = 0; i < 6; ++i) {
         int to = i + 1;
         int from = to - window;
-        if(from < 0) from = 0;
+        if (from < 0) from = 0;
         double cov_naive = ornate::cov(_data1.data() + from, _data2.data() + from, to - from);
         double s = cvr(_data1[i], _data2[i]);
-        if(std::isnan(cov_naive)) {
+        rcr(_data1[i], _data2[i]);
+        if (std::isnan(cov_naive)) {
             REQUIRE(std::isnan(s));
+            REQUIRE(std::isnan(rcr.covariance));
         } else {
             REQUIRE(FloatEqual(cvr.covariance, cov_naive));
+            REQUIRE(FloatEqual(rcr.covariance, cov_naive));
         }
     }
 }
@@ -131,16 +139,20 @@ TEST_CASE("corr online", "[MathStatsRolling]") {
 
 void test_corr_rolling(const vector<double>& _data1, const vector<double>& _data2, int window) {
     ornate::corr_rolling cvr(window);
+    rolling_corr_rb rcr(window);
     for (int i = 0; i < 6; ++i) {
         int to = i + 1;
         int from = to - window;
-        if(from < 0) from = 0;
+        if (from < 0) from = 0;
         double corr_naive = ornate::corr(_data1.data() + from, _data2.data() + from, to - from);
         double s = cvr(_data1[i], _data2[i]);
-        if(std::isnan(corr_naive)) {
+        rcr(_data1[i], _data2[i]);
+        if (std::isnan(corr_naive)) {
             REQUIRE(std::isnan(s));
+            REQUIRE(std::isnan(rcr.corr));
         } else {
             REQUIRE(FloatEqual(s, corr_naive));
+            REQUIRE(FloatEqual(rcr.corr, corr_naive));
         }
     }
 }
@@ -188,10 +200,13 @@ TEST_CASE("skew rolling", "[MathStatsRolling]") {
 
 TEST_CASE("mean rolling", "[MathStatsRolling]") {
     mean_rolling<> sr(4);
+    rolling_mean_rb rmr(4);
 
     double ret = 0;
     for (double i : data) {
         ret = sr(i);
+        rmr(i);
+        REQUIRE(FloatEqual(ret, rmr.mean));
     }
     REQUIRE(FloatEqual(ret, 4.5));
 }

@@ -39,11 +39,11 @@ vector<T> generate_random_data(size_t count, T a, T b) {
 }
 
 template <typename T, template <typename> class Dist>
-vector<vector<double>> generate_random_data(size_t m, size_t n, T a, T b) {
+vector<vector<T>> generate_random_data(size_t m, size_t n, T a, T b) {
     random_device rd;  // non-deterministic generator
     mt19937 generator(rd());
-    Dist<double> uid(0.0, 10.0);
-    vector<vector<double>> ret;
+    Dist<T> uid(a, b);
+    vector<vector<T>> ret;
     ret.resize(m);
     for (size_t i = 0; i < m; ++i) {
         ret[i].resize(n);
@@ -69,12 +69,14 @@ vector<T> generate_gaussian(size_t count, T mean = 0.0, T delta = 1.0) {
     return generate_random_data<T, normal_distribution>(count, mean, delta);
 }
 
-inline vector<vector<double>> generate_gaussian_matrix(size_t m, size_t n, double mean = 0, double delta = 1) {
-    return generate_random_data<double, normal_distribution>(m, n, mean, delta);
+template <typename T = double>
+inline vector<vector<T>> generate_gaussian_matrix(size_t m, size_t n, T mean = 0, T delta = 1) {
+    return generate_random_data<T, normal_distribution>(m, n, mean, delta);
 }
 
-inline vector<vector<double>> generate_uniform_matrix(size_t m, size_t n, double from = 0, double to = 1) {
-    return generate_random_data<double, uniform_real_distribution>(m, n, from, to);
+template <typename T = double>
+inline vector<vector<T>> generate_uniform_matrix(size_t m, size_t n, T from = 0, T to = 1) {
+    return generate_random_data<T, uniform_real_distribution>(m, n, from, to);
 }
 }  // namespace ornate
 
