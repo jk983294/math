@@ -102,7 +102,64 @@ TEST_CASE("rank", "[MathVector]") {
     REQUIRE(x.size() == 5);
     REQUIRE(x[0] == 1.0);
     REQUIRE(x[1] == 0.5);
+    REQUIRE(std::isnan(x[2]));
     REQUIRE(x[3] == 0.0);
+    REQUIRE(std::isnan(x[4]));
+}
+
+TEST_CASE("rank equal value", "[MathVector]") {
+    vector<float> x{3, 1, NAN, 1, NAN};
+    ornate::rank(x);
+    REQUIRE(x.size() == 5);
+    REQUIRE(x[0] == 1.0);
+    REQUIRE(x[1] == 0.25);
+    REQUIRE(std::isnan(x[2]));
+    REQUIRE(x[3] == 0.25);
+    REQUIRE(std::isnan(x[4]));
+}
+
+TEST_CASE("rank equal value1", "[MathVector]") {
+    vector<float> x{1, 1, NAN, 1, NAN};
+    ornate::rank(x);
+    REQUIRE(x.size() == 5);
+    REQUIRE(x[0] == 0.5);
+    REQUIRE(x[1] == 0.5);
+    REQUIRE(std::isnan(x[2]));
+    REQUIRE(x[3] == 0.5);
+    REQUIRE(std::isnan(x[4]));
+}
+
+TEST_CASE("rank1", "[MathVector]") {
+    vector<float> x{3, 2, NAN, 1, NAN};
+    ornate::rank1(x);
+    REQUIRE(x.size() == 5);
+    REQUIRE(x[0] == 1.0);
+    REQUIRE(x[1] == 0.5);
+    REQUIRE(std::isnan(x[2]));
+    REQUIRE(x[3] == 0.0);
+    REQUIRE(std::isnan(x[4]));
+}
+
+TEST_CASE("rank1 equal value", "[MathVector]") {
+    vector<float> x{3, 1, NAN, 1, NAN};
+    ornate::rank1(x);
+    REQUIRE(x.size() == 5);
+    REQUIRE(x[0] == 1.0);
+    REQUIRE(x[1] == 0.25);
+    REQUIRE(std::isnan(x[2]));
+    REQUIRE(x[3] == 0.25);
+    REQUIRE(std::isnan(x[4]));
+}
+
+TEST_CASE("rank1 equal value1", "[MathVector]") {
+    vector<float> x{1, 1, NAN, 1, NAN};
+    ornate::rank1(x);
+    REQUIRE(x.size() == 5);
+    REQUIRE(x[0] == 0.5);
+    REQUIRE(x[1] == 0.5);
+    REQUIRE(std::isnan(x[2]));
+    REQUIRE(x[3] == 0.5);
+    REQUIRE(std::isnan(x[4]));
 }
 
 TEST_CASE("normalize", "[MathVector]") {

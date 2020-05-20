@@ -50,6 +50,16 @@ public:
     __SortHelper(const T& data_, int index_) : data{&data_}, index{index_} {}
     bool operator<(const __SortHelper<T>& a) const { return (*data < *a.data); }
 };
+
+template <typename T>
+class __SortHelperByValue {
+public:
+    T data;
+    int index;
+    __SortHelperByValue() = default;
+    __SortHelperByValue(T data_, int index_) : data{data_}, index{index_} {}
+    bool operator<(const __SortHelperByValue<T>& a) const { return data < a.data; }
+};
 }  // namespace detail
 template <typename T>
 inline double l2_norm(const vector<T>& a, const vector<T>& b) {
@@ -234,8 +244,8 @@ void rank(INOUT std::vector<T>& n) {
         while (start < s) {
             int end_ = start + 1;
             auto curr_val = n2[sorted[start]];
-            while (end_ < s){
-                if(std::fabs(n2[sorted[end_]] - curr_val) > 1e-14) break;
+            while (end_ < s) {
+                if (std::fabs(n2[sorted[end_]] - curr_val) > 1e-14) break;
                 ++end_;
             }
             for (int jj = start; jj < end_; ++jj) {
@@ -245,6 +255,47 @@ void rank(INOUT std::vector<T>& n) {
         }
     }
     n = output;
+}
+
+template <typename T>
+void rank1(INOUT std::vector<T>& n) {
+    int size_ = static_cast<int>(n.size());
+    std::vector<detail::__SortHelperByValue<T> > s(size_);
+    int count = 0;
+    for (int i = 0; i < size_; i++) {
+        if (std::isfinite(n[i])) {
+            s[count].data = n[i];
+            s[count].index = i;
+            ++count;
+        }
+    }
+    sort(s.begin(), s.begin() + count);
+
+    if (count > 1) {
+        float sort_index = -1.0;
+        float formula_rank_step = 1.0f / (count - 1);
+        int loop_index = 0;
+        while (loop_index < count) {
+            int begin = loop_index;
+            float sort_index_left = sort_index + 1.0;
+            T curr_val = s[begin].data;
+            while (begin < count) {
+                sort_index += 1.0;
+                ++begin;
+                if (begin < count) {
+                    if (std::fabs(s[begin].data - curr_val) > 1e-14) break;
+                }
+            }
+            float sort_index_right = sort_index;
+            int end = begin;
+            begin = loop_index;
+            while (begin != end) {
+                n[s[loop_index].index] = (sort_index_left + sort_index_right) / 2.0 * formula_rank_step;
+                ++begin;
+                ++loop_index;
+            }
+        }
+    }
 }
 
 template <typename T>
