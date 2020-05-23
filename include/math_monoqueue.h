@@ -82,11 +82,15 @@ struct MonotoneQueue {
     int TopIndex() {
         if(empty()) return -1;
         return seq - GetCell(front).seq;
+        // if reverse index
+        // return capacity - 2 - (seq - GetCell(front).seq);
     }
 
     float TopIndexFloat() {
         if(empty()) return NAN;
         return seq - GetCell(front).seq;
+        // if reverse index
+        // return capacity - 2 - (seq - GetCell(front).seq);
     }
 
     bool empty() { return front == rear; }

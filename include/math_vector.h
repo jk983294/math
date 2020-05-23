@@ -180,6 +180,25 @@ std::vector<int> get_sorted_index(const std::vector<T>& data, bool ascending_ord
 }
 
 template <typename T>
+std::vector<int> get_sorted_index_by_value(const std::vector<T>& data, bool ascending_order = true) {
+    int n = static_cast<int>(data.size());
+    std::vector<detail::__SortHelperByValue<T> > s(n);
+    for (int i = 0; i < n; i++) {
+        s[i].data = data[i];
+        s[i].index = i;
+    }
+    sort(s.begin(), s.end());
+    std::vector<int> ret(n);
+    for (int i = 0; i < n; i++) {
+        ret[i] = s[i].index;
+    }
+    if (!ascending_order) {
+        std::reverse(ret.begin(), ret.end());
+    }
+    return ret;
+}
+
+template <typename T>
 std::vector<int> get_sorted_rank(const std::vector<T>& data, bool ascending_order = true) {
     int n = static_cast<int>(data.size());
     std::vector<detail::__SortHelper<T> > s(n);
@@ -236,7 +255,7 @@ template <typename T>
 void rank(INOUT std::vector<T>& n) {
     std::vector<T> n2 = n;
     std::vector<uint32_t> index = filter(n2);
-    std::vector<int> sorted = get_sorted_index(n2);
+    std::vector<int> sorted = get_sorted_index_by_value(n2);
     std::vector<T> output(n.size(), NAN);
     int s = static_cast<int>(n2.size());
     if (s >= 2) {
@@ -295,6 +314,8 @@ void rank1(INOUT std::vector<T>& n) {
                 ++loop_index;
             }
         }
+    } else {
+        std::fill(n.begin(), n.end(), NAN);
     }
 }
 
