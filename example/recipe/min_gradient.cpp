@@ -1,4 +1,3 @@
-#include <zerg_stl.h>
 #include <iostream>
 
 using namespace std;
