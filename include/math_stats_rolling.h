@@ -286,63 +286,38 @@ struct corr_rolling {
     }
 };
 
-template <int dof = 1, typename R = double, typename T = double>
-struct skew_rolling {
-    R mean{0};
-    long count{0};
-    std::deque<T> m_data;
-    size_t window_size;
-
-    explicit skew_rolling(size_t size) : window_size{size} {}
-
-    R operator()(T data) {
-        if (std::isfinite(data)) {  // invalid data
-            m_data.push_back(data);
-            ++count;
-
-            if (m_data.size() <= window_size) {  // window not full
-                mean = mean + 1.0 * (data - mean) / count;
-            } else {  // window full, now starts to roll
-                mean += 1.0 * (data - m_data[0]) / (count - 1);
-                m_data.pop_front();
-                --count;
-            }
-        }
-
-        if (count < 2) return NAN;
-        R a = 0, b = 0;
-        for (auto d : m_data) {
-            a += std::pow(d - mean, 3);
-            b += (d - mean) * (d - mean);
-        }
-        return (a / count) / (std::pow(b / (count - dof), 1.5));
-    }
-};
-
 template <typename R = double, typename T = double>
 struct mean_rolling {
-    R mean{0};
-    long count{0};
+    R mean{0}, sum{0};
+    int m_count{0}, m_valid_count{0};
     std::deque<T> m_data;
-    size_t window_size;
+    int window_size;
 
-    explicit mean_rolling(size_t size) : window_size{size} {}
+    explicit mean_rolling(int size) : window_size{size} {}
 
     R operator()(T data) {
-        if (std::isfinite(data)) {  // valid data
-            m_data.push_back(data);
-            ++count;
+        m_data.push_back(data);
+        ++m_count;
 
-            if (m_data.size() <= window_size) {  // window not full
-                mean = mean + 1.0 * (data - mean) / count;
-            } else {  // window full, now starts to roll
-                mean += 1.0 * (data - m_data[0]) / (count - 1);
-                m_data.pop_front();
-                --count;
+        if (m_count > window_size) {
+            T old_value = m_data.front();
+            m_data.pop_front();
+
+            if (isfinite(old_value)) {
+                sum -= old_value;
+                --m_valid_count;
             }
         }
 
-        if (count < 1) return NAN;
+        if (isfinite(data)) {
+            sum += data;
+            ++m_valid_count;
+        }
+        if (m_valid_count > 0) {
+            mean = sum / m_valid_count;
+        } else {
+            mean = NAN;
+        }
         return mean;
     }
 };

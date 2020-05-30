@@ -13,6 +13,12 @@ struct rolling_rb_base {
     std::vector<T> m_container;
 
     rolling_rb_base(int size) : window_size{size + 1} { m_container.resize(window_size, T()); }
+
+    int get_old_index() {
+        int old_index = m_head_index - window_size;
+        if (old_index < 0) old_index += window_size;
+        return old_index;
+    }
 };
 
 struct rolling_mean_rb : public rolling_rb_base<double> {
@@ -22,8 +28,7 @@ struct rolling_mean_rb : public rolling_rb_base<double> {
     rolling_mean_rb(int size) : rolling_rb_base<double>(size) {}
 
     void delete_old() {
-        int old_index = m_head_index - window_size;
-        if (old_index < 0) old_index += window_size;
+        int old_index = get_old_index();
         const double& old_value = m_container[old_index];
         if (std::isfinite(old_value)) {
             total_sum -= old_value;
@@ -62,8 +67,7 @@ struct rolling_variance_rb : public rolling_rb_base<double> {
     rolling_variance_rb(int size) : rolling_rb_base<double>(size) {}
 
     void delete_old() {
-        int old_index = m_head_index - window_size;
-        if (old_index < 0) old_index += window_size;
+        int old_index = get_old_index();
         const double& old_value = m_container[old_index];
         if (std::isfinite(old_value)) {
             total_sum -= old_value;
@@ -231,6 +235,114 @@ struct rolling_corr_rb {
         add_new();
         if (m_head_index == window_size) m_head_index = 0;
         return corr;
+    }
+};
+
+struct rolling_skew_rb : public rolling_rb_base<double> {
+    double total_x1{0}, total_x2{0}, total_x3{0};
+    double skew{0};
+
+    rolling_skew_rb(int size) : rolling_rb_base<double>(size) {}
+
+    void delete_old() {
+        int old_index = get_old_index();
+        const double& old_value = m_container[old_index];
+        if (std::isfinite(old_value)) {
+            total_x1 -= old_value;
+            total_x2 -= old_value * old_value;
+            total_x3 -= old_value * old_value * old_value;
+            --m_valid_count;
+        }
+    }
+    void add_new() {
+        const double& new_value = m_container[m_head_index - 1];
+        if (std::isfinite(new_value)) {
+            total_x1 += new_value;
+            total_x2 += new_value * new_value;
+            total_x3 += new_value * new_value * new_value;
+            ++m_valid_count;
+        }
+
+        if (m_valid_count >= 2) {
+            double mean = total_x1 / m_valid_count;
+            double mean2 = mean * mean;
+            double var = total_x2 / m_valid_count - mean2;
+            if (var <= 1e-14)
+                skew = NAN;
+            else {
+                double mean3 = mean * mean * mean;
+                double m3 = total_x3 / m_valid_count - 3 * mean * total_x2 / m_valid_count + 2 * mean3;
+                skew = m3 / std::pow(var, 1.5);
+            }
+        } else
+            skew = NAN;
+    }
+    double operator()(double data) {
+        m_container[m_head_index++] = data;
+        ++m_count;
+
+        if (m_count >= window_size) {
+            delete_old();
+        }
+        add_new();
+        if (m_head_index == window_size) m_head_index = 0;
+        return skew;
+    }
+};
+
+struct rolling_kurtosis_rb : public rolling_rb_base<double> {
+    double total_x1{0}, total_x2{0}, total_x3{0}, total_x4{0};
+    double kurtosis{0};
+
+    rolling_kurtosis_rb(int size) : rolling_rb_base<double>(size) {}
+
+    void delete_old() {
+        int old_index = get_old_index();
+        const double& old_value = m_container[old_index];
+        if (std::isfinite(old_value)) {
+            total_x1 -= old_value;
+            total_x2 -= old_value * old_value;
+            total_x3 -= old_value * old_value * old_value;
+            total_x4 -= old_value * old_value * old_value * old_value;
+            --m_valid_count;
+        }
+    }
+    void add_new() {
+        const double& new_value = m_container[m_head_index - 1];
+        if (std::isfinite(new_value)) {
+            total_x1 += new_value;
+            total_x2 += new_value * new_value;
+            total_x3 += new_value * new_value * new_value;
+            total_x4 += new_value * new_value * new_value * new_value;
+            ++m_valid_count;
+        }
+
+        if (m_valid_count >= 2) {
+            double mean = total_x1 / m_valid_count;
+            double mean2 = mean * mean;
+            double var = total_x2 / m_valid_count - mean2;
+            if (var <= 1e-14)
+                kurtosis = NAN;
+            else {
+                double mean3 = mean2 * mean;
+                double mean4 = mean3 * mean;
+                double m4 = total_x4 / m_valid_count - 4 * mean * total_x3 / m_valid_count +
+                            6 * mean2 * total_x2 / m_valid_count - 3 * mean4;
+                kurtosis = m4 / std::pow(var, 2) - 3.0;
+            }
+        } else
+            kurtosis = NAN;
+    }
+    double operator()(double data) {
+        m_container[m_head_index++] = data;
+        ++m_count;
+
+        if (m_count >= window_size) {
+            delete_old();
+        }
+        add_new();
+        if (m_head_index == window_size) m_head_index = 0;
+        return kurtosis;
     }
 };
 

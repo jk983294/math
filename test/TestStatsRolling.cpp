@@ -6,6 +6,7 @@
 using namespace std;
 using namespace ornate;
 
+static vector<double> x = {1, 2, NAN, 3, NAN, NAN, 4, 5.5, 6, 7, NAN, 8, 9};
 static vector<double> data{1, 2, 3, 4, 5, 6};
 static vector<double> data2{6, 5, 4, 3, 2, 1};
 static vector<double> weight{1, 1, 1, 1, 1, 1};
@@ -176,26 +177,56 @@ TEST_CASE("corr rolling", "[MathStatsRolling]") {
 }
 
 static double calc_skew(const vector<double>& data_) {
-    auto mean_ = mean(data_);
-    auto std_ = ornate::std(data_);
+    double mean_ = mean(data_);
+    double std_ = 0;
+    int valid_count = 0;
+    for (double i : data_) {
+        if (isfinite(i)) {
+            ++valid_count;
+            std_ += std::pow((i - mean_), 2);
+        }
+    }
+    if (valid_count < 2) return NAN;
+    std_ = sqrt(std_ / valid_count);
+    if (std_ < 1e-7) return NAN;
     double ret = 0;
     for (double i : data_) {
-        ret += std::pow((i - mean_) / std_, 3);
+        if (isfinite(i)) {
+            ret += std::pow((i - mean_) / std_, 3);
+        }
     }
-    return ret / data_.size();
+    return ret / valid_count;
 }
 
-TEST_CASE("skew rolling", "[MathStatsRolling]") {
-    auto x = data;
-    x.push_back(8);
-    skew_rolling<> sr(x.size());
+void test_skew_by_window(const vector<double>& x_, int window) {
+    rolling_skew_rb sr(window);
+    vector<double> y;
 
     double ret = 0;
-    for (double i : x) {
-        ret = sr(i);
+    for (double d : x_) {
+        if (y.size() < (size_t)window)
+            y.push_back(d);
+        else {
+            for (int j = 1; j < window; ++j) {
+                y[j - 1] = y[j];
+            }
+            y[window - 1] = d;
+        }
+        ret = sr(d);
+
+        double expected = calc_skew(y);
+        if (!FloatEqual(ret, expected)) {
+            cerr << ret << " <-> " << expected << endl;
+        }
+        REQUIRE(FloatEqual(ret, expected));
     }
-    double expected = calc_skew(x);
-    REQUIRE(FloatEqual(ret, expected));
+}
+
+TEST_CASE("skew rolling nan", "[MathStatsRolling]") {
+    test_skew_by_window(x, 3);
+    test_skew_by_window(x, 4);
+    test_skew_by_window(x, 5);
+    test_skew_by_window(x, 6);
 }
 
 TEST_CASE("mean rolling", "[MathStatsRolling]") {
@@ -209,4 +240,69 @@ TEST_CASE("mean rolling", "[MathStatsRolling]") {
         REQUIRE(FloatEqual(ret, rmr.mean));
     }
     REQUIRE(FloatEqual(ret, 4.5));
+}
+
+TEST_CASE("mean rolling nan", "[MathStatsRolling]") {
+    mean_rolling<> sr(4);
+    rolling_mean_rb rmr(4);
+
+    double ret = 0;
+    for (double i : x) {
+        ret = sr(i);
+        rmr(i);
+        REQUIRE(FloatEqual(ret, rmr.mean));
+    }
+}
+
+static double calc_kurtosis(const vector<double>& data_) {
+    double mean_ = mean(data_);
+    double std_ = 0;
+    int valid_count = 0;
+    for (double i : data_) {
+        if (isfinite(i)) {
+            ++valid_count;
+            std_ += std::pow((i - mean_), 2);
+        }
+    }
+    if (valid_count < 2) return NAN;
+    std_ = sqrt(std_ / valid_count);
+    if (std_ < 1e-7) return NAN;
+    double ret = 0;
+    for (double i : data_) {
+        if (isfinite(i)) {
+            ret += std::pow((i - mean_) / std_, 4);
+        }
+    }
+    return ret / valid_count - 3.0;
+}
+
+void test_kurtosis_by_window(const vector<double>& x_, int window) {
+    rolling_kurtosis_rb sr(window);
+    vector<double> y;
+
+    double ret = 0;
+    for (double d : x_) {
+        if (y.size() < (size_t)window)
+            y.push_back(d);
+        else {
+            for (int j = 1; j < window; ++j) {
+                y[j - 1] = y[j];
+            }
+            y[window - 1] = d;
+        }
+        ret = sr(d);
+
+        double expected = calc_kurtosis(y);
+        if (!FloatEqual(ret, expected)) {
+            cerr << ret << " <-> " << expected << " window=" << window << " data=" << d << endl;
+        }
+        REQUIRE(FloatEqual(ret, expected));
+    }
+}
+
+TEST_CASE("kurtosis rolling nan", "[MathStatsRolling]") {
+    test_kurtosis_by_window(x, 3);
+    test_kurtosis_by_window(x, 4);
+    test_kurtosis_by_window(x, 5);
+    test_kurtosis_by_window(x, 6);
 }
