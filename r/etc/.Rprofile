@@ -9,4 +9,4 @@ local({
     r["CRAN"] <- "https://mirrors.tuna.tsinghua.edu.cn/CRAN/"
     options(repos = r)
 })
-library(ggplot2)
+#library(ggplot2)

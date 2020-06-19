@@ -3,7 +3,7 @@
 using namespace ornate;
 
 int main(int argc, char *argv[]) {
-    const char *ifile_y = "/home/kun/github/math/data/snp500.txt";
+    const char *ifile_y = "/home/aaron/github/math/data/snp500.txt";
 
     FILE *fp = fopen(ifile_y, "r");
     if (fp == nullptr) {
