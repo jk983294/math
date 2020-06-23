@@ -1,0 +1,52 @@
+#include <Rcpp.h>
+
+NumericVector x, y;
+int k;
+double z;
+
+abs(x);
+exp(x);
+floor(x);
+ceil(x);
+pow(x, z);
+log(x);
+log10(x);
+sqrt(x);
+sin(x);
+cos(x);
+tan(x);
+sinh(x);
+cosh(x);
+tanh(x);
+asin(x);
+acos(x);
+atan(x);
+gamma(x);
+lgamma(x);  // log gamma
+digamma(x);
+trigamma(x);
+tetragamma(x);
+pentagamma(x);
+expm1(x);
+log1p(x);
+factorial(x);
+lfactorial(x);
+choose(n, k);
+lchoose(n, k);
+beta(n, k);
+lbeta(n, k);
+psigamma(n, k);
+trunc(x);
+round(x, k);
+signif(x, k);
+mean(x);
+var(x);
+sd(x);
+sum(x);
+cumsum(x);
+min(x);
+max(x);
+range(x);
+which_min(x);
+which_max(x);
+setequal(x, y);
