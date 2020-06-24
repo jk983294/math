@@ -15,8 +15,8 @@ bool IsValidData(T value) {
     return std::isfinite(value) && !std::isnan(value);
 }
 
-template <typename T>
-bool FloatEqual(T a, T b) {
+template <typename T1, typename T2>
+bool FloatEqual(T1 a, T2 b) {
     if (IsValidData(a) && IsValidData(b)) {
         return std::fabs(a - b) < epsilon;
     } else if (std::isnan(a) && std::isnan(b)) {
