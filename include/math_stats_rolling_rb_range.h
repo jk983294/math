@@ -5,6 +5,30 @@
 
 namespace ornate {
 
+namespace detail {
+template <typename T, typename U>
+void _data_copy2vector(const U* pData, T* _container, int size) {
+    for (int ii = 0; ii < size; ++ii) {
+        _container[ii] = pData[ii];
+    }
+}
+
+template <typename T>
+void _data_copy2vector(const T* pData, T* _container, int size) {
+    std::copy(pData, pData + size, _container);
+}
+
+template <typename T, typename U>
+void _data_copy2vector(const U* pData, std::vector<T>& _container, int size) {
+    _data_copy2vector(pData, _container.data(), size);
+}
+
+template <typename T>
+void _data_copy2vector(const T* pData, std::vector<T>& _container, int size) {
+    std::copy(pData, pData + size, _container.begin());
+}
+}
+
 template <typename T = double>
 struct rolling_data_container {
     int window_size{-1};
@@ -41,19 +65,7 @@ struct rolling_data_container {
         ++m_count;
         ++m_head_index;
         if (m_head_index == window_size) m_head_index = 0;
-        _data_copy2vector(data.data(), m_container[m_head_index]);
-    }
-
-private:
-    template <typename U>
-    void _data_copy2vector(const U* pData, std::vector<T>& _container) {
-        for (int ii = 0; ii < m_column_size; ++ii) {
-            _container[ii] = pData[ii];
-        }
-    }
-
-    void _data_copy2vector(const T* pData, std::vector<T>& _container) {
-        std::copy(pData, pData + m_column_size, _container.begin());
+        detail::_data_copy2vector(data.data(), m_container[m_head_index], m_column_size);
     }
 };
 
@@ -166,6 +178,61 @@ struct rolling_sum_rb_range {
                 output[i] = stat.total_sum;
             else
                 output[i] = NAN;
+        }
+    }
+
+    void set_row_size(int row) {}
+};
+
+struct rolling_delay_rb_range {
+    int m_column_size;
+
+    explicit rolling_delay_rb_range(int column_size_) : m_column_size{column_size_} {}
+
+    template <typename T, typename TOut>
+    void operator()(const T* old_row, const T* new_row, TOut* output) {
+        if(old_row) {
+            detail::_data_copy2vector(old_row, output, m_column_size);
+        } else {
+            std::fill(output, output + m_column_size, NAN);
+        }
+    }
+
+    void set_row_size(int row) {}
+};
+
+struct rolling_delta_rb_range {
+    int m_column_size;
+
+    explicit rolling_delta_rb_range(int column_size_) : m_column_size{column_size_} {}
+
+    template <typename T, typename TOut>
+    void operator()(const T* old_row, const T* new_row, TOut* output) {
+        if(old_row) {
+            for (int ii = 0; ii < m_column_size; ++ii) {
+                output[ii] = new_row[ii] - old_row[ii];
+            }
+        } else {
+            std::fill(output, output + m_column_size, NAN);
+        }
+    }
+
+    void set_row_size(int row) {}
+};
+
+struct rolling_pct_rb_range {
+    int m_column_size;
+
+    explicit rolling_pct_rb_range(int column_size_) : m_column_size{column_size_} {}
+
+    template <typename T, typename TOut>
+    void operator()(const T* old_row, const T* new_row, TOut* output) {
+        if(old_row) {
+            for (int ii = 0; ii < m_column_size; ++ii) {
+                output[ii] = new_row[ii] / old_row[ii] - 1.0f;
+            }
+        } else {
+            std::fill(output, output + m_column_size, NAN);
         }
     }
 
