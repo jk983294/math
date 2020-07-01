@@ -1,6 +1,7 @@
 #ifndef ORNATE_MATH_STATS_ROLLING_RB_RANGE_H
 #define ORNATE_MATH_STATS_ROLLING_RB_RANGE_H
 
+#include <functional>
 #include "math_utils.h"
 
 namespace ornate {
@@ -27,7 +28,7 @@ template <typename T>
 void _data_copy2vector(const T* pData, std::vector<T>& _container, int size) {
     std::copy(pData, pData + size, _container.begin());
 }
-}
+}  // namespace detail
 
 template <typename T = double>
 struct rolling_data_container {
@@ -191,7 +192,7 @@ struct rolling_delay_rb_range {
 
     template <typename T, typename TOut>
     void operator()(const T* old_row, const T* new_row, TOut* output) {
-        if(old_row) {
+        if (old_row) {
             detail::_data_copy2vector(old_row, output, m_column_size);
         } else {
             std::fill(output, output + m_column_size, NAN);
@@ -208,7 +209,7 @@ struct rolling_delta_rb_range {
 
     template <typename T, typename TOut>
     void operator()(const T* old_row, const T* new_row, TOut* output) {
-        if(old_row) {
+        if (old_row) {
             for (int ii = 0; ii < m_column_size; ++ii) {
                 output[ii] = new_row[ii] - old_row[ii];
             }
@@ -227,7 +228,7 @@ struct rolling_pct_rb_range {
 
     template <typename T, typename TOut>
     void operator()(const T* old_row, const T* new_row, TOut* output) {
-        if(old_row) {
+        if (old_row) {
             for (int ii = 0; ii < m_column_size; ++ii) {
                 output[ii] = new_row[ii] / old_row[ii] - 1.0f;
             }
@@ -282,6 +283,137 @@ struct rolling_variance_rb_range {
             return (st.total_square_sum - mean * mean * st.m_valid_count) / (st.m_valid_count - 1);
         } else {
             return NAN;
+        }
+    }
+
+    void set_row_size(int row) {}
+};
+
+struct rolling_std_rb_range {
+    struct stat {
+        double total_sum{0}, total_square_sum{0};
+        int m_valid_count{0};
+    };
+    int m_column_size;
+    std::vector<stat> stats;
+
+    explicit rolling_std_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
+
+    template <typename T, typename TOut>
+    void operator()(const T* old_row, const T* new_row, TOut* output) {
+        for (int i = 0; i < m_column_size; ++i) {
+            auto& st = stats[i];
+            if (old_row) {
+                delete_old(st, old_row[i]);
+            }
+            output[i] = add_new(st, new_row[i]);
+        }
+    }
+
+    template <typename T>
+    void delete_old(stat& st, T old_value) {
+        if (std::isfinite(old_value)) {
+            st.total_sum -= old_value;
+            st.total_square_sum -= old_value * old_value;
+            --st.m_valid_count;
+        }
+    }
+
+    template <typename T>
+    double add_new(stat& st, T new_value) {
+        if (std::isfinite(new_value)) {
+            st.total_sum += new_value;
+            st.total_square_sum += new_value * new_value;
+            ++st.m_valid_count;
+        }
+
+        if (st.m_valid_count > 1) {
+            double mean = st.total_sum / st.m_valid_count;
+            return std::sqrt((st.total_square_sum - mean * mean * st.m_valid_count) / (st.m_valid_count - 1));
+        } else {
+            return NAN;
+        }
+    }
+
+    void set_row_size(int row) {}
+};
+
+struct rolling_zscore_rb_range {
+    struct stat {
+        double total_sum{0}, total_square_sum{0};
+        int m_valid_count{0};
+    };
+    int m_column_size;
+    std::vector<stat> stats;
+
+    explicit rolling_zscore_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
+
+    template <typename T, typename TOut>
+    void operator()(const T* old_row, const T* new_row, TOut* output) {
+        for (int i = 0; i < m_column_size; ++i) {
+            auto& st = stats[i];
+            if (old_row) {
+                delete_old(st, old_row[i]);
+            }
+            output[i] = add_new(st, new_row[i]);
+        }
+    }
+
+    template <typename T>
+    void delete_old(stat& st, T old_value) {
+        if (std::isfinite(old_value)) {
+            st.total_sum -= old_value;
+            st.total_square_sum -= old_value * old_value;
+            --st.m_valid_count;
+        }
+    }
+
+    template <typename T>
+    double add_new(stat& st, T new_value) {
+        if (std::isfinite(new_value)) {
+            st.total_sum += new_value;
+            st.total_square_sum += new_value * new_value;
+            ++st.m_valid_count;
+            double mean = st.total_sum / st.m_valid_count;
+            double stddev = std::sqrt((st.total_square_sum - mean * mean * st.m_valid_count) / (st.m_valid_count - 1));
+            return (new_value - mean) / stddev;
+        } else {
+            return NAN;
+        }
+    }
+
+    void set_row_size(int row) {}
+};
+
+struct rolling_score_rb_range {
+    struct stat {
+        double total_sum{0};
+        int m_valid_count{0};
+    };
+    int m_column_size;
+    std::vector<stat> stats;
+
+    explicit rolling_score_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
+
+    template <typename T, typename TOut>
+    void operator()(const T* old_row, const T* new_row, TOut* output) {
+        for (int i = 0; i < m_column_size; ++i) {
+            auto& stat = stats[i];
+            if (old_row) {
+                auto old_value = old_row[i];
+                if (std::isfinite(old_value)) {
+                    stat.total_sum -= old_value;
+                    --stat.m_valid_count;
+                }
+            }
+
+            auto new_value = new_row[i];
+            if (std::isfinite(new_value)) {
+                stat.total_sum += new_value;
+                ++stat.m_valid_count;
+                output[i] = new_value - stat.total_sum / stat.m_valid_count;
+            } else
+                output[i] = NAN;
         }
     }
 
@@ -582,6 +714,117 @@ struct rolling_decay_rb_range {
             return st.total / st.m_valid_count;
         }
         return NAN;
+    }
+};
+
+template <typename TData, typename TCmp = std::greater<TData>>
+struct rolling_mq_rb_range {
+public:
+    struct Cell {
+        int seq{-1};
+        TData data;
+
+        Cell() : data{TData()} {}
+    };
+
+    struct stat {
+        int front = 0;
+        int rear = 0;
+        int seq = -1;
+    };
+    int capacity{0};
+    int m_column_size;
+    std::vector<stat> stats;
+    std::vector<Cell> _data;
+    TCmp cmp;
+
+    explicit rolling_mq_rb_range(int column_size_) : m_column_size{column_size_} {
+        stats.resize(m_column_size);
+        cmp = TCmp();
+    }
+    void set_row_size(int row) {
+        capacity = row + 1;
+        _data.resize(capacity * m_column_size);
+    }
+
+    void push(TData value, stat& st, Cell* start_cell) {
+        int oldest_seq = st.seq - capacity + 2;
+        int ptr = st.front;
+        for (; ptr != st.rear && start_cell[ptr].seq <= oldest_seq; ptr = (ptr + 1) % capacity)
+            ;
+        st.front = ptr;
+
+        if (!isvalid(value)) {
+            ++st.seq;
+            return;
+        }
+
+        ptr = (st.rear + capacity - 1) % capacity;
+        int end_ptr = (st.front + capacity - 1) % capacity;
+        for (; ptr != end_ptr && cmp(start_cell[ptr].data, value); ptr = (ptr + capacity - 1) % capacity)
+            ;
+        ptr = (ptr + 1) % capacity;
+
+        auto& cell = start_cell[ptr];
+        cell.seq = ++st.seq;
+        cell.data = value;
+        st.rear = (ptr + 1) % capacity;
+    }
+
+    float top_index(stat& st, Cell* start_cell) {
+        if (st.front == st.rear) return NAN;
+        return st.seq - start_cell[st.front].seq;
+    }
+
+    TData top(stat& st, Cell* start_cell) {
+        if (st.front == st.rear) return get_nan<TData>();
+        return start_cell[st.front].data;
+    }
+};
+
+template <typename TData, typename TCmp = std::greater<TData>>
+struct rolling_mq_index_rb_range : public rolling_mq_rb_range<TData, TCmp> {
+    using rolling_mq_rb_range<TData, TCmp>::m_column_size;
+    using rolling_mq_rb_range<TData, TCmp>::stats;
+    using rolling_mq_rb_range<TData, TCmp>::Cell;
+    using rolling_mq_rb_range<TData, TCmp>::_data;
+    using rolling_mq_rb_range<TData, TCmp>::capacity;
+    using rolling_mq_rb_range<TData, TCmp>::push;
+    using rolling_mq_rb_range<TData, TCmp>::top_index;
+
+    explicit rolling_mq_index_rb_range(int column_size_) : rolling_mq_rb_range<TData, TCmp>(column_size_) {}
+
+    template <typename T, typename TOut>
+    void operator()(const T* old_row, const T* new_row, TOut* output) {
+        for (int i = 0; i < m_column_size; ++i) {
+            auto& st = stats[i];
+            auto* start_cell = _data.data() + i * capacity;
+            push(new_row[i], st, start_cell);
+            output[i] = top_index(st, start_cell);
+        }
+    }
+};
+
+template <typename TData, typename TCmp = std::greater<TData>>
+struct rolling_mq_value_rb_range : public rolling_mq_rb_range<TData, TCmp> {
+    using rolling_mq_rb_range<TData, TCmp>::m_column_size;
+    using rolling_mq_rb_range<TData, TCmp>::stats;
+    using rolling_mq_rb_range<TData, TCmp>::Cell;
+    using rolling_mq_rb_range<TData, TCmp>::_data;
+    using rolling_mq_rb_range<TData, TCmp>::capacity;
+    using rolling_mq_rb_range<TData, TCmp>::push;
+    using rolling_mq_rb_range<TData, TCmp>::top;
+
+    explicit rolling_mq_value_rb_range(int column_size_) : rolling_mq_rb_range<TData, TCmp>(column_size_) {}
+
+    template <typename T, typename TOut>
+    void operator()(const T* old_row, const T* new_row, TOut* output) {
+        for (int i = 0; i < m_column_size; ++i) {
+            auto& st = stats[i];
+            auto* start_cell = _data.data() + i * capacity;
+            push(new_row[i], st, start_cell);
+            output[i] = top(st, start_cell);
+        }
     }
 };
 
