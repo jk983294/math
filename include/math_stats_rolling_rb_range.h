@@ -1,6 +1,7 @@
 #ifndef ORNATE_MATH_STATS_ROLLING_RB_RANGE_H
 #define ORNATE_MATH_STATS_ROLLING_RB_RANGE_H
 
+#include <algorithm>
 #include <functional>
 #include "math_utils.h"
 
@@ -659,7 +660,6 @@ struct rolling_decay_rb_range {
     struct stat {
         double total_x1{0}, total{0};
         int m_valid_count{0}, m_valid_x1_count{0};
-        ;
     };
     int m_column_size;
     int m_row_size{0};  // window size
@@ -825,6 +825,117 @@ struct rolling_mq_value_rb_range : public rolling_mq_rb_range<TData, TCmp> {
             push(new_row[i], st, start_cell);
             output[i] = top(st, start_cell);
         }
+    }
+};
+
+template <typename T>
+struct rolling_rank_rb_range {
+public:
+    struct SortItem {
+        T data = T();
+        int seq{-1};
+        SortItem() = default;
+        explicit SortItem(T data_, int seq_) : data{data_}, seq{seq_} {}
+        bool operator<(const SortItem& a) const { return data < a.data; }
+        bool operator==(const SortItem& a) const { return data == a.data && seq == a.seq; }
+        bool operator<(const T a) const { return data < a; }
+        bool operator==(const T a) const { return data == a; }
+    };
+
+    struct stat {
+        int m_valid_count = 0;
+    };
+    int window_size{0}, m_count{0};
+    int m_column_size;
+    std::vector<stat> stats;
+    std::vector<SortItem> m_sorted_data_;
+
+    explicit rolling_rank_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
+    void set_row_size(int row) {
+        window_size = row + 1;
+        m_sorted_data_.resize(row * m_column_size);
+    }
+
+    template <typename TOut>
+    void operator()(const T* old_row, const T* new_row, TOut* output) {
+        ++m_count;
+        for (int i = 0; i < m_column_size; ++i) {
+            auto& st = stats[i];
+            auto* start_sorted_data = m_sorted_data_.data() + i * (window_size - 1);
+
+            T old_value = get_nan<T>();
+            if (old_row) old_value = old_row[i];
+            output[i] = calc(new_row[i], old_value, st, start_sorted_data);
+        }
+    }
+
+    double calc(T new_value, T old_value, stat& st, SortItem* start_sorted_data) {
+        int idx = -1, lower = -1;
+        if (m_count >= window_size) {
+            if (isvalid(old_value)) {
+                int insert_pos_index = find_insert_point(start_sorted_data, st, old_value, m_count - window_size);
+
+                if (isvalid(new_value)) {
+                    if (new_value > old_value) {
+                        idx = insert_right(start_sorted_data, st, new_value, insert_pos_index);
+                    } else {
+                        idx = insert_left(start_sorted_data, st, new_value, insert_pos_index);
+                    }
+
+                    lower = lower_bound(start_sorted_data, new_value, idx);
+                } else {
+                    std::rotate(start_sorted_data + insert_pos_index, start_sorted_data + insert_pos_index + 1,
+                                start_sorted_data + st.m_valid_count);
+                    --st.m_valid_count;
+                }
+            } else {
+                if (isvalid(new_value)) {
+                    idx = insert_left(start_sorted_data, st, new_value, st.m_valid_count);
+                    lower = lower_bound(start_sorted_data, new_value, idx);
+                    st.m_valid_count++;
+                }
+            }
+        } else {
+            if (isvalid(new_value)) {
+                idx = insert_left(start_sorted_data, st, new_value, st.m_valid_count);
+                lower = lower_bound(start_sorted_data, new_value, idx);
+                st.m_valid_count++;
+            }
+        }
+
+        if (idx >= 0 && st.m_valid_count > 1)
+            return (lower + idx) / (2.0 * (st.m_valid_count - 1));
+        else
+            return NAN;
+    }
+
+    int lower_bound(SortItem* start_sorted_data, T data, int idx) {
+        while (idx >= 0 && start_sorted_data[idx].data == data) --idx;
+        return idx + 1;
+    }
+
+    int insert_left(SortItem* start_sorted_data, stat& st, T data, int idx) {
+        start_sorted_data[idx].data = data;
+        start_sorted_data[idx].seq = m_count - 1;
+        auto itr = std::upper_bound(start_sorted_data, start_sorted_data + idx, start_sorted_data[idx]);
+        std::rotate(itr, start_sorted_data + idx, start_sorted_data + idx + 1);
+        return itr - start_sorted_data;
+    }
+
+    int insert_right(SortItem* start_sorted_data, stat& st, T data, int idx) {
+        start_sorted_data[idx].data = data;
+        start_sorted_data[idx].seq = m_count - 1;
+        auto itr =
+            std::upper_bound(start_sorted_data + idx, start_sorted_data + st.m_valid_count, start_sorted_data[idx]);
+        std::rotate(start_sorted_data + idx, start_sorted_data + idx + 1, itr);
+        return int(itr - start_sorted_data) - 1;
+    }
+
+    int find_insert_point(SortItem* start_sorted_data, stat& st, T data, int seq) {
+        auto itr = std::lower_bound(start_sorted_data, start_sorted_data + st.m_valid_count, data);
+        int pos = itr - start_sorted_data;
+        while (pos < st.m_valid_count && start_sorted_data[pos].seq != seq && start_sorted_data[pos].data == seq) pos++;
+        return pos;
     }
 };
 

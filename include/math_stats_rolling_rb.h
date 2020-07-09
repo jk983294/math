@@ -346,6 +346,126 @@ struct rolling_kurtosis_rb : public rolling_rb_base<double> {
     }
 };
 
+template <typename T>
+struct rolling_rank_rb {
+    struct SortItem {
+        T data = T();
+        int seq{-1};
+        SortItem() = default;
+        explicit SortItem(T data_, int seq_) : data{data_}, seq{seq_} {}
+        bool operator<(const SortItem& a) const { return data < a.data; }
+        bool operator==(const SortItem& a) const { return data == a.data && seq == a.seq; }
+        bool operator<(const T a) const { return data < a; }
+        bool operator==(const T a) const { return data == a; }
+    };
+
+    int window_size;
+    int m_count{0}, m_valid_count{0};
+    int m_head_index{0};
+    std::vector<T> m_container;
+    std::vector<SortItem> m_sorted_data;
+
+    explicit rolling_rank_rb(int size) : window_size{size + 1} {
+        m_container.resize(window_size, T());
+        m_sorted_data.resize(size);
+    }
+
+    int get_old_index() {
+        int old_index = m_head_index - window_size;
+        if (old_index < 0) old_index += window_size;
+        return old_index;
+    }
+
+    /**
+     * upper_bound 向左找到比data大的位置，然后 rotate 把 m_sorted_data[idx] 挪到该位置
+     * 每次找比data大的位置插入，这样还保证了seq维度上的stable insert
+     * @return idx where new data reside
+     */
+    int insert_left(T data, int idx) {
+        m_sorted_data[idx].data = data;
+        m_sorted_data[idx].seq = m_count - 1;
+        auto itr = std::upper_bound(m_sorted_data.begin(), m_sorted_data.begin() + idx, m_sorted_data[idx]);
+        std::rotate(itr, m_sorted_data.begin() + idx, m_sorted_data.begin() + idx + 1);
+        return itr - m_sorted_data.begin();
+    }
+
+    /**
+     * upper_bound 向右找到比data大的位置，然后 rotate 把 m_sorted_data[idx] 挪到该位置
+     * 每次找比data大的位置插入，这样还保证了seq维度上的stable insert
+     * @return idx where new data reside
+     */
+    int insert_right(T data, int idx) {
+        m_sorted_data[idx].data = data;
+        m_sorted_data[idx].seq = m_count - 1;
+        auto itr =
+            std::upper_bound(m_sorted_data.begin() + idx, m_sorted_data.begin() + m_valid_count, m_sorted_data[idx]);
+        std::rotate(m_sorted_data.begin() + idx, m_sorted_data.begin() + idx + 1, itr);
+        return int(itr - m_sorted_data.begin()) - 1;
+    }
+
+    int find_insert_point(T data, int seq) {
+        auto itr = std::lower_bound(m_sorted_data.begin(), m_sorted_data.begin() + m_valid_count, data);
+        int pos = itr - m_sorted_data.begin();
+        while (pos < m_valid_count && m_sorted_data[pos].seq != seq && m_sorted_data[pos].data == seq) pos++;
+        return pos;
+    }
+
+    /**
+     * 因为新插入的值是在相等值的最右边(stable sort)，向前找到地一个不等于它的位置 + 1就是 lower bound
+     */
+    int lower_bound(T data, int idx) {
+        while (idx >= 0 && m_sorted_data[idx].data == data) --idx;
+        return idx + 1;
+    }
+
+    double operator()(T new_value) {
+        m_container[m_head_index++] = new_value;
+        ++m_count;
+
+        int idx = -1, lower = -1;
+        if (m_count >= window_size) {
+            int old_index = get_old_index();
+            T old_value = m_container[old_index];
+            if (isvalid(old_value)) {
+                int insert_pos_index = find_insert_point(old_value, m_count - window_size);
+
+                if (isvalid(new_value)) {
+                    if (new_value > old_value) {
+                        idx = insert_right(new_value, insert_pos_index);
+                    } else {
+                        idx = insert_left(new_value, insert_pos_index);
+                    }
+
+                    lower = lower_bound(new_value, idx);
+                } else {
+                    // as new_value is NAN, move back data one step forward
+                    std::rotate(m_sorted_data.begin() + insert_pos_index, m_sorted_data.begin() + insert_pos_index + 1,
+                                m_sorted_data.begin() + m_valid_count);
+                    --m_valid_count;
+                }
+            } else {
+                if (isvalid(new_value)) {
+                    idx = insert_left(new_value, m_valid_count);
+                    lower = lower_bound(new_value, idx);
+                    m_valid_count++;
+                }
+            }
+        } else {  // 数据还不够，直接 insert sort
+            if (isvalid(new_value)) {
+                idx = insert_left(new_value, m_valid_count);
+                lower = lower_bound(new_value, idx);
+                m_valid_count++;
+            }
+        }
+
+        if (m_head_index == window_size) m_head_index = 0;
+        if (idx >= 0 && m_valid_count > 1)
+            return (lower + idx) / (2.0 * (m_valid_count - 1));
+        else
+            return NAN;
+    }
+};
+
 }  // namespace ornate
 
 #endif
