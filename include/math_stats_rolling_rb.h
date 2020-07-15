@@ -1,6 +1,8 @@
 #ifndef ORNATE_MATH_STATS_ROLLING_RB_H
 #define ORNATE_MATH_STATS_ROLLING_RB_H
 
+#include <algorithm>
+#include <functional>
 #include "math_utils.h"
 
 namespace ornate {
