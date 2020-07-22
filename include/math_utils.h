@@ -3,6 +3,7 @@
 
 #include <deque>
 #include <limits>
+#include <string>
 #include <vector>
 #include "math_type.h"
 
@@ -24,6 +25,11 @@ bool FloatEqual(T1 a, T2 b) {
     } else {
         return false;
     }
+}
+
+inline double round_up(double value, int decimal_places) {
+    const double multiplier = std::pow(10.0, decimal_places);
+    return static_cast<double>(std::lround(value * multiplier + .5)) / multiplier;
 }
 }  // namespace ornate
 
