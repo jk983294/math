@@ -939,6 +939,68 @@ public:
     }
 };
 
+struct rolling_regression2_rb_range {
+    struct stat {
+        double sum_x{0}, sum_y{0}, sum_x2{0}, sum_xy{0};
+        double a{NAN}, b{NAN};
+        int m_valid_count{0};
+
+        void calc() {
+            if (m_valid_count > 1) {
+                b = (m_valid_count * sum_xy - sum_x * sum_y) / (m_valid_count * sum_x2 - sum_x * sum_x);
+                a = (sum_y - b * sum_x) / m_valid_count;
+            } else {
+                a = NAN;
+                b = NAN;
+            }
+        }
+    };
+    int m_column_size;
+    std::vector<stat> stats;
+
+    explicit rolling_regression2_rb_range(int column_size_) : m_column_size{column_size_} {
+        stats.resize(m_column_size);
+    }
+
+    template <typename T, typename TOut>
+    void operator()(const T* old_y, const T* old_x, const T* new_y, const T* new_x, TOut* a, TOut* b) {
+        for (int i = 0; i < m_column_size; ++i) {
+            auto& st = stats[i];
+            if (old_y) {
+                delete_old(st, old_y[i], old_x[i]);
+            }
+            add_new(st, new_y[i], new_x[i]);
+            a[i] = st.a;
+            b[i] = st.b;
+        }
+    }
+
+    template <typename T>
+    void delete_old(stat& st, T old_y, T old_x) {
+        if (std::isfinite(old_y) && std::isfinite(old_x)) {
+            st.sum_x -= old_x;
+            st.sum_y -= old_y;
+            st.sum_x2 -= old_x * old_x;
+            st.sum_xy -= old_y * old_x;
+            --st.m_valid_count;
+        }
+    }
+    template <typename T>
+    void add_new(stat& st, T y, T x) {
+        if (std::isfinite(y) && std::isfinite(x)) {
+            st.sum_x += x;
+            st.sum_y += y;
+            st.sum_x2 += x * x;
+            st.sum_xy += x * y;
+            ++st.m_valid_count;
+        }
+
+        st.calc();
+    }
+
+    void set_row_size(int row) {}
+};
+
 }  // namespace ornate
 
 #endif

@@ -228,6 +228,8 @@ bool _regression(const T *y, const T *x, size_t num, OUT T *a, OUT T *b, OUT T *
         valid_num++;
     }
     if (valid_num < 2) {
+        *a = NAN;
+        *b = NAN;
         return false;
     }
     T mx = mean(nx.data(), valid_num);

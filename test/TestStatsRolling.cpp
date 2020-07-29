@@ -8,6 +8,7 @@ using namespace std;
 using namespace ornate;
 
 static vector<double> x = {1, 2, NAN, 3, NAN, NAN, 4, 5.5, 6, 7, NAN, 8, 9};
+static vector<double> x1 = {3, 2, NAN, 1, NAN, NAN, 5, 3.5, 7, 6, NAN, 5, 7};
 static vector<double> data{1, 2, 3, 4, 5, 6};
 static vector<double> data2{6, 5, 4, 3, 2, 1};
 static vector<double> weight{1, 1, 1, 1, 1, 1};
@@ -473,4 +474,63 @@ TEST_CASE("rank rolling nan", "[MathStatsRolling]") {
     test_rank_by_window(datum, 4);
     test_rank_by_window(datum, 5);
     test_rank_by_window(datum, 6);
+}
+
+void test_regression_by_window(const vector<double>& x_, const vector<double>& y_, int window) {
+    regression2_rolling rr(window);
+    vector<double> _x, _y;
+    rolling_regression2_rb rrrb(window);
+
+    rolling_data_container<> container(window, 2);
+    rolling_data_container<> container2(window, 2);
+    vector<double> row(2, 0);
+    vector<double> row2(2, 0);
+    rolling_regression2_rb_range rrrr(2);
+    rrrr.set_row_size(window);
+
+    double ret = 0;
+    for (size_t i = 0; i < x_.size(); ++i) {
+        if (_x.size() < (size_t)window) {
+            _x.push_back(x_[i]);
+            _y.push_back(y_[i]);
+        } else {
+            for (int j = 1; j < window; ++j) {
+                _x[j - 1] = _x[j];
+                _y[j - 1] = _y[j];
+            }
+            _x[window - 1] = x_[i];
+            _y[window - 1] = y_[i];
+        }
+
+        double a, b, R;
+        ornate::regression(_y, _x, &a, &b, &R);
+
+        rr(y_[i], x_[i]);
+        rrrb(y_[i], x_[i]);
+
+        REQUIRE(FloatEqual(rr.a, a));
+        REQUIRE(FloatEqual(rr.b, b));
+        REQUIRE(FloatEqual(rrrb.a, a));
+        REQUIRE(FloatEqual(rrrb.b, b));
+
+        row[0] = y_[i];
+        row[1] = y_[i];
+        container.push(row);
+        row2[0] = x_[i];
+        row2[1] = x_[i];
+        container2.push(row2);
+        rrrr(container.get_old_row(), container2.get_old_row(), container.get_new_row(), container2.get_new_row(),
+             row.data(), row2.data());
+        REQUIRE(FloatEqual(row[0], a));
+        REQUIRE(FloatEqual(row[1], a));
+        REQUIRE(FloatEqual(row2[0], b));
+        REQUIRE(FloatEqual(row2[1], b));
+    }
+}
+
+TEST_CASE("regression rolling nan", "[MathStatsRolling]") {
+    test_regression_by_window(x, x1, 3);
+    test_regression_by_window(x, x1, 4);
+    test_regression_by_window(x, x1, 5);
+    test_regression_by_window(x, x1, 6);
 }

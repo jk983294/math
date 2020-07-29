@@ -322,6 +322,50 @@ struct mean_rolling {
     }
 };
 
+struct regression2_rolling {
+    // y = a + b * x
+    double sum_x{0}, sum_y{0}, sum_x2{0}, sum_xy{0};
+    double a{NAN}, b{NAN};
+    int m_count{0}, m_valid_count{0};
+    std::deque<std::pair<double, double>> m_data;
+    int window_size;
+
+    explicit regression2_rolling(int size) : window_size{size} {}
+
+    void operator()(double y, double x) {
+        m_data.emplace_back(y, x);
+        ++m_count;
+
+        if (m_count > window_size) {
+            auto old_value = m_data.front();
+            m_data.pop_front();
+
+            if (isfinite(old_value.first) && isfinite(old_value.second)) {
+                sum_x -= old_value.second;
+                sum_y -= old_value.first;
+                sum_x2 -= old_value.second * old_value.second;
+                sum_xy -= old_value.first * old_value.second;
+                --m_valid_count;
+            }
+        }
+
+        if (isfinite(x) && isfinite(y)) {
+            sum_x += x;
+            sum_y += y;
+            sum_x2 += x * x;
+            sum_xy += x * y;
+            ++m_valid_count;
+        }
+        if (m_valid_count > 1) {
+            b = (m_valid_count * sum_xy - sum_x * sum_y) / (m_valid_count * sum_x2 - sum_x * sum_x);
+            a = (sum_y - b * sum_x) / m_valid_count;
+        } else {
+            a = NAN;
+            b = NAN;
+        }
+    }
+};
+
 }  // namespace ornate
 
 #endif

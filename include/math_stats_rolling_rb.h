@@ -468,6 +468,60 @@ struct rolling_rank_rb {
     }
 };
 
+struct rolling_regression2_rb {
+    double sum_x{0}, sum_y{0}, sum_x2{0}, sum_xy{0};
+    double a{NAN}, b{NAN};
+    int window_size;
+    int m_count{0}, m_valid_count{0};
+    int m_head_index{0};
+    std::vector<std::pair<double, double>> m_container;
+
+    rolling_regression2_rb(int size) : window_size{size + 1} {
+        m_container.resize(window_size, std::pair<double, double>());
+    }
+
+    void delete_old() {
+        int old_index = m_head_index - window_size;
+        if (old_index < 0) old_index += window_size;
+        const auto& old_value = m_container[old_index];
+        if (std::isfinite(old_value.first) && std::isfinite(old_value.second)) {
+            sum_x -= old_value.second;
+            sum_y -= old_value.first;
+            sum_x2 -= old_value.second * old_value.second;
+            sum_xy -= old_value.first * old_value.second;
+            --m_valid_count;
+        }
+    }
+    void add_new() {
+        const auto& new_value = m_container[m_head_index - 1];
+        if (std::isfinite(new_value.first) && std::isfinite(new_value.second)) {
+            sum_x += new_value.second;
+            sum_y += new_value.first;
+            sum_x2 += new_value.second * new_value.second;
+            sum_xy += new_value.first * new_value.second;
+            ++m_valid_count;
+        }
+
+        if (m_valid_count > 1) {
+            b = (m_valid_count * sum_xy - sum_x * sum_y) / (m_valid_count * sum_x2 - sum_x * sum_x);
+            a = (sum_y - b * sum_x) / m_valid_count;
+        } else {
+            a = NAN;
+            b = NAN;
+        }
+    }
+    void operator()(double y, double x) {
+        m_container[m_head_index++] = {y, x};
+        ++m_count;
+
+        if (m_count >= window_size) {
+            delete_old();
+        }
+        add_new();
+        if (m_head_index == window_size) m_head_index = 0;
+    }
+};
+
 }  // namespace ornate
 
 #endif

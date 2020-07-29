@@ -29,13 +29,13 @@ int main() {
     vec x = solve(A, b);  // throw if no solution found
     cout << A << endl;
     cout << b << endl;
-    cout << x << endl;
+    cout << x << endl;  // [2, 1, -1]^T
 
     vec x2;
     bool status = solve(x2, A, b);  // no throw
     cout << "status=" << status << endl;
     cout << A << endl;
     cout << b << endl;
-    cout << x2 << endl;
+    cout << x2 << endl;  // [2, 1, -1]^T
     return 0;
 }
