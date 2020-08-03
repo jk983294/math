@@ -52,3 +52,27 @@ TEST_CASE("regression", "[MathStats]") {
     REQUIRE(FloatEqual(b, -1.0));
     REQUIRE(FloatEqual(R, 1.0));
 }
+
+/**
+ * y = -1 + 2 * x1 + 1 * x2
+ */
+TEST_CASE("regression3", "[MathStats]") {
+    float b0, b1, b2;
+    //    vector<float> x1 = {3, 4, 5, 6, 2};
+    //    vector<float> x2 = {8, 5, 7, 3, 1};
+    //    vector<float> y = {-3.7, 3.5, 2.5, 11.5, 5.7};
+
+    vector<float> x1 = {0, 1, 2, 0, 0, 1, 1, 2, 2};
+    vector<float> x2 = {0, 0, 0, 1, 2, 1., 2, 1, 2};
+    vector<float> y(x1.size(), 0);
+    vector<float> coeff = {-1, 2, 1};
+    for (std::size_t i = 0; i < x1.size(); ++i) {
+        y[i] = coeff[0] + coeff[1] * x1[i] + coeff[2] * x2[i];
+    }
+    bool ret = ornate::regression3(y, x1, x2, &b0, &b1, &b2);
+    cout << setprecision(12) << b0 << " " << b1 << " " << b2 << endl;
+    REQUIRE(ret);
+    REQUIRE(FloatEqual(b0, coeff[0]));
+    REQUIRE(FloatEqual(b1, coeff[1]));
+    REQUIRE(FloatEqual(b2, coeff[2]));
+}

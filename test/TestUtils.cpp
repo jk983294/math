@@ -20,5 +20,5 @@ TEST_CASE("equal", "[MathStats]") {
     REQUIRE(!FloatEqual(a, b));
     REQUIRE(FloatEqual(c, d));
     REQUIRE(FloatEqual(NAN, NAN));
-    REQUIRE(!FloatEqual(INFINITY, INFINITY));
+    REQUIRE(FloatEqual(INFINITY, INFINITY));
 }

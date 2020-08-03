@@ -262,6 +262,51 @@ template <typename T = float>
 bool regression(const std::vector<T> &y, const std::vector<T> &x, OUT T *a, OUT T *b, OUT T *R = nullptr) {
     return _regression(&y[0], &x[0], x.size(), a, b, R);
 }
+
+/**
+ * y = b0 + b1 * x1 + b2 * x2
+ */
+template <typename T = float>
+inline bool regression3(const std::vector<T> &y, const std::vector<T> &x1, const std::vector<T> &x2, OUT T *b0,
+                        OUT T *b1, OUT T *b2) {
+    size_t valid_num = 0;
+    double sum_x12 = 0, sum_x1_2 = 0, sum_x2_2 = 0, sum_y_2 = 0, sum_x1 = 0, sum_x2 = 0, sum_y = 0, sum_x1y = 0,
+           sum_x2y = 0;
+    for (size_t i = 0; i < y.size(); i++) {
+        if (!isfinite(y[i]) || !isfinite(x1[i]) || !isfinite(x2[i])) continue;
+        sum_x12 += x1[i] * x2[i];
+        sum_x1_2 += x1[i] * x1[i];
+        sum_x2_2 += x2[i] * x2[i];
+        sum_y_2 += y[i] * y[i];
+        sum_x1y += x1[i] * y[i];
+        sum_x2y += x2[i] * y[i];
+        sum_x1 += x1[i];
+        sum_x2 += x2[i];
+        sum_y += y[i];
+        valid_num++;
+    }
+
+    if (valid_num < 3) {
+        *b0 = NAN;
+        *b1 = NAN;
+        *b2 = NAN;
+        return false;
+    }
+    double sum_X1_2 = sum_x1_2 - sum_x1 * sum_x1 / valid_num;
+    double sum_X2_2 = sum_x2_2 - sum_x2 * sum_x2 / valid_num;
+    double sum_X1Y = sum_x1y - sum_x1 * sum_y / valid_num;
+    double sum_X2Y = sum_x2y - sum_x2 * sum_y / valid_num;
+    double sum_X12 = sum_x12 - sum_x1 * sum_x2 / valid_num;
+
+    double denominator = sum_X1_2 * sum_X2_2 - sum_X12 * sum_X12;
+    double b1_ = (sum_X2_2 * sum_X1Y - sum_X12 * sum_X2Y) / denominator;
+    double b2_ = (sum_X1_2 * sum_X2Y - sum_X12 * sum_X1Y) / denominator;
+    double b0_ = (sum_y - b1_ * sum_x1 - b2_ * sum_x2) / valid_num;
+    *b0 = b0_;
+    *b1 = b1_;
+    *b2 = b2_;
+    return true;
+}
 }  // namespace ornate
 
 #endif
