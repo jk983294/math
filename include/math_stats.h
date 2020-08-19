@@ -307,6 +307,25 @@ inline bool regression3(const std::vector<T> &y, const std::vector<T> &x1, const
     *b2 = b2_;
     return true;
 }
+template <typename T = float>
+T quantile(T *data, int size, double q) {
+    auto itr = std::partition(data, data + size, [](auto i) { return std::isfinite(i); });
+    int valid_count = itr - data;
+    if (valid_count <= 0) return NAN;
+
+    long nth = std::lround(std::floor(valid_count * q));
+    if (nth < 0)
+        nth = 0;
+    else if (nth >= valid_count)
+        nth = valid_count - 1;
+    std::nth_element(data, data + nth, data + valid_count);
+    return data[nth];
+}
+
+template <typename T = float>
+T quantile(std::vector<T> &data, double q) {
+    return quantile(data.data(), data.size(), q);
+}
 }  // namespace ornate
 
 #endif

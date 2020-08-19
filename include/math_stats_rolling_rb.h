@@ -349,7 +349,7 @@ struct rolling_kurtosis_rb : public rolling_rb_base<double> {
 };
 
 template <typename T>
-struct rolling_rank_rb {
+struct rolling_rank_base_rb {
     struct SortItem {
         T data = T();
         int seq{-1};
@@ -367,7 +367,7 @@ struct rolling_rank_rb {
     std::vector<T> m_container;
     std::vector<SortItem> m_sorted_data;
 
-    explicit rolling_rank_rb(int size) : window_size{size + 1} {
+    explicit rolling_rank_base_rb(int size) : window_size{size + 1} {
         m_container.resize(window_size, T());
         m_sorted_data.resize(size);
     }
@@ -420,7 +420,7 @@ struct rolling_rank_rb {
         return idx + 1;
     }
 
-    double operator()(T new_value) {
+    std::pair<int, int> handle(T new_value) {
         m_container[m_head_index++] = new_value;
         ++m_count;
 
@@ -461,9 +461,46 @@ struct rolling_rank_rb {
         }
 
         if (m_head_index == window_size) m_head_index = 0;
+        return {lower, idx};
+    }
+};
+
+template <typename T>
+struct rolling_rank_rb : public rolling_rank_base_rb<T> {
+    explicit rolling_rank_rb(int size) : rolling_rank_base_rb<T>(size) {}
+
+    using rolling_rank_base_rb<T>::m_valid_count;
+    using rolling_rank_base_rb<T>::handle;
+
+    double operator()(T new_value) {
+        int lower, idx;
+        std::tie(lower, idx) = handle(new_value);
         if (idx >= 0 && m_valid_count > 1)
             return (lower + idx) / (2.0 * (m_valid_count - 1));
         else
+            return NAN;
+    }
+};
+
+template <typename T>
+struct rolling_quantile_rb : public rolling_rank_base_rb<T> {
+    double percent{0};
+    explicit rolling_quantile_rb(int size, double percent_) : rolling_rank_base_rb<T>(size), percent{percent_} {}
+
+    using rolling_rank_base_rb<T>::m_valid_count;
+    using rolling_rank_base_rb<T>::handle;
+    using rolling_rank_base_rb<T>::m_sorted_data;
+
+    double operator()(T new_value) {
+        handle(new_value);
+        if (m_valid_count > 0) {
+            long nth = std::lround(std::floor(m_valid_count * percent));
+            if (nth < 0)
+                nth = 0;
+            else if (nth >= m_valid_count)
+                nth = m_valid_count - 1;
+            return m_sorted_data[nth].data;
+        } else
             return NAN;
     }
 };

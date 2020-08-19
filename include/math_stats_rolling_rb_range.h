@@ -726,7 +726,7 @@ struct rolling_mq_value_rb_range : public rolling_mq_rb_range<TData, TCmp> {
 };
 
 template <typename T>
-struct rolling_rank_rb_range {
+struct rolling_rank_base_rb_range {
 public:
     struct SortItem {
         T data = T();
@@ -747,26 +747,13 @@ public:
     std::vector<stat> stats;
     std::vector<SortItem> m_sorted_data_;
 
-    explicit rolling_rank_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
+    explicit rolling_rank_base_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
     void set_row_size(int row) {
         window_size = row + 1;
         m_sorted_data_.resize(row * m_column_size);
     }
 
-    template <typename TOut>
-    void operator()(const T* old_row, const T* new_row, TOut* output) {
-        ++m_count;
-        for (int i = 0; i < m_column_size; ++i) {
-            auto& st = stats[i];
-            auto* start_sorted_data = m_sorted_data_.data() + i * (window_size - 1);
-
-            T old_value = get_nan<T>();
-            if (old_row) old_value = old_row[i];
-            output[i] = calc(new_row[i], old_value, st, start_sorted_data);
-        }
-    }
-
-    double calc(T new_value, T old_value, stat& st, SortItem* start_sorted_data) {
+    std::tuple<int, int, int> handle(T new_value, T old_value, stat& st, SortItem* start_sorted_data) {
         int idx = -1, lower = -1;
         if (m_count >= window_size) {
             if (isvalid(old_value)) {
@@ -800,10 +787,7 @@ public:
             }
         }
 
-        if (idx >= 0 && st.m_valid_count > 1)
-            return (lower + idx) / (2.0 * (st.m_valid_count - 1));
-        else
-            return NAN;
+        return {lower, idx, st.m_valid_count};
     }
 
     int lower_bound(SortItem* start_sorted_data, T data, int idx) {
@@ -833,6 +817,74 @@ public:
         int pos = itr - start_sorted_data;
         while (pos < st.m_valid_count && start_sorted_data[pos].seq != seq && start_sorted_data[pos].data == seq) pos++;
         return pos;
+    }
+};
+
+template <typename T>
+struct rolling_rank_rb_range : public rolling_rank_base_rb_range<T> {
+    using rolling_rank_base_rb_range<T>::m_count;
+    using rolling_rank_base_rb_range<T>::m_column_size;
+    using rolling_rank_base_rb_range<T>::stats;
+    using rolling_rank_base_rb_range<T>::m_sorted_data_;
+    using rolling_rank_base_rb_range<T>::window_size;
+    using rolling_rank_base_rb_range<T>::handle;
+
+    explicit rolling_rank_rb_range(int size) : rolling_rank_base_rb_range<T>(size) {}
+
+    template <typename TOut>
+    void operator()(const T* old_row, const T* new_row, TOut* output) {
+        ++m_count;
+        for (int i = 0; i < m_column_size; ++i) {
+            auto& st = stats[i];
+            auto* start_sorted_data = m_sorted_data_.data() + i * (window_size - 1);
+
+            T old_value = get_nan<T>();
+            if (old_row) old_value = old_row[i];
+            int lower, idx, _valid_count;
+            std::tie(lower, idx, _valid_count) = handle(new_row[i], old_value, st, start_sorted_data);
+            if (idx >= 0 && _valid_count > 1)
+                output[i] = (lower + idx) / (2.0 * (_valid_count - 1));
+            else
+                output[i] = NAN;
+        }
+    }
+};
+
+template <typename T>
+struct rolling_quantile_rb_range : public rolling_rank_base_rb_range<T> {
+    using rolling_rank_base_rb_range<T>::m_count;
+    using rolling_rank_base_rb_range<T>::m_column_size;
+    using rolling_rank_base_rb_range<T>::stats;
+    using rolling_rank_base_rb_range<T>::m_sorted_data_;
+    using rolling_rank_base_rb_range<T>::window_size;
+    using rolling_rank_base_rb_range<T>::handle;
+    double percent{0};
+
+    explicit rolling_quantile_rb_range(int size, double percent_)
+        : rolling_rank_base_rb_range<T>(size), percent{percent_} {}
+
+    template <typename TOut>
+    void operator()(const T* old_row, const T* new_row, TOut* output) {
+        ++m_count;
+        for (int i = 0; i < m_column_size; ++i) {
+            auto& st = stats[i];
+            auto* start_sorted_data = m_sorted_data_.data() + i * (window_size - 1);
+
+            T old_value = get_nan<T>();
+            if (old_row) old_value = old_row[i];
+            int _valid_count;
+            std::tie(std::ignore, std::ignore, _valid_count) = handle(new_row[i], old_value, st, start_sorted_data);
+
+            if (_valid_count > 0) {
+                long nth = std::lround(std::floor(_valid_count * percent));
+                if (nth < 0)
+                    nth = 0;
+                else if (nth >= _valid_count)
+                    nth = _valid_count - 1;
+                output[i] = start_sorted_data[nth].data;
+            } else
+                output[i] = NAN;
+        }
     }
 };
 

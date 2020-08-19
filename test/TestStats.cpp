@@ -1,5 +1,6 @@
 #include <math_utils.h>
 #include <iostream>
+#include <numeric>
 #include "catch.hpp"
 #include "math_stats.h"
 
@@ -75,4 +76,16 @@ TEST_CASE("regression3", "[MathStats]") {
     REQUIRE(FloatEqual(b0, coeff[0]));
     REQUIRE(FloatEqual(b1, coeff[1]));
     REQUIRE(FloatEqual(b2, coeff[2]));
+}
+
+TEST_CASE("quantile", "[MathStats]") {
+    std::vector<double> v(10);
+    std::iota(v.begin(), v.end(), 0.0);
+    REQUIRE(ornate::quantile(v, -0.1) == 0);
+    REQUIRE(ornate::quantile(v, 0.0) == 0);
+    REQUIRE(ornate::quantile(v, 0.1) == 1);
+    REQUIRE(ornate::quantile(v, 0.8) == 8);
+    REQUIRE(ornate::quantile(v, 0.9) == 9);
+    REQUIRE(ornate::quantile(v, 1.0) == 9);
+    REQUIRE(ornate::quantile(v, 1.1) == 9);
 }
