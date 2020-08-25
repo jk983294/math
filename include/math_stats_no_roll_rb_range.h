@@ -48,6 +48,7 @@ struct no_roll_mean_rb_range {
     }
 
     void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
 };
 
 struct no_roll_sum_rb_range {
@@ -92,6 +93,52 @@ struct no_roll_sum_rb_range {
     }
 
     void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
+};
+
+struct no_roll_prod_rb_range {
+    struct stat {
+        double total_prod{1};
+        int m_valid_count{0};
+        void clear() {
+            total_prod = 1;
+            m_valid_count = 0;
+        }
+        double calc() const {
+            if (m_valid_count > 0)
+                return total_prod;
+            else
+                return NAN;
+        }
+    };
+    int m_column_size;
+    std::vector<stat> stats;
+
+    explicit no_roll_prod_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
+
+    void init() {
+        for (auto& stat : stats) stat.clear();
+    }
+
+    template <typename T, typename TOut>
+    void operator()(int idx, const T* _row, TOut* output) {
+        for (int i = 0; i < m_column_size; ++i) {
+            if (std::isfinite(_row[i])) {
+                ++stats[i].m_valid_count;
+                stats[i].total_prod *= _row[i];
+            }
+        }
+    }
+
+    template <typename TOut>
+    void final_result(TOut* output) {
+        for (int i = 0; i < m_column_size; ++i) {
+            output[i] = stats[i].calc();
+        }
+    }
+
+    void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
 };
 
 struct no_roll_decay_rb_range {
@@ -116,6 +163,7 @@ struct no_roll_decay_rb_range {
     explicit no_roll_decay_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
 
     void set_row_size(int row) { m_row_size = row; }
+    void set_param(const std::string& key, const std::string& value) {}
 
     void init() {
         for (auto& stat : stats) stat.clear();
@@ -148,16 +196,21 @@ struct no_roll_variance_rb_range {
             total_square_sum = 0;
             m_valid_count = 0;
         }
-        double calc() const {
+        double calc(bool demean_) const {
             if (m_valid_count > 1) {
-                double mean = total_sum / m_valid_count;
-                return (total_square_sum - mean * mean * m_valid_count) / (m_valid_count - 1);
+                if (demean_) {
+                    double mean = total_sum / m_valid_count;
+                    return (total_square_sum - mean * mean * m_valid_count) / (m_valid_count - 1);
+                } else {
+                    return (total_square_sum) / (m_valid_count - 1);
+                }
             }
             return NAN;
         }
     };
     int m_column_size;
     std::vector<stat> stats;
+    bool demean{true};  // for some series, its mean is 0, like return, no need to - mean
 
     explicit no_roll_variance_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
 
@@ -179,11 +232,16 @@ struct no_roll_variance_rb_range {
     template <typename TOut>
     void final_result(TOut* output) {
         for (int i = 0; i < m_column_size; ++i) {
-            output[i] = stats[i].calc();
+            output[i] = stats[i].calc(demean);
         }
     }
 
     void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {
+        if (key == "demean") {
+            demean = value == "true";
+        }
+    }
 };
 
 struct no_roll_std_rb_range {
@@ -194,16 +252,21 @@ struct no_roll_std_rb_range {
             total_sum = total_square_sum = 0;
             m_valid_count = 0;
         }
-        double calc() const {
+        double calc(bool demean_) const {
             if (m_valid_count > 1) {
-                double mean = total_sum / m_valid_count;
-                return std::sqrt((total_square_sum - mean * mean * m_valid_count) / (m_valid_count - 1));
+                if (demean_) {
+                    double mean = total_sum / m_valid_count;
+                    return std::sqrt((total_square_sum - mean * mean * m_valid_count) / (m_valid_count - 1));
+                } else {
+                    return std::sqrt((total_square_sum) / (m_valid_count - 1));
+                }
             }
             return NAN;
         }
     };
     int m_column_size;
     std::vector<stat> stats;
+    bool demean{true};  // for some series, its mean is 0, like return, no need to - mean
 
     explicit no_roll_std_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
 
@@ -225,11 +288,16 @@ struct no_roll_std_rb_range {
     template <typename TOut>
     void final_result(TOut* output) {
         for (int i = 0; i < m_column_size; ++i) {
-            output[i] = stats[i].calc();
+            output[i] = stats[i].calc(demean);
         }
     }
 
     void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {
+        if (key == "demean") {
+            demean = value == "true";
+        }
+    }
 };
 
 struct no_roll_zscore_rb_range {
@@ -264,7 +332,7 @@ struct no_roll_zscore_rb_range {
         for (int i = 0; i < m_column_size; ++i) {
             if (std::isfinite(_row[i])) {
                 ++stats[i].m_valid_count;
-                stats[i].total_sum += _row[i];  // total_sum
+                stats[i].total_sum += _row[i];
                 stats[i].total_square_sum += _row[i] * _row[i];
             }
         }
@@ -281,6 +349,7 @@ struct no_roll_zscore_rb_range {
     }
 
     void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
 };
 
 struct no_roll_score_rb_range {
@@ -328,6 +397,7 @@ struct no_roll_score_rb_range {
     }
 
     void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
 };
 
 struct no_roll_cov_rb_range {
@@ -376,6 +446,7 @@ struct no_roll_cov_rb_range {
     }
 
     void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
 };
 
 struct no_roll_corr_rb_range {
@@ -432,6 +503,7 @@ struct no_roll_corr_rb_range {
     }
 
     void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
 };
 
 struct no_roll_skew_rb_range {
@@ -485,6 +557,7 @@ struct no_roll_skew_rb_range {
     }
 
     void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
 };
 
 struct no_roll_kurtosis_rb_range {
@@ -541,6 +614,7 @@ struct no_roll_kurtosis_rb_range {
     }
 
     void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
 };
 
 struct no_roll_regression2_rb_range {
@@ -598,6 +672,7 @@ struct no_roll_regression2_rb_range {
     }
 
     void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
 };
 
 struct no_roll_regression3_rb_range {
@@ -670,6 +745,7 @@ struct no_roll_regression3_rb_range {
     }
 
     void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
 };
 
 struct no_roll_ema_rb_range {
@@ -720,6 +796,58 @@ struct no_roll_ema_rb_range {
     }
 
     void set_row_size(int ts_window) { decay_coeff = 2.0f / static_cast<double>(1 + ts_window); }
+    void set_param(const std::string& key, const std::string& value) {}
+};
+
+struct no_roll_ema_hl_rb_range {
+    struct stat {
+        double total_{0}, total_w{0};
+        int m_valid_count{0};
+        void clear() {
+            total_ = total_w = 0;
+            m_valid_count = 0;
+        }
+        double calc() const {
+            if (m_valid_count > 0)
+                return total_ / total_w;
+            else
+                return NAN;
+        }
+    };
+    int m_column_size;
+    double decay_coeff{0};
+    std::vector<stat> stats;
+
+    explicit no_roll_ema_hl_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
+
+    void init() {
+        for (auto& stat : stats) stat.clear();
+    }
+
+    template <typename T, typename TOut>
+    void operator()(int idx, const T* _row, TOut* output) {
+        for (int i = 0; i < m_column_size; ++i) {
+            if (std::isfinite(_row[i])) {
+                ++stats[i].m_valid_count;
+                stats[i].total_ += _row[i] * pow(decay_coeff, idx);
+                stats[i].total_w += pow(decay_coeff, idx);
+            }
+        }
+    }
+
+    template <typename TOut>
+    void final_result(TOut* output) {
+        for (int i = 0; i < m_column_size; ++i) {
+            output[i] = stats[i].calc();
+        }
+    }
+
+    void set_row_size(int ts_window) {}
+    void set_param(const std::string& key, const std::string& value) {
+        if (key == "hl" || key == "half_life") {
+            decay_coeff = pow(0.5, 1.0 / std::stod(value));
+        }
+    }
 };
 
 }  // namespace ornate

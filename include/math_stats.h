@@ -326,6 +326,37 @@ template <typename T = float>
 T quantile(std::vector<T> &data, double q) {
     return quantile(data.data(), data.size(), q);
 }
+
+template <typename T = float>
+double ema_decay(const T *data, int n, int i, double decay) {
+    if (i < n - 1) return NAN;
+    double v = 0, w = 0;
+    for (int ii = 0; ii < n; ++ii) {
+        if (std::isfinite(data[i - ii])) {
+            v += data[i - ii] * pow(decay, ii);
+            w += pow(decay, ii);
+        }
+    }
+    return v / w;
+}
+
+template <typename T = float>
+double ema_decay(const std::vector<T> &data, int n, int i, double decay) {
+    if ((size_t)n > data.size()) return NAN;
+    return ema_decay(data.data(), n, i, decay);
+}
+
+template <typename T = float>
+double ema_hl(const T *data, int n, int i, double hl) {
+    double decay = ema_hl2decay(hl);
+    return ema_decay(data, n, i, decay);
+}
+
+template <typename T = float>
+double ema_hl(const std::vector<T> &data, int n, int i, double hl) {
+    if ((size_t)n > data.size()) return NAN;
+    return ema_hl(data.data(), n, i, hl);
+}
 }  // namespace ornate
 
 #endif

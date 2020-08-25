@@ -48,6 +48,8 @@ inline uint32_t NextPowerOf2(uint32_t n) {
 
     return 1u << count;
 }
+
+inline double ema_hl2decay(double hl) { return pow(0.5, 1.0 / hl); }
 }  // namespace ornate
 
 #endif

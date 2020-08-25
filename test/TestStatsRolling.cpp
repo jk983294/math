@@ -794,3 +794,65 @@ TEST_CASE("quantile rolling nan", "[MathStatsRolling]") {
     test_quantile_by_window(datum, 5, 0.5);
     test_quantile_by_window(datum, 6, 0.5);
 }
+
+void test_ema_hl_by_window(const vector<double>& x_, int window) {
+    rolling_ema_hl_rb rrrb(window, 4);
+    vector<double> y;
+
+    rolling_data_container<> container(window, 2);
+    vector<double> row(2, 0);
+//    rolling_quantile_rb_range<double> rqrr(2, percent);
+//    rqrr.set_row_size(window);
+
+    no_roll_ema_hl_rb_range nrqrr(2);
+    nrqrr.set_row_size(window);
+    nrqrr.set_param("hl", "4");
+
+    double ret = 0;
+    for (double d : x_) {
+        if (y.size() < (size_t)window)
+            y.push_back(d);
+        else {
+            for (int j = 1; j < window; ++j) {
+                y[j - 1] = y[j];
+            }
+            y[window - 1] = d;
+        }
+        ret = rrrb(d);
+
+//        row[0] = d;
+//        row[1] = d;
+//        container.push(row);
+//        rqrr(container.get_old_row(), container.get_new_row(), row.data());
+
+        vector<double> tmp = y;
+        double expected = ornate::ema_hl(tmp, window, window - 1, 4);
+
+        if (!FloatEqual(ret, expected)) {
+            cout << ret << " " << expected << endl;
+        }
+        REQUIRE(FloatEqual(ret, expected));
+//        REQUIRE(FloatEqual(row[0], expected));
+//        REQUIRE(FloatEqual(row[1], expected));
+
+        if (container.m_count >= window) {
+            nrqrr.init();
+            if (container.m_count >= window) {
+                for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
+                    nrqrr(ts_idx, container.get_row_by_idx(ts_idx), row.data());
+                }
+                nrqrr.final_result(row.data());
+            }
+            REQUIRE(FloatEqual(expected, row[0]));
+        }
+    }
+}
+
+TEST_CASE("ema_hl rolling nan", "[MathStatsRolling]") {
+    vector<double> datum = {1, 4, NAN, NAN, 3, 1, 6, -2, 4, NAN, 7, 2, -3, NAN, NAN, 5};
+
+    test_ema_hl_by_window(datum, 3);
+    test_ema_hl_by_window(datum, 4);
+    test_ema_hl_by_window(datum, 5);
+    test_ema_hl_by_window(datum, 6);
+}

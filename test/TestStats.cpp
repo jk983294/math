@@ -89,3 +89,9 @@ TEST_CASE("quantile", "[MathStats]") {
     REQUIRE(ornate::quantile(v, 1.0) == 9);
     REQUIRE(ornate::quantile(v, 1.1) == 9);
 }
+
+TEST_CASE("ema_hl", "[MathStats]") {
+    std::vector<double> v(10);
+    std::iota(v.begin(), v.end(), 0.0);
+    REQUIRE(FloatEqual(ornate::ema_hl(v, 5, 5, 4), 3.342143));
+}

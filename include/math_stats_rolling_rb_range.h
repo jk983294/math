@@ -43,6 +43,7 @@ struct rolling_mean_rb_range {
     }
 
     void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
 };
 
 struct rolling_sum_rb_range {
@@ -81,6 +82,7 @@ struct rolling_sum_rb_range {
     }
 
     void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
 };
 
 struct rolling_delay_rb_range {
@@ -98,6 +100,7 @@ struct rolling_delay_rb_range {
     }
 
     void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
 };
 
 struct rolling_delta_rb_range {
@@ -117,6 +120,7 @@ struct rolling_delta_rb_range {
     }
 
     void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
 };
 
 struct rolling_pct_rb_range {
@@ -136,6 +140,7 @@ struct rolling_pct_rb_range {
     }
 
     void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
 };
 
 struct rolling_variance_rb_range {
@@ -185,6 +190,7 @@ struct rolling_variance_rb_range {
     }
 
     void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
 };
 
 struct rolling_std_rb_range {
@@ -234,6 +240,7 @@ struct rolling_std_rb_range {
     }
 
     void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
 };
 
 struct rolling_zscore_rb_range {
@@ -281,6 +288,7 @@ struct rolling_zscore_rb_range {
     }
 
     void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
 };
 
 struct rolling_score_rb_range {
@@ -316,6 +324,7 @@ struct rolling_score_rb_range {
     }
 
     void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
 };
 
 struct rolling_cov_rb_range {
@@ -367,6 +376,7 @@ struct rolling_cov_rb_range {
     }
 
     void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
 };
 
 struct rolling_corr_rb_range {
@@ -431,6 +441,7 @@ struct rolling_corr_rb_range {
     }
 
     void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
 };
 
 struct rolling_skew_rb_range {
@@ -489,6 +500,7 @@ struct rolling_skew_rb_range {
     }
 
     void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
 };
 
 struct rolling_kurtosis_rb_range {
@@ -551,6 +563,7 @@ struct rolling_kurtosis_rb_range {
     }
 
     void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
 };
 
 struct rolling_decay_rb_range {
@@ -566,6 +579,7 @@ struct rolling_decay_rb_range {
     explicit rolling_decay_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
 
     void set_row_size(int row) { m_row_size = row; }
+    void set_param(const std::string& key, const std::string& value) {}
 
     template <typename T, typename TOut>
     void operator()(const T* old_row, const T* new_row, TOut* output) {
@@ -643,6 +657,7 @@ public:
         capacity = row + 1;
         _data.resize(capacity * m_column_size);
     }
+    void set_param(const std::string& key, const std::string& value) {}
 
     void push(TData value, stat& st, Cell* start_cell) {
         int oldest_seq = st.seq - capacity + 2;
@@ -668,9 +683,14 @@ public:
         st.rear = (ptr + 1) % capacity;
     }
 
-    float top_index(stat& st, Cell* start_cell) {
+    double top_index(stat& st, Cell* start_cell) {
         if (st.front == st.rear) return NAN;
         return st.seq - start_cell[st.front].seq;
+    }
+
+    double top_percent(stat& st, Cell* start_cell) {
+        if (st.front == st.rear) return NAN;
+        return double(st.seq - start_cell[st.front].seq) / (capacity - 2);
     }
 
     TData top(stat& st, Cell* start_cell) {
@@ -698,6 +718,29 @@ struct rolling_mq_index_rb_range : public rolling_mq_rb_range<TData, TCmp> {
             auto* start_cell = _data.data() + i * capacity;
             push(new_row[i], st, start_cell);
             output[i] = top_index(st, start_cell);
+        }
+    }
+};
+
+template <typename TData, typename TCmp = std::greater<TData>>
+struct rolling_mq_percent_rb_range : public rolling_mq_rb_range<TData, TCmp> {
+    using rolling_mq_rb_range<TData, TCmp>::m_column_size;
+    using rolling_mq_rb_range<TData, TCmp>::stats;
+    using rolling_mq_rb_range<TData, TCmp>::Cell;
+    using rolling_mq_rb_range<TData, TCmp>::_data;
+    using rolling_mq_rb_range<TData, TCmp>::capacity;
+    using rolling_mq_rb_range<TData, TCmp>::push;
+    using rolling_mq_rb_range<TData, TCmp>::top_percent;
+
+    explicit rolling_mq_percent_rb_range(int column_size_) : rolling_mq_rb_range<TData, TCmp>(column_size_) {}
+
+    template <typename T, typename TOut>
+    void operator()(const T* old_row, const T* new_row, TOut* output) {
+        for (int i = 0; i < m_column_size; ++i) {
+            auto& st = stats[i];
+            auto* start_cell = _data.data() + i * capacity;
+            push(new_row[i], st, start_cell);
+            output[i] = top_percent(st, start_cell);
         }
     }
 };
@@ -848,6 +891,8 @@ struct rolling_rank_rb_range : public rolling_rank_base_rb_range<T> {
                 output[i] = NAN;
         }
     }
+
+    void set_param(const std::string& key, const std::string& value) {}
 };
 
 template <typename T>
@@ -862,6 +907,7 @@ struct rolling_quantile_rb_range : public rolling_rank_base_rb_range<T> {
 
     explicit rolling_quantile_rb_range(int size, double percent_)
         : rolling_rank_base_rb_range<T>(size), percent{percent_} {}
+    explicit rolling_quantile_rb_range(int size) : rolling_rank_base_rb_range<T>(size) {}
 
     template <typename TOut>
     void operator()(const T* old_row, const T* new_row, TOut* output) {
@@ -884,6 +930,12 @@ struct rolling_quantile_rb_range : public rolling_rank_base_rb_range<T> {
                 output[i] = start_sorted_data[nth].data;
             } else
                 output[i] = NAN;
+        }
+    }
+
+    void set_param(const std::string& key, const std::string& value) {
+        if (key == "percent" || key == "arg1") {
+            percent = std::stod(value);
         }
     }
 };
@@ -948,6 +1000,7 @@ struct rolling_regression2_rb_range {
     }
 
     void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
 };
 
 struct rolling_regression3_rb_range {
@@ -1033,6 +1086,7 @@ struct rolling_regression3_rb_range {
     }
 
     void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
 };
 
 }  // namespace ornate

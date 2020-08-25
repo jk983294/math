@@ -638,6 +638,50 @@ struct rolling_regression3_rb {
     }
 };
 
+struct rolling_ema_hl_rb : public rolling_rb_base<double> {
+    double total_{0}, total_w{0}, result{0};
+    double decay_coeff{0};
+
+    rolling_ema_hl_rb(int size, double hl) : rolling_rb_base<double>(size) { decay_coeff = ema_hl2decay(hl); }
+
+    void delete_old() {
+        int old_index = get_old_index();
+        const double& old_value = m_container[old_index];
+        if (std::isfinite(old_value)) {
+            total_ -= old_value * std::pow(decay_coeff, window_size - 2);
+            total_w -= std::pow(decay_coeff, window_size - 2);
+            --m_valid_count;
+        }
+    }
+    void add_new() {
+        const double& new_value = m_container[m_head_index - 1];
+        if (std::isfinite(new_value)) {
+            total_ = total_ * decay_coeff + new_value;
+            total_w = total_w * decay_coeff + 1.0;
+            ++m_valid_count;
+        } else {
+            total_ = total_ * decay_coeff;
+            total_w = total_w * decay_coeff;
+        }
+
+        if (m_count > window_size - 2 && m_valid_count > 0)
+            result = total_ / total_w;
+        else
+            result = NAN;
+    }
+    double operator()(double data) {
+        m_container[m_head_index++] = data;
+        ++m_count;
+
+        if (m_count >= window_size) {
+            delete_old();
+        }
+        add_new();
+        if (m_head_index == window_size) m_head_index = 0;
+        return result;
+    }
+};
+
 }  // namespace ornate
 
 #endif
