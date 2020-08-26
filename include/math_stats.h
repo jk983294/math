@@ -313,18 +313,36 @@ T quantile(T *data, int size, double q) {
     int valid_count = itr - data;
     if (valid_count <= 0) return NAN;
 
-    long nth = std::lround(std::floor(valid_count * q));
-    if (nth < 0)
-        nth = 0;
-    else if (nth >= valid_count)
-        nth = valid_count - 1;
-    std::nth_element(data, data + nth, data + valid_count);
-    return data[nth];
+    double idx = (valid_count - 1) * q;
+    long nth_lb = std::lround(std::floor(idx));
+    long nth_ub = std::lround(std::ceil(idx));
+    if (nth_lb < 0) nth_lb = 0;
+    if (nth_lb >= valid_count) nth_lb = valid_count - 1;
+    if (nth_ub < 0) nth_ub = 0;
+    if (nth_ub >= valid_count) nth_ub = valid_count - 1;
+    if (nth_lb == nth_ub) {
+        std::nth_element(data, data + nth_lb, data + valid_count);
+        return data[nth_lb];
+    } else {
+        std::nth_element(data, data + nth_ub, data + valid_count);
+        std::nth_element(data, data + nth_lb, data + nth_ub);
+        return data[nth_lb] * (nth_ub - idx) + data[nth_ub] * (idx - nth_lb);
+    }
 }
 
 template <typename T = float>
 T quantile(std::vector<T> &data, double q) {
     return quantile(data.data(), data.size(), q);
+}
+
+template <typename T = float>
+double normal_ema(const std::vector<T> &data, int num) {
+    double alpha = 2.0f / static_cast<double>(1 + num);
+    double ret = data.front();
+    for (size_t i = 1; i < data.size(); ++i) {
+        ret = ret * (1 - alpha) + data[i] * alpha;
+    }
+    return ret;
 }
 
 template <typename T = float>

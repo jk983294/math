@@ -842,10 +842,10 @@ struct no_roll_ema_hl_rb_range {
         }
     }
 
-    void set_row_size(int ts_window) {}
+    void set_row_size(int ts_window) { decay_coeff = ema_hl2decay(ts_window); }
     void set_param(const std::string& key, const std::string& value) {
         if (key == "hl" || key == "half_life") {
-            decay_coeff = pow(0.5, 1.0 / std::stod(value));
+            decay_coeff = ema_hl2decay(std::stod(value));
         }
     }
 };

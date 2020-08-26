@@ -38,7 +38,7 @@ void test_variance_rolling(const vector<double>& _data, int window) {
     rolling_data_container<> container(window, 1);
     vector<double> row(1, 0);
     rolling_variance_rb_range rvrr(1);
-    no_roll_variance_rb_range nrvrr(1);
+    rolling_variance_rb_range nrvrr(1);
 
     for (int i = 0; i < 6; ++i) {
         int to = i + 1;
@@ -64,7 +64,7 @@ void test_variance_rolling(const vector<double>& _data, int window) {
             nrvrr.init();
             if (container.m_count >= window) {
                 for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
-                    nrvrr(ts_idx, container.get_row_by_idx(ts_idx), row.data());
+                    nrvrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), row.data());
                 }
                 nrvrr.final_result(row.data());
             }
@@ -99,7 +99,7 @@ void test_covariance_rolling(const vector<double>& _data1, const vector<double>&
     vector<double> row(1, 0);
     vector<double> row2(1, 0);
     rolling_cov_rb_range rcrr(1);
-    no_roll_cov_rb_range nrcrr(1);
+    rolling_cov_rb_range nrcrr(1);
 
     for (int i = 0; i < 6; ++i) {
         int to = i + 1;
@@ -128,7 +128,8 @@ void test_covariance_rolling(const vector<double>& _data1, const vector<double>&
             nrcrr.init();
             if (container.m_count >= window) {
                 for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
-                    nrcrr(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx), row.data());
+                    nrcrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx),
+                                      row.data());
                 }
                 nrcrr.final_result(row.data());
             }
@@ -205,7 +206,7 @@ void test_corr_rolling(const vector<double>& _data1, const vector<double>& _data
     vector<double> row(1, 0);
     vector<double> row2(1, 0);
     rolling_corr_rb_range rcrr(1);
-    no_roll_corr_rb_range nrcrr(1);
+    rolling_corr_rb_range nrcrr(1);
 
     for (int i = 0; i < 6; ++i) {
         int to = i + 1;
@@ -236,7 +237,8 @@ void test_corr_rolling(const vector<double>& _data1, const vector<double>& _data
             nrcrr.init();
             if (container.m_count >= window) {
                 for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
-                    nrcrr(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx), row.data());
+                    nrcrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx),
+                                      row.data());
                 }
                 nrcrr.final_result(row.data());
             }
@@ -296,7 +298,7 @@ void test_skew_by_window(const vector<double>& x_, int window) {
     rolling_data_container<> container(window, 1);
     vector<double> row(1, 0);
     rolling_skew_rb_range rsrr(1);
-    no_roll_skew_rb_range nrsrr(1);
+    rolling_skew_rb_range nrsrr(1);
 
     double ret = 0;
     for (double d : x_) {
@@ -322,7 +324,7 @@ void test_skew_by_window(const vector<double>& x_, int window) {
             nrsrr.init();
             if (container.m_count >= window) {
                 for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
-                    nrsrr(ts_idx, container.get_row_by_idx(ts_idx), row.data());
+                    nrsrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), row.data());
                 }
                 nrsrr.final_result(row.data());
             }
@@ -345,7 +347,7 @@ TEST_CASE("mean rolling", "[MathStatsRolling]") {
     rolling_data_container<> container(ts_window, 1);
     vector<double> row(1, 0);
     rolling_mean_rb_range rmrr(1);
-    no_roll_mean_rb_range nrmrr(1);
+    rolling_mean_rb_range nrmrr(1);
 
     double ret = 0;
     for (double i : data) {
@@ -361,7 +363,7 @@ TEST_CASE("mean rolling", "[MathStatsRolling]") {
             nrmrr.init();
             if (container.m_count >= ts_window) {
                 for (int ts_idx = 0; ts_idx < ts_window; ++ts_idx) {
-                    nrmrr(ts_idx, container.get_row_by_idx(ts_idx), row.data());
+                    nrmrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), row.data());
                 }
                 nrmrr.final_result(row.data());
             }
@@ -377,7 +379,7 @@ TEST_CASE("mean rolling nan", "[MathStatsRolling]") {
     rolling_data_container<> container(ts_window, 1);
     vector<double> row(1, 0);
     rolling_mean_rb_range rmrr(1);
-    no_roll_mean_rb_range nrmrr(1);
+    rolling_mean_rb_range nrmrr(1);
 
     double ret = 0;
     for (double i : x) {
@@ -394,7 +396,7 @@ TEST_CASE("mean rolling nan", "[MathStatsRolling]") {
             nrmrr.init();
             if (container.m_count >= ts_window) {
                 for (int ts_idx = 0; ts_idx < ts_window; ++ts_idx) {
-                    nrmrr(ts_idx, container.get_row_by_idx(ts_idx), row.data());
+                    nrmrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), row.data());
                 }
                 nrmrr.final_result(row.data());
             }
@@ -432,7 +434,7 @@ void test_kurtosis_by_window(const vector<double>& x_, int window) {
     rolling_data_container<> container(window, 1);
     vector<double> row(1, 0);
     rolling_kurtosis_rb_range rkrr(1);
-    no_roll_kurtosis_rb_range nrkrr(1);
+    rolling_kurtosis_rb_range nrkrr(1);
 
     double ret = 0;
     for (double d : x_) {
@@ -459,7 +461,7 @@ void test_kurtosis_by_window(const vector<double>& x_, int window) {
             nrkrr.init();
             if (container.m_count >= window) {
                 for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
-                    nrkrr(ts_idx, container.get_row_by_idx(ts_idx), row.data());
+                    nrkrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), row.data());
                 }
                 nrkrr.final_result(row.data());
             }
@@ -499,7 +501,7 @@ void test_decay_by_window(const vector<double>& x_, int window) {
     vector<double> row(1, 0);
     rolling_decay_rb_range rdrr(1);
     rdrr.set_row_size(window);
-    no_roll_decay_rb_range nrdrr(1);
+    rolling_decay_rb_range nrdrr(1);
     nrdrr.set_row_size(window);
 
     for (double d : x_) {
@@ -528,7 +530,7 @@ void test_decay_by_window(const vector<double>& x_, int window) {
             nrdrr.init();
             if (container.m_count >= window) {
                 for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
-                    nrdrr(ts_idx, container.get_row_by_idx(ts_idx), row.data());
+                    nrdrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), row.data());
                 }
                 nrdrr.final_result(row.data());
             }
@@ -600,7 +602,7 @@ void test_regression_by_window(const vector<double>& x_, const vector<double>& y
     vector<double> row2(2, 0);
     rolling_regression2_rb_range rrrr(2);
     rrrr.set_row_size(window);
-    no_roll_regression2_rb_range nrrrr(2);
+    rolling_regression2_rb_range nrrrr(2);
     nrrrr.set_row_size(window);
 
     double ret = 0;
@@ -645,7 +647,7 @@ void test_regression_by_window(const vector<double>& x_, const vector<double>& y
             nrrrr.init();
             if (container.m_count >= window) {
                 for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
-                    nrrrr(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx));
+                    nrrrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx));
                 }
                 nrrrr.final_result(row.data(), row2.data());
             }
@@ -675,7 +677,7 @@ void test_regression3_by_window(const vector<double>& x1_, const vector<double>&
     vector<double> row3(2, 0);
     rolling_regression3_rb_range rrrr(2);
     rrrr.set_row_size(window);
-    no_roll_regression3_rb_range nrrrr(2);
+    rolling_regression3_rb_range nrrrr(2);
     nrrrr.set_row_size(window);
 
     double ret = 0;
@@ -729,8 +731,8 @@ void test_regression3_by_window(const vector<double>& x1_, const vector<double>&
             nrrrr.init();
             if (container.m_count >= window) {
                 for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
-                    nrrrr(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx),
-                          container3.get_row_by_idx(ts_idx));
+                    nrrrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx),
+                                      container3.get_row_by_idx(ts_idx));
                 }
                 nrrrr.final_result(row.data(), row2.data(), row3.data());
             }
@@ -796,17 +798,18 @@ TEST_CASE("quantile rolling nan", "[MathStatsRolling]") {
 }
 
 void test_ema_hl_by_window(const vector<double>& x_, int window) {
-    rolling_ema_hl_rb rrrb(window, 4);
+    rolling_ema_hl_rb rerb(window, 4);
     vector<double> y;
 
     rolling_data_container<> container(window, 2);
     vector<double> row(2, 0);
-//    rolling_quantile_rb_range<double> rqrr(2, percent);
-//    rqrr.set_row_size(window);
+    rolling_ema_hl_rb_range rqrr(2);
+    rqrr.set_row_size(window);
+    rqrr.set_param("hl", "4");
 
-    no_roll_ema_hl_rb_range nrqrr(2);
-    nrqrr.set_row_size(window);
-    nrqrr.set_param("hl", "4");
+    rolling_ema_hl_rb_range nrerr(2);
+    nrerr.set_row_size(window);
+    nrerr.set_param("hl", "4");
 
     double ret = 0;
     for (double d : x_) {
@@ -818,12 +821,12 @@ void test_ema_hl_by_window(const vector<double>& x_, int window) {
             }
             y[window - 1] = d;
         }
-        ret = rrrb(d);
+        ret = rerb(d);
 
-//        row[0] = d;
-//        row[1] = d;
-//        container.push(row);
-//        rqrr(container.get_old_row(), container.get_new_row(), row.data());
+        row[0] = d;
+        row[1] = d;
+        container.push(row);
+        rqrr(container.get_old_row(), container.get_new_row(), row.data());
 
         vector<double> tmp = y;
         double expected = ornate::ema_hl(tmp, window, window - 1, 4);
@@ -832,16 +835,16 @@ void test_ema_hl_by_window(const vector<double>& x_, int window) {
             cout << ret << " " << expected << endl;
         }
         REQUIRE(FloatEqual(ret, expected));
-//        REQUIRE(FloatEqual(row[0], expected));
-//        REQUIRE(FloatEqual(row[1], expected));
+        REQUIRE(FloatEqual(row[0], expected));
+        REQUIRE(FloatEqual(row[1], expected));
 
         if (container.m_count >= window) {
-            nrqrr.init();
+            nrerr.init();
             if (container.m_count >= window) {
                 for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
-                    nrqrr(ts_idx, container.get_row_by_idx(ts_idx), row.data());
+                    nrerr.full_single(ts_idx, container.get_row_by_idx(ts_idx), row.data());
                 }
-                nrqrr.final_result(row.data());
+                nrerr.final_result(row.data());
             }
             REQUIRE(FloatEqual(expected, row[0]));
         }

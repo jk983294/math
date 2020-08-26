@@ -81,11 +81,11 @@ TEST_CASE("regression3", "[MathStats]") {
 TEST_CASE("quantile", "[MathStats]") {
     std::vector<double> v(10);
     std::iota(v.begin(), v.end(), 0.0);
-    REQUIRE(ornate::quantile(v, -0.1) == 0);
+    REQUIRE(FloatEqual(ornate::quantile(v, -0.1), 0));
     REQUIRE(ornate::quantile(v, 0.0) == 0);
-    REQUIRE(ornate::quantile(v, 0.1) == 1);
-    REQUIRE(ornate::quantile(v, 0.8) == 8);
-    REQUIRE(ornate::quantile(v, 0.9) == 9);
+    REQUIRE(FloatEqual(ornate::quantile(v, 0.1), 0.9));
+    REQUIRE(FloatEqual(ornate::quantile(v, 0.8), 7.2));
+    REQUIRE(FloatEqual(ornate::quantile(v, 0.9), 8.1));
     REQUIRE(ornate::quantile(v, 1.0) == 9);
     REQUIRE(ornate::quantile(v, 1.1) == 9);
 }

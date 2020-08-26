@@ -408,7 +408,7 @@ struct rolling_rank_base_rb {
     int find_insert_point(T data, int seq) {
         auto itr = std::lower_bound(m_sorted_data.begin(), m_sorted_data.begin() + m_valid_count, data);
         int pos = itr - m_sorted_data.begin();
-        while (pos < m_valid_count && m_sorted_data[pos].seq != seq && m_sorted_data[pos].data == seq) pos++;
+        while (pos < m_valid_count && m_sorted_data[pos].seq != seq && m_sorted_data[pos].data == data) pos++;
         return pos;
     }
 
@@ -494,12 +494,15 @@ struct rolling_quantile_rb : public rolling_rank_base_rb<T> {
     double operator()(T new_value) {
         handle(new_value);
         if (m_valid_count > 0) {
-            long nth = std::lround(std::floor(m_valid_count * percent));
-            if (nth < 0)
-                nth = 0;
-            else if (nth >= m_valid_count)
-                nth = m_valid_count - 1;
-            return m_sorted_data[nth].data;
+            double idx = (m_valid_count - 1) * percent;
+            long nth_lb = std::lround(std::floor(idx));
+            long nth_ub = std::lround(std::ceil(idx));
+            if (nth_lb < 0) nth_lb = 0;
+            if (nth_lb >= m_valid_count) nth_lb = m_valid_count - 1;
+            if (nth_ub < 0) nth_ub = 0;
+            if (nth_ub >= m_valid_count) nth_ub = m_valid_count - 1;
+            if (nth_lb == nth_ub) return m_sorted_data[nth_lb].data;
+            return m_sorted_data[nth_lb].data * (nth_ub - idx) + m_sorted_data[nth_ub].data * (idx - nth_lb);
         } else
             return NAN;
     }
