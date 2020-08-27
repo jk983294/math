@@ -49,6 +49,18 @@ inline uint32_t NextPowerOf2(uint32_t n) {
     return 1u << count;
 }
 
+inline bool cmp_numeric(double l, double r) {
+    if (std::isfinite(l) && std::isfinite(r))
+        return l < r;
+    else
+        return false;  // 永远让比较函数对相同元素返回false, otherwise violate Strict Weak Ordering
+}
+
+/**
+ * hl越大，该alpha/decay系数越大，新值权重越小，老值权重越高，ma的时滞越大
+ * hl越小，对新值越敏感
+ * @param hl 半衰期
+ */
 inline double ema_hl2decay(double hl) { return pow(0.5, 1.0 / hl); }
 }  // namespace ornate
 
