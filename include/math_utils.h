@@ -52,8 +52,10 @@ inline uint32_t NextPowerOf2(uint32_t n) {
 inline bool cmp_numeric(double l, double r) {
     if (std::isfinite(l) && std::isfinite(r))
         return l < r;
-    else
+    else if (!std::isfinite(l) && !std::isfinite(r))
         return false;  // 永远让比较函数对相同元素返回false, otherwise violate Strict Weak Ordering
+    else
+        return !std::isfinite(l);
 }
 
 /**
@@ -62,6 +64,8 @@ inline bool cmp_numeric(double l, double r) {
  * @param hl 半衰期
  */
 inline double ema_hl2decay(double hl) { return pow(0.5, 1.0 / hl); }
+
+inline bool is_same_sign(double val, int sign_) { return sign_ == 0 || sign_ * val > 0; }
 }  // namespace ornate
 
 #endif

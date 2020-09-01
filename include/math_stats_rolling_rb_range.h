@@ -91,6 +91,7 @@ struct rolling_sum_rb_range {
     };
     int m_column_size;
     std::vector<stat> stats;
+    int sign{0};  // 0: all, 1: + only, -1: - only
 
     explicit rolling_sum_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
 
@@ -101,15 +102,19 @@ struct rolling_sum_rb_range {
             if (old_row) {
                 auto old_value = old_row[i];
                 if (std::isfinite(old_value)) {
-                    stat.total_sum -= old_value;
-                    --stat.m_valid_count;
+                    if (is_same_sign(old_value, sign)) {
+                        stat.total_sum -= old_value;
+                        --stat.m_valid_count;
+                    }
                 }
             }
 
             auto new_value = new_row[i];
             if (std::isfinite(new_value)) {
-                stat.total_sum += new_value;
-                ++stat.m_valid_count;
+                if (is_same_sign(new_value, sign)) {
+                    stat.total_sum += new_value;
+                    ++stat.m_valid_count;
+                }
             }
 
             if (stat.m_valid_count > 0)
@@ -127,8 +132,10 @@ struct rolling_sum_rb_range {
     void full_single(int idx, const T* _row, TOut* output) {
         for (int i = 0; i < m_column_size; ++i) {
             if (std::isfinite(_row[i])) {
-                ++stats[i].m_valid_count;
-                stats[i].total_sum += _row[i];
+                if (is_same_sign(_row[i], sign)) {
+                    ++stats[i].m_valid_count;
+                    stats[i].total_sum += _row[i];
+                }
             }
         }
     }
@@ -141,7 +148,11 @@ struct rolling_sum_rb_range {
     }
 
     void set_row_size(int row) {}
-    void set_param(const std::string& key, const std::string& value) {}
+    void set_param(const std::string& key, const std::string& value) {
+        if (key == "sign") {
+            sign = std::stoi(value);
+        }
+    }
 };
 
 struct rolling_prod_rb_range {
