@@ -63,6 +63,9 @@ install.packages("~/XML_3.98-1.3.zip", repos = NULL, type = "source")
 library("ggplot2")
 library("package Name", lib.loc = "path to library")
 
+# unload package
+detach("package:ggplot2", unload=TRUE)
+
 # update packages
 update.packages()
 
@@ -71,3 +74,6 @@ update.packages()
 library()  # get all packages installed
 search()  # all packages currently loaded
 installed.packages()  # list installed packages metadata
+
+# uninstall
+remove.packages("vioplot")

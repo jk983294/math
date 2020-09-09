@@ -249,6 +249,31 @@ std::vector<uint32_t> filter(INOUT std::vector<T>& n) {
 }
 
 /**
+ * @param x
+ * @param i x[i]在window内的rank值
+ * @param n = 0 表示i之前的所有数据参与rank, 给了n，但是数据长度不够一律返回NAN
+ */
+template <typename T>
+double rank_last(IN const T* x, int i, int n) {
+    const int size = i + 1;
+    T last = x[i];
+    if (std::isnan(last) || (n > 0 && i + 1 < n)) {
+        return NAN;
+    }
+    const int N = (n == 0) ? size : std::min(size, n);
+    int nlte = 0, neq = 0, nv = 0;
+    for (int j = 0; j < N; ++j) {
+        double vx = x[i - N + 1 + j];
+        if (std::isnan(vx)) continue;
+        if (vx <= last) nlte++;
+        if (vx == last) neq++;
+        nv++;
+    }
+    // return nv <= 1 ? NAN : (nlte - 1.0) / (nv - 1.0);
+    return nv <= 1 ? NAN : (2 * nlte - neq - 1.0) / (2.0 * (nv - 1.0));
+}
+
+/**
  * rank in place. will filter NAN, normalize to [0, 1], NAN will remain NAN
  */
 template <typename T>

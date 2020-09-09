@@ -1,0 +1,3 @@
+# File > New Project > New Directory > R Package > Create package based on source files > Create project
+# toolbar Build > Build Source/Binary Package
+# Build > Load All 现在library load了，可以开始使用

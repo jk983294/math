@@ -7,6 +7,8 @@ install.packages("plotrix", repos = "https://mirrors.tuna.tsinghua.edu.cn/CRAN/"
 # help
 help.start()  # 打开帮助文档首页
 help("foo")  # ?foo 查看函数 foo 的帮助(引号可以省略)
+help("foo", package = "pkgname")  # if package has not been loaded
+ls("package:foo")  # show functions within foo
 help(package = "ggplot2")  # package desc
 help.search("foo")  # ??foo 以 foo 为关键词搜索本地帮助文档
 example("foo")  # 函数 foo 的使用示例

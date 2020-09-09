@@ -1295,38 +1295,6 @@ public:
 };
 
 template <typename T>
-struct rolling_rank_rb_range : public rolling_rank_base_rb_range<T> {
-    using rolling_rank_base_rb_range<T>::m_count;
-    using rolling_rank_base_rb_range<T>::m_column_size;
-    using rolling_rank_base_rb_range<T>::stats;
-    using rolling_rank_base_rb_range<T>::m_sorted_data_;
-    using rolling_rank_base_rb_range<T>::window_size;
-    using rolling_rank_base_rb_range<T>::handle;
-
-    explicit rolling_rank_rb_range(int size) : rolling_rank_base_rb_range<T>(size) {}
-
-    template <typename TOut>
-    void operator()(const T* old_row, const T* new_row, TOut* output) {
-        ++m_count;
-        for (int i = 0; i < m_column_size; ++i) {
-            auto& st = stats[i];
-            auto* start_sorted_data = m_sorted_data_.data() + i * (window_size - 1);
-
-            T old_value = get_nan<T>();
-            if (old_row) old_value = old_row[i];
-            int lower, idx, _valid_count;
-            std::tie(lower, idx, _valid_count) = handle(new_row[i], old_value, st, start_sorted_data);
-            if (idx >= 0 && _valid_count > 1)
-                output[i] = (lower + idx) / (2.0 * (_valid_count - 1));
-            else
-                output[i] = NAN;
-        }
-    }
-
-    void set_param(const std::string& key, const std::string& value) {}
-};
-
-template <typename T>
 struct rolling_quantile_rb_range : public rolling_rank_base_rb_range<T> {
     using rolling_rank_base_rb_range<T>::m_count;
     using rolling_rank_base_rb_range<T>::m_column_size;
@@ -1371,6 +1339,49 @@ struct rolling_quantile_rb_range : public rolling_rank_base_rb_range<T> {
             percent = std::stod(value);
         }
     }
+};
+
+template <typename T>
+struct rolling_rank_count_rb_range {
+    int window_size{0}, m_count{0};
+    int m_column_size{0};
+    std::vector<T> m_container;
+
+    explicit rolling_rank_count_rb_range(int column_size_) : m_column_size{column_size_} {}
+    void set_row_size(int row) {
+        window_size = row;
+        m_container.resize(window_size * m_column_size);
+    }
+
+    double calc(const T* x, T new_value) {
+        if (std::isnan(new_value) || m_count < window_size) {
+            return NAN;
+        }
+        int nlte = 0, neq = 0, nv = 0;
+        for (int i = 0; i < window_size; ++i) {
+            const T val = x[i];
+            if (std::isnan(val)) continue;
+            if (val <= new_value) nlte++;
+            if (val == new_value) neq++;
+            nv++;
+        }
+        // return nv <= 1 ? NAN : (nlte - 1.0) / (nv - 1.0);
+        return nv <= 1 ? NAN : (2 * nlte - neq - 1.0) / (2.0 * (nv - 1.0));
+    }
+
+    template <typename TOut>
+    void operator()(const T* old_row, const T* new_row, TOut* output) {
+        int pos = m_count % window_size;
+        ++m_count;
+        for (int i = 0; i < m_column_size; ++i) {
+            auto* start_data = m_container.data() + i * window_size;
+            const T new_val = new_row[i];
+            start_data[pos] = new_val;
+            output[i] = calc(start_data, new_val);
+        }
+    }
+
+    void set_param(const std::string& key, const std::string& value) {}
 };
 
 struct rolling_regression2_rb_range {

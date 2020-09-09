@@ -547,12 +547,12 @@ TEST_CASE("decay rolling nan", "[MathStatsRolling]") {
 }
 
 void test_rank_by_window(const vector<double>& x_, int window) {
-    rolling_rank_rb<double> rrrb(window);
+    rolling_rank_count_rb<double> rrrb(window);
     vector<double> y;
 
     rolling_data_container<> container(window, 2);
     vector<double> row(2, 0);
-    rolling_rank_rb_range<double> rrrr(2);
+    rolling_rank_count_rb_range<double> rrrr(2);
     rrrr.set_row_size(window);
 
     double ret = 0;
@@ -572,9 +572,7 @@ void test_rank_by_window(const vector<double>& x_, int window) {
         container.push(row);
         rrrr(container.get_old_row(), container.get_new_row(), row.data());
 
-        vector<double> tmp = y;
-        ornate::rank(tmp);
-        double expected = tmp.back();
+        double expected = ornate::rank_last(y.data(), y.size() - 1, window);
 
         REQUIRE(FloatEqual(ret, expected));
         REQUIRE(FloatEqual(row[0], expected));

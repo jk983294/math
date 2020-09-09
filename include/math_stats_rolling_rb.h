@@ -466,23 +466,6 @@ struct rolling_rank_base_rb {
 };
 
 template <typename T>
-struct rolling_rank_rb : public rolling_rank_base_rb<T> {
-    explicit rolling_rank_rb(int size) : rolling_rank_base_rb<T>(size) {}
-
-    using rolling_rank_base_rb<T>::m_valid_count;
-    using rolling_rank_base_rb<T>::handle;
-
-    double operator()(T new_value) {
-        int lower, idx;
-        std::tie(lower, idx) = handle(new_value);
-        if (idx >= 0 && m_valid_count > 1)
-            return (lower + idx) / (2.0 * (m_valid_count - 1));
-        else
-            return NAN;
-    }
-};
-
-template <typename T>
 struct rolling_quantile_rb : public rolling_rank_base_rb<T> {
     double percent{0};
     explicit rolling_quantile_rb(int size, double percent_) : rolling_rank_base_rb<T>(size), percent{percent_} {}
@@ -505,6 +488,31 @@ struct rolling_quantile_rb : public rolling_rank_base_rb<T> {
             return m_sorted_data[nth_lb].data * (nth_ub - idx) + m_sorted_data[nth_ub].data * (idx - nth_lb);
         } else
             return NAN;
+    }
+};
+
+template <typename T>
+struct rolling_rank_count_rb {
+    int window_size;
+    int m_count{0};
+    std::vector<T> m_container;
+
+    explicit rolling_rank_count_rb(int size) : window_size{size} { m_container.resize(window_size, T()); }
+
+    double operator()(T new_value) {
+        m_container[(m_count++) % window_size] = new_value;
+        if (std::isnan(new_value) || m_count < window_size) {
+            return NAN;
+        }
+        int nlte = 0, neq = 0, nv = 0;
+        for (T val : m_container) {
+            if (std::isnan(val)) continue;
+            if (val <= new_value) nlte++;
+            if (val == new_value) neq++;
+            nv++;
+        }
+        // return nv <= 1 ? NAN : (nlte - 1.0) / (nv - 1.0);
+        return nv <= 1 ? NAN : (2 * nlte - neq - 1.0) / (2.0 * (nv - 1.0));
     }
 };
 
