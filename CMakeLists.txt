@@ -2,10 +2,13 @@ cmake_minimum_required(VERSION 3.5)
 
 project(ornate)
 
-set(CMAKE_INSTALL_PREFIX "/opt/version/latest/")
+set(CMAKE_INSTALL_PREFIX "/opt/version/latest/ornate/")
+SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/)
+set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/)
 
 
 # SET(CMAKE_CXX_FLAGS "-std=c++14 -O3 -Wall -Werror")
@@ -24,7 +27,8 @@ include_directories(/opt/version/latest/zergtool/include)
 
 link_directories(/opt/3rd/common/lib)
 
-install(DIRECTORY include/ DESTINATION ornate/include)
+install(DIRECTORY include/ DESTINATION include)
 
 add_subdirectory(example)
 add_subdirectory(test)
+add_subdirectory(src)

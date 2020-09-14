@@ -46,3 +46,6 @@ install/
 **/.Rproj.user
 .Rproj.user
 **/.vscode
+**/*.gz
+**/RcppExports.cpp
+**/RcppExports.R

@@ -81,6 +81,7 @@ cproto -I/usr/share/R/include -e student_export.cpp
 ##### link
 PKG_LIBS = -L$(XML_DIR)/lib -lxml2 -pthread
 PKG_CPPFLAGS = -pthread
+PKG_LIBS=-L$(XML_DIR)/lib -Wl,-rpath,$(XML_DIR)/lib -lxml2
 
 ### src
 sources and headers, and optionally a file Makevars or Makefile
@@ -105,7 +106,7 @@ import(pkg1, except=c(var3, var4))  # imports every symbol from pkg1 except var3
 allows shared objects that need to be loaded
 
 * useDynLib(foo, myRoutine) enables .Call(myRoutine, x, y) instead of .Call("myRoutine", x, y, PACKAGE = "foo")
-* useDynLib(myDLL, .registration = TRUE) causes the so to be loaded and also for the R variables of all which has registration information to be defined in the package’s namespace
+* useDynLib(myDLL, .registration = TRUE) causes the so to be loaded and also for the R variables of all which has registration information to be defined in the package's namespace
 
 #### S4 class export/inport
 * exportClasses / exportMethods / exportClassPattern
@@ -140,8 +141,8 @@ compile it:
 ```bash
 R CMD SHLIB foo.c   # compile to foo.so
 R CMD SHLIB --help
-# PKG_CPPFLAGS  - mainly ‘-I’, ‘-D’ and ‘-U’ flags
-# PKG_LIBS      - additional ‘-l’ and ‘-L’ flags to linker
+# PKG_CPPFLAGS  - mainly ‘-I', ‘-D' and ‘-U' flags
+# PKG_LIBS      - additional ‘-l' and ‘-L' flags to linker
 ```
 
 wrapper it in R:
@@ -156,6 +157,77 @@ use it in client code:
 ```R
 source('wrappers.R')
 greeting <- helloA1()
+```
+
+### compile cpp class
+```c++
+// X.h
+class X {
+public: X (); ~X ();
+};
+
+class Y {
+public: Y (); ~Y ();
+};
+
+// X.cpp
+#include <R.h>
+#include "X.h"
+
+static Y y;
+
+X::X()  { REprintf("constructor X\n"); }
+X::~X() { REprintf("destructor X\n");  }
+Y::Y()  { REprintf("constructor Y\n"); }
+Y::~Y() { REprintf("destructor Y\n");  }
+
+// X_export.cpp:
+#include "X.h"
+
+extern "C" {
+void X_main () {
+  X x;
+}
+}
+```
+
+compile:
+```bash
+R CMD SHLIB X.cpp X_main.cpp
+```
+
+client code:
+```r
+R> dyn.load(paste("X", .Platform$dynlib.ext, sep = ""))
+constructor Y
+R> .C("X_main")
+constructor X
+destructor X
+list()
+R> q()
+Save workspace image? [y/n/c]: n
+destructor Y
+```
+
+### link to other lib
+```bash
+PKGB_PATH=`echo 'library(packB);cat(system.file("lib", package="packB", mustWork=TRUE)))' | "${R_HOME}/bin/R" --vanilla --no-echo`
+PKG_LIBS=-L"$(PKGB_PATH)$(R_ARCH)" -Wl,-rpath,"$(PKGB_PATH)$(R_ARCH)" -lpackB
+```
+
+### .Call and .External
+```c++
+#include <R.h>
+#include <Rinternals.h>
+
+SEXP convolve2(SEXP a, SEXP b);
+SEXP convolveE(SEXP args); // args is a LISTSXP, a Lisp-style pair list from which the arguments can be extracted
+```
+
+use in R:
+```r
+.Call("convolve2", a, b)
+.External("convolveE", a, b)  # (a, b) packed as args
 ```
 
 ## Document
