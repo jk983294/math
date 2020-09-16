@@ -652,15 +652,19 @@ struct rolling_regression3_rb {
 struct rolling_ema_hl_rb : public rolling_rb_base<double> {
     double total_{0}, total_w{0}, result{0};
     double decay_coeff{0};
+    double remove_coeff{0};
 
-    rolling_ema_hl_rb(int size, double hl) : rolling_rb_base<double>(size) { decay_coeff = ema_hl2decay(hl); }
+    rolling_ema_hl_rb(int size, double hl) : rolling_rb_base<double>(size) {
+        decay_coeff = ema_hl2decay(hl);
+        remove_coeff = std::pow(decay_coeff, window_size - 2);
+    }
 
     void delete_old() {
         int old_index = get_old_index();
         const double& old_value = m_container[old_index];
         if (std::isfinite(old_value)) {
-            total_ -= old_value * std::pow(decay_coeff, window_size - 2);
-            total_w -= std::pow(decay_coeff, window_size - 2);
+            total_ -= old_value * remove_coeff;
+            total_w -= remove_coeff;
             --m_valid_count;
         }
     }

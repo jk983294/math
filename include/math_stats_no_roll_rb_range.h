@@ -815,8 +815,10 @@ struct no_roll_ema_hl_rb_range {
         }
     };
     int m_column_size;
+    int m_row_size{0};  // window size
     double decay_coeff{0};
     std::vector<stat> stats;
+    std::vector<double> cached_coeff;
 
     explicit no_roll_ema_hl_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
 
@@ -829,8 +831,8 @@ struct no_roll_ema_hl_rb_range {
         for (int i = 0; i < m_column_size; ++i) {
             if (std::isfinite(_row[i])) {
                 ++stats[i].m_valid_count;
-                stats[i].total_ += _row[i] * pow(decay_coeff, idx);
-                stats[i].total_w += pow(decay_coeff, idx);
+                stats[i].total_ += _row[i] * cached_coeff[idx];
+                stats[i].total_w += cached_coeff[idx];
             }
         }
     }
@@ -842,10 +844,21 @@ struct no_roll_ema_hl_rb_range {
         }
     }
 
-    void set_row_size(int ts_window) { decay_coeff = ema_hl2decay(ts_window); }
+    void calc_cached_coeff() {
+        cached_coeff.resize(m_row_size);
+        for (int i = 0; i < m_row_size; ++i) {
+            cached_coeff[i] = std::pow(decay_coeff, i);
+        }
+    }
+    void set_row_size(int ts_window) {
+        m_row_size = ts_window;
+        decay_coeff = ema_hl2decay(ts_window);
+        calc_cached_coeff();
+    }
     void set_param(const std::string& key, const std::string& value) {
         if (key == "hl" || key == "half_life") {
             decay_coeff = ema_hl2decay(std::stod(value));
+            calc_cached_coeff();
         }
     }
 };

@@ -1588,6 +1588,8 @@ struct rolling_ema_hl_rb_range {
     int m_row_size{0};  // window size
     int count{0};
     double decay_coeff{0};
+    double remove_coeff{0};
+    std::vector<double> cached_coeff;
     std::vector<stat> stats;
 
     explicit rolling_ema_hl_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
@@ -1595,10 +1597,20 @@ struct rolling_ema_hl_rb_range {
     void set_row_size(int row) {
         m_row_size = row;
         decay_coeff = ema_hl2decay(row);
+        calc_cached_coeff();
     }
     void set_param(const std::string& key, const std::string& value) {
         if (key == "hl" || key == "half_life") {
             decay_coeff = ema_hl2decay(std::stod(value));
+            calc_cached_coeff();
+        }
+    }
+
+    void calc_cached_coeff() {
+        remove_coeff = std::pow(decay_coeff, m_row_size - 1);
+        cached_coeff.resize(m_row_size);
+        for (int i = 0; i < m_row_size; ++i) {
+            cached_coeff[i] = std::pow(decay_coeff, i);
         }
     }
 
@@ -1621,8 +1633,8 @@ struct rolling_ema_hl_rb_range {
     template <typename T>
     void delete_old(stat& st, T old_value) {
         if (std::isfinite(old_value)) {
-            st.total_ -= old_value * std::pow(decay_coeff, m_row_size - 1);
-            st.total_w -= std::pow(decay_coeff, m_row_size - 1);
+            st.total_ -= old_value * remove_coeff;
+            st.total_w -= remove_coeff;
             --st.m_valid_count;
         }
     }
@@ -1649,8 +1661,8 @@ struct rolling_ema_hl_rb_range {
         for (int i = 0; i < m_column_size; ++i) {
             if (std::isfinite(_row[i])) {
                 ++stats[i].m_valid_count;
-                stats[i].total_ += _row[i] * pow(decay_coeff, idx);
-                stats[i].total_w += pow(decay_coeff, idx);
+                stats[i].total_ += _row[i] * cached_coeff[idx];
+                stats[i].total_w += cached_coeff[idx];
             }
         }
     }
