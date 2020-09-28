@@ -13,18 +13,18 @@ ans <- dt[1:2]   # get the first two rows
 ans
 
 # subset columns in j
-ans <- dt[, z]          # return vector
+ans <- dt[, z]          # return vector z
 ans
-ans <- dt[, list(z)]    # return table
+ans <- dt[, list(z)]    # return table contains column z
 ans
-ans <- dt[, list(y, z)]
+ans <- dt[, list(y, z)] # return table contains column y&z
 ans
-ans <- dt[, .(y, z)]    # list sugar
+ans <- dt[, .(y, z)]    # .() list sugar, return table
 ans
-ans <- dt[, c('y', 'z')]    # refer to columns by string names 
+ans <- dt[, c('y', 'z')]    # refer to columns by string names
 ans
 select_cols = c("y", "z")
-ans <- dt[, ..select_cols]    # string name sugar
+ans <- dt[, ..select_cols]    # .. is string name sugar
 ans
 # with = FALSE disables the ability to refer to columns as if they are variables, thereby restoring the “data.frame mode”
 ans <- dt[, select_cols, with = FALSE]
