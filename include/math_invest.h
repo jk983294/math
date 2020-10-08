@@ -9,6 +9,21 @@
 namespace ornate {
 
 template <typename T>
+bool is_valid_price(T p) {
+    return (p > 1e-6 && p < 1e8 && std::isfinite(p));
+}
+
+inline float calc_return(float p, float p0) {
+    float r = NAN;
+    if (is_valid_price(p) && is_valid_price(p0)) r = p / p0 - 1;
+    if (!std::isfinite(r) || std::fabs(r) > 0.3) r = 0;
+    return r * 10000;
+}
+
+inline bool is_valid_maturity(int n) { return (n > 0 && n < 9999); }
+inline bool is_same_maturity(int mat0, int mat1) { return (mat0 == mat1 && is_valid_maturity(mat0)); }
+
+template <typename T>
 float calc_ir(const std::vector<T> &pnl, int32_t start_di = -1, int32_t end_di = -1) {
     if (pnl.empty()) return NAN;
     if (start_di >= end_di) return NAN;  // less than one day
