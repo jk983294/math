@@ -3,6 +3,7 @@ library(Hmisc)
 library(corrplot)
 library(PerformanceAnalytics)
 
+#dt1 <- fread("~/github/barn/train/factor.csv")
 dt1 <- fread("~/github/MyTmp/sim/cmake-build-debug/pmfut/factor.csv")
 dim(dt1)
 
