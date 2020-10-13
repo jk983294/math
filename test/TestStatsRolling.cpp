@@ -857,3 +857,148 @@ TEST_CASE("ema_hl rolling nan", "[MathStatsRolling]") {
     test_ema_hl_by_window(datum, 5);
     test_ema_hl_by_window(datum, 6);
 }
+
+void test_ols_by_window(const vector<double>& x_, const vector<double>& y_, int window) {
+    ols2_rolling rr(window);
+    vector<double> _x, _y;
+    rolling_ols2_rb rrrb(window);
+
+    rolling_data_container<> container(window, 2);
+    rolling_data_container<> container2(window, 2);
+    vector<double> row(2, 0);
+    vector<double> row2(2, 0);
+    rolling_ols2_rb_range rrrr(2);
+    rrrr.set_row_size(window);
+    rolling_ols2_rb_range nrrrr(2);
+    nrrrr.set_row_size(window);
+
+    double ret = 0;
+    for (size_t i = 0; i < x_.size(); ++i) {
+        if (_x.size() < (size_t)window) {
+            _x.push_back(x_[i]);
+            _y.push_back(y_[i]);
+        } else {
+            for (int j = 1; j < window; ++j) {
+                _x[j - 1] = _x[j];
+                _y[j - 1] = _y[j];
+            }
+            _x[window - 1] = x_[i];
+            _y[window - 1] = y_[i];
+        }
+
+        double b = ornate::ols(_y, _x);
+
+        rr(y_[i], x_[i]);
+        rrrb(y_[i], x_[i]);
+
+        REQUIRE(FloatEqual(rr.b, b));
+        REQUIRE(FloatEqual(rrrb.b, b));
+
+        row[0] = y_[i];
+        row[1] = y_[i];
+        container.push(row);
+        row2[0] = x_[i];
+        row2[1] = x_[i];
+        container2.push(row2);
+        rrrr(container.get_old_row(), container2.get_old_row(), container.get_new_row(), container2.get_new_row(),
+             row2.data());
+        REQUIRE(FloatEqual(row2[0], b));
+        REQUIRE(FloatEqual(row2[1], b));
+
+        if (container.m_count >= window) {
+            nrrrr.init();
+            if (container.m_count >= window) {
+                for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
+                    nrrrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx));
+                }
+                nrrrr.final_result(row2.data());
+            }
+            REQUIRE(FloatEqual(b, row2[0]));
+        }
+    }
+}
+
+TEST_CASE("ols rolling nan", "[MathStatsRolling]") {
+    test_ols_by_window(x, x1, 3);
+    test_ols_by_window(x, x1, 4);
+    test_ols_by_window(x, x1, 5);
+    test_ols_by_window(x, x1, 6);
+}
+
+void test_ols3_by_window(const vector<double>& x1_, const vector<double>& x2_, const vector<double>& y_, int window) {
+    vector<double> _x1, _x2, _y;
+    rolling_ols3_rb rrrb(window);
+
+    rolling_data_container<> container(window, 2);
+    rolling_data_container<> container2(window, 2);
+    rolling_data_container<> container3(window, 2);
+    vector<double> row(2, 0);
+    vector<double> row2(2, 0);
+    vector<double> row3(2, 0);
+    rolling_ols3_rb_range rrrr(2);
+    rrrr.set_row_size(window);
+    rolling_ols3_rb_range nrrrr(2);
+    nrrrr.set_row_size(window);
+
+    double ret = 0;
+    for (size_t i = 0; i < x1_.size(); ++i) {
+        if (_x1.size() < (size_t)window) {
+            _x1.push_back(x1_[i]);
+            _x2.push_back(x2_[i]);
+            _y.push_back(y_[i]);
+        } else {
+            for (int j = 1; j < window; ++j) {
+                _x1[j - 1] = _x1[j];
+                _x2[j - 1] = _x2[j];
+                _y[j - 1] = _y[j];
+            }
+            _x1[window - 1] = x1_[i];
+            _x2[window - 1] = x2_[i];
+            _y[window - 1] = y_[i];
+        }
+
+        double b1, b2;
+        ornate::ols(_y, _x1, _x2, &b1, &b2);
+
+        rrrb(y_[i], x1_[i], x2_[i]);
+
+        REQUIRE(FloatEqual(rrrb.b1, b1));
+        REQUIRE(FloatEqual(rrrb.b2, b2));
+
+        row[0] = y_[i];
+        row[1] = y_[i];
+        container.push(row);
+        row2[0] = x1_[i];
+        row2[1] = x1_[i];
+        container2.push(row2);
+        row3[0] = x2_[i];
+        row3[1] = x2_[i];
+        container3.push(row3);
+        rrrr(container.get_old_row(), container2.get_old_row(), container3.get_old_row(), container.get_new_row(),
+             container2.get_new_row(), container3.get_new_row(), row2.data(), row3.data());
+        REQUIRE(FloatEqual(row2[0], b1));
+        REQUIRE(FloatEqual(row2[1], b1));
+        REQUIRE(FloatEqual(row3[0], b2));
+        REQUIRE(FloatEqual(row3[1], b2));
+
+        if (container.m_count >= window) {
+            nrrrr.init();
+            if (container.m_count >= window) {
+                for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
+                    nrrrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx),
+                                      container3.get_row_by_idx(ts_idx));
+                }
+                nrrrr.final_result(row2.data(), row3.data());
+            }
+            REQUIRE(FloatEqual(b1, row2[0]));
+            REQUIRE(FloatEqual(b2, row3[0]));
+        }
+    }
+}
+
+TEST_CASE("ols3 rolling nan", "[MathStatsRolling]") {
+    test_ols3_by_window(x, x1, x2, 3);
+    test_ols3_by_window(x, x1, x2, 4);
+    test_ols3_by_window(x, x1, x2, 5);
+    test_ols3_by_window(x, x1, x2, 6);
+}

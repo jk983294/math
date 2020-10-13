@@ -307,6 +307,60 @@ inline bool regression3(const std::vector<T> &y, const std::vector<T> &x1, const
     *b2 = b2_;
     return true;
 }
+
+template <typename T = float>
+T _ols(const T *y, const T *x, size_t num) {
+    T mx = 0, my = 0;
+    size_t valid_num = 0;
+    for (size_t i = 0; i < num; i++) {
+        if (!isfinite(y[i]) || !isfinite(x[i])) continue;
+        my += y[i];
+        mx += x[i];
+        valid_num++;
+    }
+    if (valid_num < 1) {
+        return NAN;
+    }
+    return my / mx;
+}
+/**
+ * ols differ from regression is that it has no intercept, i.e y = b * x
+ */
+template <typename T = float>
+T ols(const std::vector<T> &y, const std::vector<T> &x) {
+    return _ols(&y[0], &x[0], x.size());
+}
+
+/**
+ * ols differ from regression is that it has no intercept, i.e y = b1 * x1 + b2 * x2
+ */
+template <typename T = float>
+inline bool ols(const std::vector<T> &y, const std::vector<T> &x1, const std::vector<T> &x2, OUT T *b1, OUT T *b2) {
+    size_t valid_num = 0;
+    long double sum_x12 = 0, sum_x1_2 = 0, sum_x2_2 = 0, sum_x1y = 0, sum_x2y = 0;
+    for (size_t i = 0; i < y.size(); i++) {
+        if (!isfinite(y[i]) || !isfinite(x1[i]) || !isfinite(x2[i])) continue;
+        sum_x12 += x1[i] * x2[i];
+        sum_x1_2 += x1[i] * x1[i];
+        sum_x2_2 += x2[i] * x2[i];
+        sum_x1y += x1[i] * y[i];
+        sum_x2y += x2[i] * y[i];
+        valid_num++;
+    }
+
+    if (valid_num < 2) {
+        *b1 = NAN;
+        *b2 = NAN;
+        return false;
+    }
+    long double denominator = sum_x12 * sum_x12 - sum_x1_2 * sum_x2_2;
+    long double b1_ = (sum_x2y * sum_x12 - sum_x1y * sum_x2_2) / denominator;
+    long double b2_ = (sum_x1y * sum_x12 - sum_x2y * sum_x1_2) / denominator;
+    *b1 = b1_;
+    *b2 = b2_;
+    return true;
+}
+
 template <typename T = float>
 T quantile(T *data, int size, double q) {
     auto itr = std::partition(data, data + size, [](auto i) { return std::isfinite(i); });

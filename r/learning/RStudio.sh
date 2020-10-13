@@ -4,6 +4,7 @@
 
 # run script
 Rscript hello_world.r
+Rscript -e 'install.packages(c("devtools", "Rcpp"))'
 
 # no such file or directory
 sudo chown -R $(whoami) ~/.rstudio*

@@ -78,6 +78,36 @@ TEST_CASE("regression3", "[MathStats]") {
     REQUIRE(FloatEqual(b2, coeff[2]));
 }
 
+TEST_CASE("ols", "[MathStats]") {
+    float coeff = -2;
+    vector<float> x1 = {0, 1, 2, 3, 4};
+    vector<float> y(x1.size(), 0);
+    for (std::size_t i = 0; i < x1.size(); ++i) {
+        y[i] = coeff * x1[i];
+    }
+    float coeff_calc = ornate::ols(y, x1);
+    REQUIRE(FloatEqual(coeff_calc, coeff));
+}
+
+/**
+ * y = 2 * x1 + 1 * x2
+ */
+TEST_CASE("ols2", "[MathStats]") {
+    float b1, b2;
+    vector<float> x1 = {0, 1, 2, 0, 0, 1, 1, 2, 2};
+    vector<float> x2 = {0, 0, 0, 1, 2, 1., 2, 1, 2};
+    vector<float> y(x1.size(), 0);
+    vector<float> coeff = {2, 1};
+    for (std::size_t i = 0; i < x1.size(); ++i) {
+        y[i] = coeff[0] * x1[i] + coeff[1] * x2[i];
+    }
+    bool ret = ornate::ols(y, x1, x2, &b1, &b2);
+    cout << setprecision(12) << b1 << " " << b2 << endl;
+    REQUIRE(ret);
+    REQUIRE(FloatEqual(b1, coeff[0]));
+    REQUIRE(FloatEqual(b2, coeff[1]));
+}
+
 TEST_CASE("quantile", "[MathStats]") {
     std::vector<double> v(10);
     std::iota(v.begin(), v.end(), 0.0);

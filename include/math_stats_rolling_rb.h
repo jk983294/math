@@ -697,6 +697,113 @@ struct rolling_ema_hl_rb : public rolling_rb_base<double> {
     }
 };
 
+struct rolling_ols2_rb {
+    double sum_x{0}, sum_y{0};
+    double b{NAN};
+    int window_size;
+    int m_count{0}, m_valid_count{0};
+    int m_head_index{0};
+    std::vector<std::pair<double, double>> m_container;
+
+    rolling_ols2_rb(int size) : window_size{size + 1} { m_container.resize(window_size, std::pair<double, double>()); }
+
+    void delete_old() {
+        int old_index = m_head_index - window_size;
+        if (old_index < 0) old_index += window_size;
+        const auto& old_value = m_container[old_index];
+        if (std::isfinite(old_value.first) && std::isfinite(old_value.second)) {
+            sum_x -= old_value.second;
+            sum_y -= old_value.first;
+            --m_valid_count;
+        }
+    }
+    void add_new() {
+        const auto& new_value = m_container[m_head_index - 1];
+        if (std::isfinite(new_value.first) && std::isfinite(new_value.second)) {
+            sum_x += new_value.second;
+            sum_y += new_value.first;
+            ++m_valid_count;
+        }
+
+        if (m_valid_count > 0) {
+            b = sum_y / sum_x;
+        } else {
+            b = NAN;
+        }
+    }
+    void operator()(double y, double x) {
+        m_container[m_head_index++] = {y, x};
+        ++m_count;
+
+        if (m_count >= window_size) {
+            delete_old();
+        }
+        add_new();
+        if (m_head_index == window_size) m_head_index = 0;
+    }
+};
+
+struct rolling_ols3_rb {
+    struct Data {
+        double y{NAN}, x1{NAN}, x2{NAN};
+        Data() = default;
+        Data(double y_, double x1_, double x2_) : y{y_}, x1{x1_}, x2{x2_} {}
+    };
+
+    long double sum_x12 = 0, sum_x1_2 = 0, sum_x2_2 = 0, sum_x1y = 0, sum_x2y = 0;
+    double b1{NAN}, b2{NAN};
+    int window_size;
+    int m_count{0}, m_valid_count{0};
+    int m_head_index{0};
+    std::vector<Data> m_container;
+
+    rolling_ols3_rb(int size) : window_size{size + 1} { m_container.resize(window_size, Data()); }
+
+    void delete_old() {
+        int old_index = m_head_index - window_size;
+        if (old_index < 0) old_index += window_size;
+        const auto& old_value = m_container[old_index];
+        if (std::isfinite(old_value.x1) && std::isfinite(old_value.x2) && std::isfinite(old_value.y)) {
+            sum_x12 -= old_value.x1 * old_value.x2;
+            sum_x1_2 -= old_value.x1 * old_value.x1;
+            sum_x2_2 -= old_value.x2 * old_value.x2;
+            sum_x1y -= old_value.x1 * old_value.y;
+            sum_x2y -= old_value.x2 * old_value.y;
+            --m_valid_count;
+        }
+    }
+    void add_new() {
+        const auto& new_value = m_container[m_head_index - 1];
+        if (std::isfinite(new_value.x1) && std::isfinite(new_value.x2) && std::isfinite(new_value.y)) {
+            sum_x12 += new_value.x1 * new_value.x2;
+            sum_x1_2 += new_value.x1 * new_value.x1;
+            sum_x2_2 += new_value.x2 * new_value.x2;
+            sum_x1y += new_value.x1 * new_value.y;
+            sum_x2y += new_value.x2 * new_value.y;
+            ++m_valid_count;
+        }
+
+        if (m_valid_count < 2) {
+            b1 = NAN;
+            b2 = NAN;
+        } else {
+            long double denominator = sum_x12 * sum_x12 - sum_x1_2 * sum_x2_2;
+            b1 = (sum_x2y * sum_x12 - sum_x1y * sum_x2_2) / denominator;
+            b2 = (sum_x1y * sum_x12 - sum_x2y * sum_x1_2) / denominator;
+        }
+    }
+    void operator()(double y, double x1, double x2) {
+        m_container[m_head_index++] = {y, x1, x2};
+        ++m_count;
+
+        if (m_count >= window_size) {
+            delete_old();
+        }
+        add_new();
+        if (m_head_index == window_size) m_head_index = 0;
+    }
+};
+
 }  // namespace ornate
 
 #endif

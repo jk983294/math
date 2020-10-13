@@ -366,6 +366,44 @@ struct regression2_rolling {
     }
 };
 
+struct ols2_rolling {
+    // y = b * x
+    double sum_x{0}, sum_y{0};
+    double b{NAN};
+    int m_count{0}, m_valid_count{0};
+    std::deque<std::pair<double, double>> m_data;
+    int window_size;
+
+    explicit ols2_rolling(int size) : window_size{size} {}
+
+    void operator()(double y, double x) {
+        m_data.emplace_back(y, x);
+        ++m_count;
+
+        if (m_count > window_size) {
+            auto old_value = m_data.front();
+            m_data.pop_front();
+
+            if (isfinite(old_value.first) && isfinite(old_value.second)) {
+                sum_x -= old_value.second;
+                sum_y -= old_value.first;
+                --m_valid_count;
+            }
+        }
+
+        if (isfinite(x) && isfinite(y)) {
+            sum_x += x;
+            sum_y += y;
+            ++m_valid_count;
+        }
+        if (m_valid_count > 0) {
+            b = sum_y / sum_x;
+        } else {
+            b = NAN;
+        }
+    }
+};
+
 }  // namespace ornate
 
 #endif
