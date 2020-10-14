@@ -4,8 +4,8 @@ library(tidyverse)
 
 R2 <- function(pred, obs, formula = "corr", na.rm = FALSE) {
     n <- sum(complete.cases(pred))
-    switch(formula, corr = cor(obs, pred, use = ifelse(na.rm, "complete.obs", "everything"))^2, 
-        traditional = 1 - (sum((obs - pred)^2, na.rm = na.rm)/((n - 1) * var(obs, 
+    switch(formula, corr = cor(obs, pred, use = ifelse(na.rm, "complete.obs", "everything"))^2,
+        traditional = 1 - (sum((obs - pred)^2, na.rm = na.rm)/((n - 1) * var(obs,
             na.rm = na.rm))))
 }
 
@@ -56,6 +56,17 @@ plot(oos.mat, ylab = "R2", main = "ridge")
 best <- which.max(oos.mat)
 best
 oos.mat[best]
+
+# ridge regression cross validation
+y <- dt1 %>% select(ret) %>% scale(center = TRUE, scale = FALSE) %>% data.matrix()
+X <- dt1 %>% select(-ret) %>% data.matrix()
+fit <- cv.glmnet(X, y, intercept = FALSE, standardize=TRUE, alpha = 0, lambda = lambdas, nfolds = 10)
+plot(fit)
+lambda_best <- fit$lambda.min
+model_cv <- glmnet(X, y, intercept = FALSE, standardize = TRUE, alpha = 0, lambda = lambda_best)
+y_hat_cv <- predict(model_cv, X)
+R2(y_hat_cv, y)
+cor(cbind(y_hat_cv, y))
 
 # lasso
 n.coef <- 100
