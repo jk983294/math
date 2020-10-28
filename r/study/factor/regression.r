@@ -4,21 +4,20 @@ library(tidyverse)
 
 R2 <- function(pred, obs, formula = "corr", na.rm = FALSE) {
     n <- sum(complete.cases(pred))
-    switch(formula, corr = cor(obs, pred, use = ifelse(na.rm, "complete.obs", "everything"))^2,
-        traditional = 1 - (sum((obs - pred)^2, na.rm = na.rm)/((n - 1) * var(obs,
-            na.rm = na.rm))))
+    switch(formula, corr = cor(obs, pred, use = ifelse(na.rm, "complete.obs", "everything"))^2, traditional = 1 - (sum((obs - pred)^2, 
+        na.rm = na.rm)/((n - 1) * var(obs, na.rm = na.rm))))
 }
 
-split <- 0.8
-#dt1 <- read.csv("~/github/barn/train/factor.csv")
+# dt1 <- read.csv('~/github/barn/train/factor.csv')
 dt1 <- read.csv("~/github/MyTmp/sim/cmake-build-debug/pmfut/factor.csv")
 plot(density(dt1$ret), main = "ret")
 qqnorm(dt1$ret)
 qqline(dt1$ret)
 
 # split into training and validation set
-rowTotal = nrow(dt1)
-rowSplit = round(split * rowTotal)
+split <- 0.8
+rowTotal <- nrow(dt1)
+rowSplit <- round(split * rowTotal)
 index <- sample(rowTotal, rowSplit)
 train <- dt1[index, ]
 validation <- dt1[-index, ]
