@@ -310,18 +310,18 @@ inline bool regression3(const std::vector<T> &y, const std::vector<T> &x1, const
 
 template <typename T = float>
 T _ols(const T *y, const T *x, size_t num) {
-    T mx = 0, my = 0;
+    T sum_x2 = 0, sum_xy = 0;
     size_t valid_num = 0;
     for (size_t i = 0; i < num; i++) {
         if (!isfinite(y[i]) || !isfinite(x[i])) continue;
-        my += y[i];
-        mx += x[i];
+        sum_xy += y[i] * x[i];
+        sum_x2 += x[i] * x[i];
         valid_num++;
     }
     if (valid_num < 1) {
         return NAN;
     }
-    return my / mx;
+    return sum_xy / sum_x2;
 }
 /**
  * ols differ from regression is that it has no intercept, i.e y = b * x
@@ -428,6 +428,98 @@ template <typename T = float>
 double ema_hl(const std::vector<T> &data, int n, int i, double hl) {
     if ((size_t)n > data.size()) return NAN;
     return ema_hl(data.data(), n, i, hl);
+}
+
+template <typename T = float>
+T _slope_no_intercept(const T *y, size_t num) {
+    T sum_x2 = 0, sum_xy = 0;
+    size_t valid_num = 0;
+    for (size_t i = 0; i < num; i++) {
+        if (!isfinite(y[i])) continue;
+        sum_xy += y[i] * i;
+        sum_x2 += i * i;
+        valid_num++;
+    }
+    if (valid_num < 1) {
+        return NAN;
+    }
+    return sum_xy / sum_x2;
+}
+
+template <typename T = float>
+T slope_no_intercept(const std::vector<T> &y) {
+    return _slope_no_intercept(&y[0], y.size());
+}
+
+template <typename T = float>
+T _ts_slope(const T *y, size_t num) {
+    T sum_x2 = 0, sum_xy = 0, sum_x{0}, sum_y{0};
+    size_t valid_num = 0;
+    for (size_t i = 0; i < num; i++) {
+        if (!isfinite(y[i])) continue;
+        sum_xy += y[i] * i;
+        sum_x2 += i * i;
+        sum_x += i;
+        sum_y += y[i];
+        valid_num++;
+    }
+    if (valid_num > 0) {
+        long double cov_xy = sum_xy * valid_num - sum_x * sum_y;
+        long double var_x = sum_x2 * valid_num - sum_x * sum_x;
+        return var_x > 0 ? cov_xy / var_x : NAN;
+    }
+    return NAN;
+}
+
+template <typename T = float>
+T ts_slope(const std::vector<T> &y) {
+    return _ts_slope(&y[0], y.size());
+}
+
+template <typename T = float>
+T _ts_sharpe(const T *y, size_t num) {
+    T sum_y2 = 0, sum_y{0};
+    size_t valid_num = 0;
+    for (size_t i = 0; i < num; i++) {
+        if (!isfinite(y[i])) continue;
+        sum_y2 += y[i] * y[i];
+        sum_y += y[i];
+        valid_num++;
+    }
+
+    if (valid_num <= 1) return NAN;
+    long double mean = sum_y / valid_num;
+    long double sd = sqrt((sum_y2 - mean * mean * valid_num) / (valid_num - 1.0));
+    return sd > 0 ? mean / sd : NAN;
+}
+
+template <typename T = float>
+T ts_sharpe(const std::vector<T> &y) {
+    return _ts_sharpe(&y[0], y.size());
+}
+
+template <typename T = float>
+T _ts_scale(const T *y, size_t num) {
+    T sum_abs_y{0};
+    size_t valid_num = 0;
+    for (size_t i = 0; i < num; i++) {
+        if (!isfinite(y[i])) continue;
+        sum_abs_y += std::abs(y[i]);
+        valid_num++;
+    }
+
+    T new_value = y[num - 1];
+    if (std::isfinite(new_value)) {
+        double abs_mean = sum_abs_y / valid_num;
+        return abs_mean > 1e-6 ? (new_value / abs_mean) : NAN;
+    } else {
+        return NAN;
+    }
+}
+
+template <typename T = float>
+T ts_scale(const std::vector<T> &y) {
+    return _ts_scale(&y[0], y.size());
 }
 }  // namespace ornate
 

@@ -273,6 +273,23 @@ double rank_last(IN const T* x, int i, int n) {
     return nv <= 1 ? NAN : (2 * nlte - neq - 1.0) / (2.0 * (nv - 1.0));
 }
 
+template <typename T>
+double rank2_last(IN const T* x, T last, int i, int n) {
+    const int size = i + 1;
+    if (std::isnan(last) || (n > 0 && i + 1 < n)) {
+        return NAN;
+    }
+    const int N = (n == 0) ? size : std::min(size, n);
+    int nlte = 0, nv = 0;
+    for (int j = 0; j < N; ++j) {
+        double vx = x[i - N + 1 + j];
+        if (std::isnan(vx)) continue;
+        if (vx <= last) nlte++;
+        nv++;
+    }
+    return nv <= 1 ? NAN : (nlte - 0.0) / (nv - 0.0);
+}
+
 /**
  * rank in place. will filter NAN, normalize to [0, 1], NAN will remain NAN
  */

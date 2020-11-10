@@ -368,7 +368,7 @@ struct regression2_rolling {
 
 struct ols2_rolling {
     // y = b * x
-    double sum_x{0}, sum_y{0};
+    double sum_x2{0}, sum_xy{0};
     double b{NAN};
     int m_count{0}, m_valid_count{0};
     std::deque<std::pair<double, double>> m_data;
@@ -385,22 +385,90 @@ struct ols2_rolling {
             m_data.pop_front();
 
             if (isfinite(old_value.first) && isfinite(old_value.second)) {
-                sum_x -= old_value.second;
-                sum_y -= old_value.first;
+                sum_x2 -= old_value.second * old_value.second;
+                sum_xy -= old_value.first * old_value.second;
                 --m_valid_count;
             }
         }
 
         if (isfinite(x) && isfinite(y)) {
-            sum_x += x;
-            sum_y += y;
+            sum_x2 += x * x;
+            sum_xy += y * x;
             ++m_valid_count;
         }
         if (m_valid_count > 0) {
-            b = sum_y / sum_x;
+            b = sum_xy / sum_x2;
         } else {
             b = NAN;
         }
+    }
+};
+
+struct slope_no_intercept_rolling {
+    // y = b * x, x = 0, 1, 2, ..., n-1
+    int m_count{0};
+    std::deque<double> m_data;
+    int window_size;
+
+    explicit slope_no_intercept_rolling(int size) : window_size{size} {}
+
+    double operator()(double y) {
+        m_data.emplace_back(y);
+        ++m_count;
+
+        if (m_count > window_size) {
+            m_data.pop_front();
+        }
+        if (m_count >= window_size) {
+            double sum_x2{0}, sum_xy{0};
+            int m_valid_count = 0;
+            for (int i = 0; i < window_size; ++i) {
+                if (isfinite(m_data[i])) {
+                    sum_x2 += i * i;
+                    sum_xy += m_data[i] * i;
+                    ++m_valid_count;
+                }
+            }
+            if (m_valid_count > 0) return sum_xy / sum_x2;
+        }
+        return NAN;
+    }
+};
+
+struct slope_rolling {
+    // y = b * x + a, x = 0, 1, 2, ..., n-1
+    int m_count{0};
+    std::deque<double> m_data;
+    int window_size;
+
+    explicit slope_rolling(int size) : window_size{size} {}
+
+    double operator()(double y) {
+        m_data.emplace_back(y);
+        ++m_count;
+
+        if (m_count > window_size) {
+            m_data.pop_front();
+        }
+        if (m_count >= window_size) {
+            double sum_x2{0}, sum_xy{0}, sum_x{0}, sum_y{0};
+            int m_valid_count = 0;
+            for (int i = 0; i < window_size; ++i) {
+                if (isfinite(m_data[i])) {
+                    sum_x += i;
+                    sum_y += m_data[i];
+                    sum_x2 += i * i;
+                    sum_xy += m_data[i] * i;
+                    ++m_valid_count;
+                }
+            }
+            if (m_valid_count > 0) {
+                long double cov_xy = sum_xy * m_valid_count - sum_x * sum_y;
+                long double var_x = sum_x2 * m_valid_count - sum_x * sum_x;
+                return var_x > 0 ? cov_xy / var_x : NAN;
+            }
+        }
+        return NAN;
     }
 };
 

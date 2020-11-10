@@ -1384,6 +1384,46 @@ struct rolling_rank_count_rb_range {
     void set_param(const std::string& key, const std::string& value) {}
 };
 
+template <typename T>
+struct rolling_rank2_count_rb_range {
+    int window_size{0}, m_count{0};
+    int m_column_size{0};
+    std::vector<T> m_container;
+
+    explicit rolling_rank2_count_rb_range(int column_size_) : m_column_size{column_size_} {}
+    void set_row_size(int row) {
+        window_size = row;
+        m_container.resize(window_size * m_column_size);
+    }
+
+    double calc(const T* x, T new_value) {
+        if (std::isnan(new_value) || m_count < window_size) {
+            return NAN;
+        }
+        int nlte = 0, nv = 0;
+        for (int i = 0; i < window_size; ++i) {
+            const T val = x[i];
+            if (std::isnan(val)) continue;
+            if (val <= new_value) nlte++;
+            nv++;
+        }
+        return nv <= 1 ? NAN : (nlte - 0.0) / (nv - 0.0);
+    }
+
+    template <typename TOut>
+    void operator()(const T* old_row, const T* new_row, const T* cmp_row, TOut* output) {
+        int pos = m_count % window_size;
+        ++m_count;
+        for (int i = 0; i < m_column_size; ++i) {
+            auto* start_data = m_container.data() + i * window_size;
+            start_data[pos] = new_row[i];
+            output[i] = calc(start_data, cmp_row[i]);
+        }
+    }
+
+    void set_param(const std::string& key, const std::string& value) {}
+};
+
 struct rolling_regression2_rb_range {
     struct stat {
         long double sum_x{0}, sum_y{0}, sum_x2{0}, sum_xy{0};
@@ -1677,15 +1717,15 @@ struct rolling_ema_hl_rb_range {
 
 struct rolling_ols2_rb_range {
     struct stat {
-        long double sum_x{0}, sum_y{0};
+        long double sum_x2{0}, sum_xy{0};
         int m_valid_count{0};
         void clear() {
-            sum_x = sum_y = 0;
+            sum_x2 = sum_xy = 0;
             m_valid_count = 0;
         }
         double calc() const {
             if (m_valid_count > 0) {
-                return sum_y / sum_x;
+                return sum_xy / sum_x2;
             }
             return NAN;
         }
@@ -1710,16 +1750,16 @@ struct rolling_ols2_rb_range {
     template <typename T>
     void delete_old(stat& st, T old_y, T old_x) {
         if (std::isfinite(old_y) && std::isfinite(old_x)) {
-            st.sum_x -= old_x;
-            st.sum_y -= old_y;
+            st.sum_x2 -= old_x * old_x;
+            st.sum_xy -= old_y * old_x;
             --st.m_valid_count;
         }
     }
     template <typename T>
     void add_new(stat& st, T y, T x) {
         if (std::isfinite(y) && std::isfinite(x)) {
-            st.sum_x += x;
-            st.sum_y += y;
+            st.sum_x2 += x * x;
+            st.sum_xy += y * x;
             ++st.m_valid_count;
         }
     }
@@ -1825,6 +1865,450 @@ struct rolling_ols3_rb_range {
         for (int i = 0; i < m_column_size; ++i) {
             auto& st = stats[i];
             std::tie(b1[i], b2[i]) = st.calc();
+        }
+    }
+
+    void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
+};
+
+struct slope_no_intercept_rb_range {
+    struct stat {
+        long double sum_x2{0}, sum_xy{0};
+        int m_valid_count{0};
+        void clear() {
+            sum_x2 = sum_xy = 0;
+            m_valid_count = 0;
+        }
+        double calc() const {
+            if (m_valid_count > 0) {
+                return sum_xy / sum_x2;
+            }
+            return NAN;
+        }
+    };
+    int m_column_size;
+    std::vector<stat> stats;
+    std::vector<double> x_squared;
+    int m_row_size{0};  // window size
+
+    explicit slope_no_intercept_rb_range(int column_size_) : m_column_size{column_size_} {
+        stats.resize(m_column_size);
+    }
+
+    template <typename T>
+    void add_new(stat& st, T y, int idx_) {
+        if (std::isfinite(y)) {
+            st.sum_x2 += x_squared[idx_];
+            st.sum_xy += y * idx_;
+            ++st.m_valid_count;
+        }
+    }
+
+    void init() {
+        for (auto& stat : stats) stat.clear();
+    }
+
+    template <typename T>
+    void full_single(int idx, const T* y_row) {
+        int x_idx = m_row_size - 1 - idx;
+        for (int i = 0; i < m_column_size; ++i) {
+            auto& st = stats[i];
+            add_new(st, y_row[i], x_idx);
+        }
+    }
+
+    template <typename TOut>
+    void final_result(TOut* b) {
+        for (int i = 0; i < m_column_size; ++i) {
+            auto& st = stats[i];
+            b[i] = st.calc();
+        }
+    }
+
+    void set_row_size(int row) {
+        m_row_size = row;
+        x_squared.resize(m_row_size);
+        for (int i = 0; i < m_row_size; ++i) {
+            x_squared[i] = i * i;
+        }
+    }
+    void set_param(const std::string& key, const std::string& value) {}
+};
+
+struct slope_rb_range {
+    struct stat {
+        long double sum_x2{0}, sum_xy{0}, sum_x{0}, sum_y{0};
+        int m_valid_count{0};
+        void clear() {
+            sum_x2 = sum_xy = sum_x = sum_y = 0;
+            m_valid_count = 0;
+        }
+        double calc() const {
+            if (m_valid_count > 0) {
+                long double cov_xy = sum_xy * m_valid_count - sum_x * sum_y;
+                long double var_x = sum_x2 * m_valid_count - sum_x * sum_x;
+                return var_x > 0 ? cov_xy / var_x : NAN;
+            }
+            return NAN;
+        }
+    };
+    int m_column_size;
+    std::vector<stat> stats;
+    std::vector<double> x_squared;
+    int m_row_size{0};  // window size
+
+    explicit slope_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
+
+    template <typename T>
+    void add_new(stat& st, T y, int idx_) {
+        if (std::isfinite(y)) {
+            st.sum_x2 += x_squared[idx_];
+            st.sum_xy += y * idx_;
+            st.sum_x += idx_;
+            st.sum_y += y;
+            ++st.m_valid_count;
+        }
+    }
+
+    void init() {
+        for (auto& stat : stats) stat.clear();
+    }
+
+    template <typename T, typename TOut>
+    void full_single(int idx, const T* y_row, TOut* output) {
+        int x_idx = m_row_size - 1 - idx;
+        for (int i = 0; i < m_column_size; ++i) {
+            auto& st = stats[i];
+            add_new(st, y_row[i], x_idx);
+        }
+    }
+
+    template <typename TOut>
+    void final_result(TOut* b) {
+        for (int i = 0; i < m_column_size; ++i) {
+            auto& st = stats[i];
+            b[i] = st.calc();
+        }
+    }
+
+    void set_row_size(int row) {
+        m_row_size = row;
+        x_squared.resize(m_row_size);
+        for (int i = 0; i < m_row_size; ++i) {
+            x_squared[i] = i * i;
+        }
+    }
+    void set_param(const std::string& key, const std::string& value) {}
+};
+
+struct rolling_sharpe_rb_range {
+    struct stat {
+        long double total_sum{0}, total_square_sum{0};
+        int m_valid_count{0};
+        void clear() {
+            total_sum = 0;
+            total_square_sum = 0;
+            m_valid_count = 0;
+        }
+        double calc() const {
+            if (m_valid_count <= 1) return NAN;
+            long double mean = total_sum / m_valid_count;
+            long double sd = sqrt((total_square_sum - mean * mean * m_valid_count) / (m_valid_count - 1.0));
+            return sd > 0 ? mean / sd : NAN;
+        }
+    };
+    int m_column_size;
+    std::vector<stat> stats;
+
+    explicit rolling_sharpe_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
+
+    template <typename T, typename TOut>
+    void operator()(const T* old_row, const T* new_row, TOut* output) {
+        for (int i = 0; i < m_column_size; ++i) {
+            auto& st = stats[i];
+            if (old_row) {
+                delete_old(st, old_row[i]);
+            }
+            output[i] = add_new(st, new_row[i]);
+        }
+    }
+
+    template <typename T>
+    void delete_old(stat& st, T old_value) {
+        if (std::isfinite(old_value)) {
+            st.total_sum -= old_value;
+            st.total_square_sum -= old_value * old_value;
+            --st.m_valid_count;
+        }
+    }
+
+    template <typename T>
+    double add_new(stat& st, T new_value) {
+        if (std::isfinite(new_value)) {
+            st.total_sum += new_value;
+            st.total_square_sum += new_value * new_value;
+            ++st.m_valid_count;
+        }
+        return st.calc();
+    }
+
+    void init() {
+        for (auto& stat : stats) stat.clear();
+    }
+
+    template <typename T, typename TOut>
+    void full_single(int idx, const T* _row, TOut* output) {
+        for (int i = 0; i < m_column_size; ++i) {
+            if (std::isfinite(_row[i])) {
+                ++stats[i].m_valid_count;
+                stats[i].total_sum += _row[i];
+                stats[i].total_square_sum += _row[i] * _row[i];
+            }
+        }
+    }
+
+    template <typename TOut>
+    void final_result(TOut* output) {
+        for (int i = 0; i < m_column_size; ++i) {
+            output[i] = stats[i].calc();
+        }
+    }
+
+    void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
+};
+
+struct rolling_scale_rb_range {
+    struct stat {
+        long double total_abs_sum{0};
+        int m_valid_count{0};
+        void clear() {
+            total_abs_sum = 0;
+            m_valid_count = 0;
+        }
+        double calc(double latest_val) const {
+            if (std::isfinite(latest_val)) {
+                double abs_mean = total_abs_sum / m_valid_count;
+                return abs_mean > 1e-6 ? (latest_val / abs_mean) : NAN;
+            }
+            return NAN;
+        }
+    };
+    int m_column_size;
+    std::vector<stat> stats;
+
+    explicit rolling_scale_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
+
+    template <typename T, typename TOut>
+    void operator()(const T* old_row, const T* new_row, TOut* output) {
+        for (int i = 0; i < m_column_size; ++i) {
+            auto& st = stats[i];
+            if (old_row) {
+                delete_old(st, old_row[i]);
+            }
+            output[i] = add_new(st, new_row[i]);
+        }
+    }
+
+    template <typename T>
+    void delete_old(stat& st, T old_value) {
+        if (std::isfinite(old_value)) {
+            st.total_abs_sum -= std::abs(old_value);
+            --st.m_valid_count;
+        }
+    }
+
+    template <typename T>
+    double add_new(stat& st, T new_value) {
+        if (std::isfinite(new_value)) {
+            st.total_abs_sum += std::abs(new_value);
+            ++st.m_valid_count;
+            double abs_mean = st.total_abs_sum / st.m_valid_count;
+            return abs_mean > 1e-6 ? (new_value / abs_mean) : NAN;
+        } else {
+            return NAN;
+        }
+    }
+
+    void init() {
+        for (auto& stat : stats) stat.clear();
+    }
+
+    template <typename T, typename TOut>
+    void full_single(int idx, const T* _row, TOut* output) {
+        for (int i = 0; i < m_column_size; ++i) {
+            if (std::isfinite(_row[i])) {
+                ++stats[i].m_valid_count;
+                stats[i].total_abs_sum += std::abs(_row[i]);
+            }
+        }
+        if (idx == 0) {
+            detail::_data_copy2vector(_row, output, m_column_size);
+        }
+    }
+
+    template <typename TOut>
+    void final_result(TOut* output) {
+        for (int i = 0; i < m_column_size; ++i) {
+            output[i] = stats[i].calc(output[i]);
+        }
+    }
+
+    void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
+};
+
+struct rolling_rsharpe_rb_range {  // reverse sharpe = sd / mean
+    struct stat {
+        long double total_sum{0}, total_square_sum{0};
+        int m_valid_count{0};
+        void clear() {
+            total_sum = 0;
+            total_square_sum = 0;
+            m_valid_count = 0;
+        }
+        double calc() const {
+            if (m_valid_count <= 1) return NAN;
+            long double mean = total_sum / m_valid_count;
+            long double sd = sqrt((total_square_sum - mean * mean * m_valid_count) / (m_valid_count - 1.0));
+            return sd > 0 ? sd / mean : NAN;
+        }
+    };
+    int m_column_size;
+    std::vector<stat> stats;
+
+    explicit rolling_rsharpe_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
+
+    template <typename T, typename TOut>
+    void operator()(const T* old_row, const T* new_row, TOut* output) {
+        for (int i = 0; i < m_column_size; ++i) {
+            auto& st = stats[i];
+            if (old_row) {
+                delete_old(st, old_row[i]);
+            }
+            output[i] = add_new(st, new_row[i]);
+        }
+    }
+
+    template <typename T>
+    void delete_old(stat& st, T old_value) {
+        if (std::isfinite(old_value)) {
+            st.total_sum -= old_value;
+            st.total_square_sum -= old_value * old_value;
+            --st.m_valid_count;
+        }
+    }
+
+    template <typename T>
+    double add_new(stat& st, T new_value) {
+        if (std::isfinite(new_value)) {
+            st.total_sum += new_value;
+            st.total_square_sum += new_value * new_value;
+            ++st.m_valid_count;
+        }
+        return st.calc();
+    }
+
+    void init() {
+        for (auto& stat : stats) stat.clear();
+    }
+
+    template <typename T, typename TOut>
+    void full_single(int idx, const T* _row, TOut* output) {
+        for (int i = 0; i < m_column_size; ++i) {
+            if (std::isfinite(_row[i])) {
+                ++stats[i].m_valid_count;
+                stats[i].total_sum += _row[i];
+                stats[i].total_square_sum += _row[i] * _row[i];
+            }
+        }
+    }
+
+    template <typename TOut>
+    void final_result(TOut* output) {
+        for (int i = 0; i < m_column_size; ++i) {
+            output[i] = stats[i].calc();
+        }
+    }
+
+    void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
+};
+
+struct rolling_dcor_rb_range {
+    struct stat {
+        long double sumxy{0}, sum_x2{0}, sum_y2{0};
+        int m_valid_count{0};
+        void clear() {
+            sumxy = sum_x2 = sum_y2 = 0;
+            m_valid_count = 0;
+        }
+        double calc() const {
+            if (m_valid_count > 0) {
+                long double d = sum_x2 * sum_y2;
+                return d > 0 ? sumxy / std::sqrt(d) : NAN;
+            }
+            return NAN;
+        }
+    };
+    int m_column_size;
+    std::vector<stat> stats;
+
+    explicit rolling_dcor_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
+
+    template <typename T, typename TOut>
+    void operator()(const T* old_row0, const T* old_row1, const T* new_row0, const T* new_row1, TOut* output) {
+        for (int i = 0; i < m_column_size; ++i) {
+            auto& st = stats[i];
+            if (old_row0) {
+                delete_old(st, old_row0[i], old_row1[i]);
+            }
+            output[i] = add_new(st, new_row0[i], new_row1[i]);
+        }
+    }
+
+    template <typename T>
+    void delete_old(stat& st, T old_value0, T old_value1) {
+        if (std::isfinite(old_value0) && std::isfinite(old_value1)) {
+            st.sumxy -= old_value0 * old_value1;
+            st.sum_x2 -= old_value0 * old_value0;
+            st.sum_y2 -= old_value1 * old_value1;
+            --st.m_valid_count;
+        }
+    }
+
+    template <typename T>
+    double add_new(stat& st, T data0, T data1) {
+        if (std::isfinite(data0) && std::isfinite(data1)) {
+            st.sumxy += data0 * data1;
+            st.sum_x2 += data0 * data0;
+            st.sum_y2 += data1 * data1;
+            ++st.m_valid_count;
+        }
+        return st.calc();
+    }
+
+    void init() {
+        for (auto& stat : stats) stat.clear();
+    }
+
+    template <typename T, typename TOut>
+    void full_single(int idx, const T* x_row, const T* y_row, TOut* output) {
+        for (int i = 0; i < m_column_size; ++i) {
+            if (std::isfinite(x_row[i]) && std::isfinite(y_row[i])) {
+                ++stats[i].m_valid_count;
+                stats[i].sumxy += x_row[i] * y_row[i];
+                stats[i].sum_x2 += x_row[i] * x_row[i];
+                stats[i].sum_y2 += y_row[i] * y_row[i];
+            }
+        }
+    }
+
+    template <typename TOut>
+    void final_result(TOut* output) {
+        for (int i = 0; i < m_column_size; ++i) {
+            output[i] = stats[i].calc();
         }
     }
 

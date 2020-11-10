@@ -698,7 +698,7 @@ struct rolling_ema_hl_rb : public rolling_rb_base<double> {
 };
 
 struct rolling_ols2_rb {
-    double sum_x{0}, sum_y{0};
+    double sum_x2{0}, sum_xy{0};
     double b{NAN};
     int window_size;
     int m_count{0}, m_valid_count{0};
@@ -712,21 +712,21 @@ struct rolling_ols2_rb {
         if (old_index < 0) old_index += window_size;
         const auto& old_value = m_container[old_index];
         if (std::isfinite(old_value.first) && std::isfinite(old_value.second)) {
-            sum_x -= old_value.second;
-            sum_y -= old_value.first;
+            sum_x2 -= old_value.second * old_value.second;
+            sum_xy -= old_value.first * old_value.second;
             --m_valid_count;
         }
     }
     void add_new() {
         const auto& new_value = m_container[m_head_index - 1];
         if (std::isfinite(new_value.first) && std::isfinite(new_value.second)) {
-            sum_x += new_value.second;
-            sum_y += new_value.first;
+            sum_x2 += new_value.second * new_value.second;
+            sum_xy += new_value.first * new_value.second;
             ++m_valid_count;
         }
 
         if (m_valid_count > 0) {
-            b = sum_y / sum_x;
+            b = sum_xy / sum_x2;
         } else {
             b = NAN;
         }
