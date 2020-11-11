@@ -29,6 +29,18 @@ bool FloatEqual(T1 a, T2 b) {
     }
 }
 
+template <typename T>
+void add_window_vector(std::vector<T>& y, size_t window, T val) {
+    if (y.size() < window)
+        y.push_back(val);
+    else {
+        for (size_t j = 1; j < window; ++j) {
+            y[j - 1] = y[j];
+        }
+        y[window - 1] = val;
+    }
+}
+
 /**
  * round_up(1.3456, 2) -> 1.35
  */
@@ -66,6 +78,7 @@ inline bool cmp_numeric(double l, double r) {
 inline double ema_hl2decay(double hl) { return pow(0.5, 1.0 / hl); }
 
 inline bool is_same_sign(double val, int sign_) { return sign_ == 0 || sign_ * val > 0; }
+inline bool is_same_sign(double val, double sign_) { return sign_ * val > 0; }
 }  // namespace ornate
 
 #endif

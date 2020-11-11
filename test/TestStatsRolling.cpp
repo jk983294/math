@@ -1,3 +1,4 @@
+#include <math_dummy.h>
 #include <math_stats_no_roll_rb_range.h>
 #include <math_stats_rolling_rb_range.h>
 #include <math_utils.h>
@@ -50,15 +51,10 @@ void test_variance_rolling(const vector<double>& _data, int window) {
         row[0] = _data[i];
         container.push(row);
         rvrr(container.get_old_row(), container.get_new_row(), row.data());
-        if (std::isnan(std_naive)) {
-            REQUIRE(std::isnan(s));
-            REQUIRE(std::isnan(rvr.variance));
-            REQUIRE(std::isnan(row[0]));
-        } else {
-            REQUIRE(sqrtf(vr.variance) == std_naive);
-            REQUIRE(sqrtf(rvr.variance) == std_naive);
-            REQUIRE(sqrtf(row[0]) == std_naive);
-        }
+
+        REQUIRE(FloatEqual(sqrtf(vr.variance), std_naive));
+        REQUIRE(FloatEqual(sqrtf(rvr.variance), std_naive));
+        REQUIRE(FloatEqual(sqrtf(row[0]), std_naive));
 
         if (container.m_count >= window) {
             nrvrr.init();
@@ -68,11 +64,7 @@ void test_variance_rolling(const vector<double>& _data, int window) {
                 }
                 nrvrr.final_result(row.data());
             }
-            if (std::isnan(std_naive)) {
-                REQUIRE(std::isnan(row[0]));
-            } else {
-                REQUIRE(sqrtf(row[0]) == std_naive);
-            }
+            REQUIRE(FloatEqual(sqrtf(row[0]), std_naive));
         }
     }
 }
@@ -114,15 +106,10 @@ void test_covariance_rolling(const vector<double>& _data1, const vector<double>&
         container2.push(row2);
         rcrr(container.get_old_row(), container2.get_old_row(), container.get_new_row(), container2.get_new_row(),
              row.data());
-        if (std::isnan(cov_naive)) {
-            REQUIRE(std::isnan(s));
-            REQUIRE(std::isnan(rcr.covariance));
-            REQUIRE(std::isnan(row[0]));
-        } else {
-            REQUIRE(FloatEqual(cvr.covariance, cov_naive));
-            REQUIRE(FloatEqual(rcr.covariance, cov_naive));
-            REQUIRE(FloatEqual(row[0], cov_naive));
-        }
+
+        REQUIRE(FloatEqual(cvr.covariance, cov_naive));
+        REQUIRE(FloatEqual(rcr.covariance, cov_naive));
+        REQUIRE(FloatEqual(row[0], cov_naive));
 
         if (container.m_count >= window) {
             nrcrr.init();
@@ -133,11 +120,7 @@ void test_covariance_rolling(const vector<double>& _data1, const vector<double>&
                 }
                 nrcrr.final_result(row.data());
             }
-            if (std::isnan(cov_naive)) {
-                REQUIRE(std::isnan(row[0]));
-            } else {
-                REQUIRE(FloatEqual(row[0], cov_naive));
-            }
+            REQUIRE(FloatEqual(row[0], cov_naive));
         }
     }
 }
@@ -223,15 +206,9 @@ void test_corr_rolling(const vector<double>& _data1, const vector<double>& _data
         rcrr(container.get_old_row(), container2.get_old_row(), container.get_new_row(), container2.get_new_row(),
              row.data());
 
-        if (std::isnan(corr_naive)) {
-            REQUIRE(std::isnan(s));
-            REQUIRE(std::isnan(rcr.corr));
-            REQUIRE(std::isnan(row[0]));
-        } else {
-            REQUIRE(FloatEqual(s, corr_naive));
-            REQUIRE(FloatEqual(rcr.corr, corr_naive));
-            REQUIRE(FloatEqual(row[0], corr_naive));
-        }
+        REQUIRE(FloatEqual(s, corr_naive));
+        REQUIRE(FloatEqual(rcr.corr, corr_naive));
+        REQUIRE(FloatEqual(row[0], corr_naive));
 
         if (container.m_count >= window) {
             nrcrr.init();
@@ -242,11 +219,7 @@ void test_corr_rolling(const vector<double>& _data1, const vector<double>& _data
                 }
                 nrcrr.final_result(row.data());
             }
-            if (std::isnan(corr_naive)) {
-                REQUIRE(std::isnan(row[0]));
-            } else {
-                REQUIRE(FloatEqual(row[0], corr_naive));
-            }
+            REQUIRE(FloatEqual(row[0], corr_naive));
         }
     }
 }
@@ -302,14 +275,7 @@ void test_skew_by_window(const vector<double>& x_, int window) {
 
     double ret = 0;
     for (double d : x_) {
-        if (y.size() < (size_t)window)
-            y.push_back(d);
-        else {
-            for (int j = 1; j < window; ++j) {
-                y[j - 1] = y[j];
-            }
-            y[window - 1] = d;
-        }
+        add_window_vector(y, window, d);
         ret = sr(d);
 
         row[0] = d;
@@ -438,14 +404,7 @@ void test_kurtosis_by_window(const vector<double>& x_, int window) {
 
     double ret = 0;
     for (double d : x_) {
-        if (y.size() < (size_t)window)
-            y.push_back(d);
-        else {
-            for (int j = 1; j < window; ++j) {
-                y[j - 1] = y[j];
-            }
-            y[window - 1] = d;
-        }
+        add_window_vector(y, window, d);
         ret = sr(d);
 
         row[0] = d;
@@ -505,14 +464,7 @@ void test_decay_by_window(const vector<double>& x_, int window) {
     nrdrr.set_row_size(window);
 
     for (double d : x_) {
-        if (y.size() < (size_t)window)
-            y.push_back(d);
-        else {
-            for (int j = 1; j < window; ++j) {
-                y[j - 1] = y[j];
-            }
-            y[window - 1] = d;
-        }
+        add_window_vector(y, window, d);
 
         row[0] = d;
         container.push(row);
@@ -557,14 +509,7 @@ void test_rank_by_window(const vector<double>& x_, int window) {
 
     double ret = 0;
     for (double d : x_) {
-        if (y.size() < (size_t)window)
-            y.push_back(d);
-        else {
-            for (int j = 1; j < window; ++j) {
-                y[j - 1] = y[j];
-            }
-            y[window - 1] = d;
-        }
+        add_window_vector(y, window, d);
         ret = rrrb(d);
 
         row[0] = d;
@@ -605,17 +550,8 @@ void test_regression_by_window(const vector<double>& x_, const vector<double>& y
 
     double ret = 0;
     for (size_t i = 0; i < x_.size(); ++i) {
-        if (_x.size() < (size_t)window) {
-            _x.push_back(x_[i]);
-            _y.push_back(y_[i]);
-        } else {
-            for (int j = 1; j < window; ++j) {
-                _x[j - 1] = _x[j];
-                _y[j - 1] = _y[j];
-            }
-            _x[window - 1] = x_[i];
-            _y[window - 1] = y_[i];
-        }
+        add_window_vector(_x, window, x_[i]);
+        add_window_vector(_y, window, y_[i]);
 
         double a, b, R;
         ornate::regression(_y, _x, &a, &b, &R);
@@ -680,20 +616,9 @@ void test_regression3_by_window(const vector<double>& x1_, const vector<double>&
 
     double ret = 0;
     for (size_t i = 0; i < x1_.size(); ++i) {
-        if (_x1.size() < (size_t)window) {
-            _x1.push_back(x1_[i]);
-            _x2.push_back(x2_[i]);
-            _y.push_back(y_[i]);
-        } else {
-            for (int j = 1; j < window; ++j) {
-                _x1[j - 1] = _x1[j];
-                _x2[j - 1] = _x2[j];
-                _y[j - 1] = _y[j];
-            }
-            _x1[window - 1] = x1_[i];
-            _x2[window - 1] = x2_[i];
-            _y[window - 1] = y_[i];
-        }
+        add_window_vector(_x1, window, x1_[i]);
+        add_window_vector(_x2, window, x2_[i]);
+        add_window_vector(_y, window, y_[i]);
 
         double b0, b1, b2;
         ornate::regression3(_y, _x1, _x2, &b0, &b1, &b2);
@@ -759,14 +684,7 @@ void test_quantile_by_window(const vector<double>& x_, int window, double percen
 
     double ret = 0;
     for (double d : x_) {
-        if (y.size() < (size_t)window)
-            y.push_back(d);
-        else {
-            for (int j = 1; j < window; ++j) {
-                y[j - 1] = y[j];
-            }
-            y[window - 1] = d;
-        }
+        add_window_vector(y, window, d);
         ret = rrrb(d);
 
         row[0] = d;
@@ -777,9 +695,6 @@ void test_quantile_by_window(const vector<double>& x_, int window, double percen
         vector<double> tmp = y;
         double expected = ornate::quantile(tmp, percent);
 
-        if (!FloatEqual(ret, expected)) {
-            cout << ret << " " << expected << endl;
-        }
         REQUIRE(FloatEqual(ret, expected));
         REQUIRE(FloatEqual(row[0], expected));
         REQUIRE(FloatEqual(row[1], expected));
@@ -811,14 +726,7 @@ void test_ema_hl_by_window(const vector<double>& x_, int window) {
 
     double ret = 0;
     for (double d : x_) {
-        if (y.size() < (size_t)window)
-            y.push_back(d);
-        else {
-            for (int j = 1; j < window; ++j) {
-                y[j - 1] = y[j];
-            }
-            y[window - 1] = d;
-        }
+        add_window_vector(y, window, d);
         ret = rerb(d);
 
         row[0] = d;
@@ -874,17 +782,8 @@ void test_ols_by_window(const vector<double>& x_, const vector<double>& y_, int 
 
     double ret = 0;
     for (size_t i = 0; i < x_.size(); ++i) {
-        if (_x.size() < (size_t)window) {
-            _x.push_back(x_[i]);
-            _y.push_back(y_[i]);
-        } else {
-            for (int j = 1; j < window; ++j) {
-                _x[j - 1] = _x[j];
-                _y[j - 1] = _y[j];
-            }
-            _x[window - 1] = x_[i];
-            _y[window - 1] = y_[i];
-        }
+        add_window_vector(_x, window, x_[i]);
+        add_window_vector(_y, window, y_[i]);
 
         double b = ornate::ols(_y, _x);
 
@@ -942,20 +841,9 @@ void test_ols3_by_window(const vector<double>& x1_, const vector<double>& x2_, c
 
     double ret = 0;
     for (size_t i = 0; i < x1_.size(); ++i) {
-        if (_x1.size() < (size_t)window) {
-            _x1.push_back(x1_[i]);
-            _x2.push_back(x2_[i]);
-            _y.push_back(y_[i]);
-        } else {
-            for (int j = 1; j < window; ++j) {
-                _x1[j - 1] = _x1[j];
-                _x2[j - 1] = _x2[j];
-                _y[j - 1] = _y[j];
-            }
-            _x1[window - 1] = x1_[i];
-            _x2[window - 1] = x2_[i];
-            _y[window - 1] = y_[i];
-        }
+        add_window_vector(_x1, window, x1_[i]);
+        add_window_vector(_x2, window, x2_[i]);
+        add_window_vector(_y, window, y_[i]);
 
         double b1, b2;
         ornate::ols(_y, _x1, _x2, &b1, &b2);
@@ -1014,14 +902,7 @@ void test_slope_no_intercept_by_window(const vector<double>& y_, int window) {
 
     double ret = 0;
     for (size_t i = 0; i < y_.size(); ++i) {
-        if (_y.size() < (size_t)window) {
-            _y.push_back(y_[i]);
-        } else {
-            for (int j = 1; j < window; ++j) {
-                _y[j - 1] = _y[j];
-            }
-            _y[window - 1] = y_[i];
-        }
+        add_window_vector(_y, window, y_[i]);
 
         double b = ornate::slope_no_intercept(_y);
 
@@ -1040,7 +921,7 @@ void test_slope_no_intercept_by_window(const vector<double>& y_, int window) {
             nrrrr.init();
             if (container.m_count >= window) {
                 for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
-                    nrrrr.full_single(ts_idx, container.get_row_by_idx(ts_idx));
+                    nrrrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), row.data());
                 }
                 nrrrr.final_result(row.data());
             }
@@ -1067,14 +948,7 @@ void test_slope_by_window(const vector<double>& y_, int window) {
 
     double ret = 0;
     for (size_t i = 0; i < y_.size(); ++i) {
-        if (_y.size() < (size_t)window) {
-            _y.push_back(y_[i]);
-        } else {
-            for (int j = 1; j < window; ++j) {
-                _y[j - 1] = _y[j];
-            }
-            _y[window - 1] = y_[i];
-        }
+        add_window_vector(_y, window, y_[i]);
 
         double b = ornate::ts_slope(_y);
 
@@ -1120,20 +994,13 @@ void test_sharpe_by_window(const vector<double>& y_, int window) {
     nrsrr.set_row_size(window);
 
     double ret = 0;
-    for (size_t i = 0; i < y_.size(); ++i) {
-        if (_y.size() < (size_t)window) {
-            _y.push_back(y_[i]);
-        } else {
-            for (int j = 1; j < window; ++j) {
-                _y[j - 1] = _y[j];
-            }
-            _y[window - 1] = y_[i];
-        }
+    for (double i : y_) {
+        add_window_vector(_y, window, i);
 
         double b = ornate::ts_sharpe(_y);
 
-        row[0] = y_[i];
-        row[1] = y_[i];
+        row[0] = i;
+        row[1] = i;
         container.push(row);
         rsrr(container.get_old_row(), container.get_new_row(), row.data());
         REQUIRE(FloatEqual(row[0], b));
@@ -1170,20 +1037,13 @@ void test_scale_by_window(const vector<double>& y_, int window) {
     nrsrr.set_row_size(window);
 
     double ret = 0;
-    for (size_t i = 0; i < y_.size(); ++i) {
-        if (_y.size() < (size_t)window) {
-            _y.push_back(y_[i]);
-        } else {
-            for (int j = 1; j < window; ++j) {
-                _y[j - 1] = _y[j];
-            }
-            _y[window - 1] = y_[i];
-        }
+    for (double i : y_) {
+        add_window_vector(_y, window, i);
 
         double b = ornate::ts_scale(_y);
 
-        row[0] = y_[i];
-        row[1] = y_[i];
+        row[0] = i;
+        row[1] = i;
         container.push(row);
         rsrr(container.get_old_row(), container.get_new_row(), row.data());
         REQUIRE(FloatEqual(row[0], b));
@@ -1209,17 +1069,6 @@ TEST_CASE("scale rolling nan", "[MathStatsRolling]") {
     test_scale_by_window(x1, 6);
 }
 
-void add_window_vector(vector<double>& y, int window, double val) {
-    if (y.size() < (size_t)window)
-        y.push_back(val);
-    else {
-        for (int j = 1; j < window; ++j) {
-            y[j - 1] = y[j];
-        }
-        y[window - 1] = val;
-    }
-}
-
 void test_rank2_by_window(const vector<double>& x_, const vector<double>& x1_, int window) {
     vector<double> y;
 
@@ -1241,7 +1090,8 @@ void test_rank2_by_window(const vector<double>& x_, const vector<double>& x1_, i
         row1[0] = x1_[i];
         row1[1] = x1_[i];
         container1.push(row1);
-        rrrr(container.get_old_row(), container.get_new_row(), container1.get_new_row(), row.data());
+        rrrr(container.get_old_row(), container1.get_old_row(), container.get_new_row(), container1.get_new_row(),
+             row.data());
 
         double expected = ornate::rank2_last(y.data(), x1_[i], y.size() - 1, window);
 
@@ -1257,35 +1107,62 @@ TEST_CASE("rank2 rolling nan", "[MathStatsRolling]") {
     test_rank2_by_window(x1, x2, 6);
 }
 
+static double dummy_dcor(const vector<double>& x_, const vector<double>& y_) {
+    long double axx = 0, ayy = 0, axy = 0;
+    std::size_t nv = 0;
+    for (size_t i = 0; i < x_.size(); ++i) {
+        if (std::isnan(x_[i]) || std::isnan(y_[i])) continue;
+        nv++;
+        axx += x_[i] * x_[i];
+        ayy += y_[i] * y_[i];
+        axy += x_[i] * y_[i];
+    }
+    if (nv < 1) {
+        return NAN;
+    } else {
+        long double d = axx * ayy;
+        return d > 0 ? axy / sqrt(d) : NAN;
+    }
+}
+
 void test_dcor_rolling(const vector<double>& _data1, const vector<double>& _data2, int window) {
+    vector<double> x_, y;
+
     rolling_data_container<> container(window, 1);
     rolling_data_container<> container2(window, 1);
     vector<double> row(1, 0);
     vector<double> row2(1, 0);
-    rolling_dcor_rb_range nrcrr(1);
+    rolling_dcor_rb_range nrdrr(1);
+    nrdrr.set_row_size(window);
+    rolling_dcor_rb_range rdrr(1);
+    rdrr.set_row_size(window);
 
     for (size_t i = 1; i < _data1.size(); ++i) {
-        row[0] = _data1[i] - _data1[i - 1];
+        double d = _data1[i] - _data1[i - 1];
+        add_window_vector(x_, window, d);
+        double d1 = _data2[i] - _data2[i - 1];
+        add_window_vector(y, window, d1);
+
+        row[0] = d;
         container.push(row);
-        row2[0] = _data2[i] - _data2[i - 1];
+        row2[0] = d1;
         container2.push(row2);
-        rcrr(container.get_old_row(), container2.get_old_row(), container.get_new_row(), container2.get_new_row(),
+        rdrr(container.get_old_row(), container2.get_old_row(), container.get_new_row(), container2.get_new_row(),
              row.data());
 
+        double corr_naive = dummy_dcor(x_, y);
+        REQUIRE(FloatEqual(row[0], corr_naive));
+
         if (container.m_count >= window) {
-            nrcrr.init();
+            nrdrr.init();
             if (container.m_count >= window) {
                 for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
-                    nrcrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx),
+                    nrdrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx),
                                       row.data());
                 }
-                nrcrr.final_result(row.data());
+                nrdrr.final_result(row.data());
             }
-            if (std::isnan(corr_naive)) {
-                REQUIRE(std::isnan(row[0]));
-            } else {
-                REQUIRE(FloatEqual(row[0], corr_naive));
-            }
+            REQUIRE(FloatEqual(row[0], corr_naive));
         }
     }
 }
@@ -1298,4 +1175,102 @@ TEST_CASE("dcor rolling", "[MathStatsRolling]") {
     vector<double> _data2{1.12, NAN, 1.13, 1.14, NAN, 1.12, 1.12, 1.13, 1.14, 1.12};
     test_dcor_rolling(_data1, _data2, 3);
     test_dcor_rolling(_data1, _data2, 5);
+}
+
+void test_tscross_rolling(const vector<double>& _data1, const vector<double>& _data2, int window) {
+    vector<double> x_, y;
+
+    int ts_w = window + 1;
+    rolling_data_container<> container(ts_w, 1);
+    rolling_data_container<> container2(ts_w, 1);
+    vector<double> row(1, 0);
+    vector<double> row2(1, 0);
+    ts_cross_rb_range nrdrr(1);
+    nrdrr.set_row_size(window);
+
+    for (size_t i = 0; i < _data1.size(); ++i) {
+        row[0] = _data1[i];
+        container.push(row);
+        row2[0] = _data2[i];
+        container2.push(row2);
+        nrdrr(container.get_old_row(), container2.get_old_row(), container.get_row_by_idx(ts_w - 1),
+              container2.get_row_by_idx(ts_w - 1), row.data());
+
+        double _naive = dummy_ts_cross(_data1.data(), _data2.data(), i, window);
+        REQUIRE(FloatEqual(row[0], _naive));
+    }
+}
+
+TEST_CASE("tscross rolling", "[MathStatsRolling]") {
+    vector<double> _data1{1, 2, NAN, 4, NAN, 1.11, 1.17, 1.11, 1.19, 1.05};
+    vector<double> _data2{1.12, NAN, 1.13, 1.14, NAN, 1.12, 1.12, 1.13, 1.14, 1.12};
+    test_tscross_rolling(_data1, _data2, 3);
+    test_tscross_rolling(_data1, _data2, 5);
+}
+
+void test_ts_backward_cpn_rolling(const vector<double>& _data1, int window) {
+    rolling_data_container<> container(window, 1);
+    vector<double> row(1, 0);
+    rolling_backward_cpn_rb_range nrdrr(1);
+    nrdrr.set_row_size(window);
+
+    for (size_t i = 0; i < _data1.size(); ++i) {
+        row[0] = _data1[i];
+        container.push(row);
+        double _naive = dummy_ts_backward_cpn(_data1.data(), i, window, 0);
+
+        if (container.m_count >= window) {
+            nrdrr.init();
+
+            for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
+                nrdrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), row.data());
+            }
+            nrdrr.final_result(row.data());
+
+            REQUIRE(FloatEqual(row[0], _naive));
+        }
+    }
+}
+
+TEST_CASE("ts_backward_cpn rolling", "[MathStatsRolling]") {
+    vector<double> _data1{1, -2, NAN, 4, NAN, -1.11, 1.17, -1.11, -1.19, 1.05};
+    test_ts_backward_cpn_rolling(_data1, 3);
+    test_ts_backward_cpn_rolling(_data1, 4);
+    test_ts_backward_cpn_rolling(_data1, 5);
+}
+
+void test_ts_acp_rolling(const vector<double>& _data1, int window) {
+    int lag = 1;
+    rolling_data_container<> container(window, 1);
+    vector<double> row(1, 0);
+    rolling_ts_acp_rb_range nrdrr(1);
+    nrdrr.set_row_size(window);
+
+    for (size_t i = 0; i < _data1.size(); ++i) {
+        row[0] = _data1[i];
+        container.push(row);
+        double _naive = dummy_ts_acp(_data1.data(), i, window, lag);
+
+        if (container.m_count >= window) {
+            nrdrr.init();
+
+            for (int ts_idx = 0; ts_idx < window - lag; ++ts_idx) {
+                nrdrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), container.get_row_by_idx(ts_idx + lag));
+            }
+            nrdrr.final_result(row.data());
+
+            if (!FloatEqual(row[0], _naive)) {
+                _naive = dummy_ts_acp(_data1.data(), i, window, lag);
+                FloatEqual(row[0], _naive);
+            }
+            REQUIRE(FloatEqual(row[0], _naive));
+        }
+    }
+}
+
+TEST_CASE("ts_acp rolling", "[MathStatsRolling]") {
+    vector<double> _data1{1, -2, NAN, 4, NAN, -1.11, 1.17, -1.11, -1.19, 1.05};
+    test_ts_acp_rolling(_data1, 3);
+    test_ts_acp_rolling(_data1, 4);
+    test_ts_acp_rolling(_data1, 5);
 }

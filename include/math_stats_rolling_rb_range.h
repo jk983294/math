@@ -1411,7 +1411,7 @@ struct rolling_rank2_count_rb_range {
     }
 
     template <typename TOut>
-    void operator()(const T* old_row, const T* new_row, const T* cmp_row, TOut* output) {
+    void operator()(const T* old_row, const T* old_cmp_row, const T* new_row, const T* cmp_row, TOut* output) {
         int pos = m_count % window_size;
         ++m_count;
         for (int i = 0; i < m_column_size; ++i) {
@@ -1909,8 +1909,8 @@ struct slope_no_intercept_rb_range {
         for (auto& stat : stats) stat.clear();
     }
 
-    template <typename T>
-    void full_single(int idx, const T* y_row) {
+    template <typename T, typename TOut>
+    void full_single(int idx, const T* y_row, TOut* output) {
         int x_idx = m_row_size - 1 - idx;
         for (int i = 0; i < m_column_size; ++i) {
             auto& st = stats[i];
@@ -2301,6 +2301,145 @@ struct rolling_dcor_rb_range {
                 stats[i].sumxy += x_row[i] * y_row[i];
                 stats[i].sum_x2 += x_row[i] * x_row[i];
                 stats[i].sum_y2 += y_row[i] * y_row[i];
+            }
+        }
+    }
+
+    template <typename TOut>
+    void final_result(TOut* output) {
+        for (int i = 0; i < m_column_size; ++i) {
+            output[i] = stats[i].calc();
+        }
+    }
+
+    void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
+};
+
+struct ts_cross_rb_range {
+    int m_column_size;
+
+    explicit ts_cross_rb_range(int column_size_) : m_column_size{column_size_} {}
+
+    template <typename T, typename TOut>
+    void operator()(const T* _row_x0, const T* _row_y0, const T* _row_x1, const T* _row_y1, TOut* output) {
+        if (_row_x0 == nullptr || _row_y0 == nullptr) {
+            std::fill(output, output + m_column_size, NAN);
+            return;
+        }
+        for (int i = 0; i < m_column_size; ++i) {
+            double x0 = _row_x0[i];
+            double y0 = _row_y0[i];
+            double x1 = _row_x1[i];
+            double y1 = _row_y1[i];
+            if (std::isnan(x0) || std::isnan(y0) || std::isnan(x1) || std::isnan(y1)) {
+                output[i] = NAN;
+            } else if (x0 < y0 && x1 > y1) {
+                output[i] = 1;
+            } else if (x0 > y0 && x1 < y1) {
+                output[i] = 1;
+            } else {
+                output[i] = 0;
+            }
+        }
+    }
+
+    void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
+};
+
+/**
+ * 没有rolling算法，因为要按当前值来看是否 count++, 下一次，依照的当前值变化了
+ * 返回从后往前和当前值同号的数字个数，一旦发现不符合的就结束累计
+ */
+struct rolling_backward_cpn_rb_range {
+    struct stat {
+        int m_count{0};
+        bool m_is_finish{false};
+        void clear() {
+            m_is_finish = false;
+            m_count = 0;
+        }
+        double calc() const { return m_count; }
+    };
+    int m_column_size;
+    std::vector<stat> stats;
+    int sign{0};  // 0: all, 1: + only, -1: - only
+
+    explicit rolling_backward_cpn_rb_range(int column_size_) : m_column_size{column_size_} {
+        stats.resize(m_column_size);
+    }
+
+    template <typename T>
+    bool should_account(T value, T latest_value) {
+        return (sign != 0 && is_same_sign(value, sign)) || is_same_sign(value, latest_value);
+    }
+
+    void init() {
+        for (auto& stat : stats) stat.clear();
+    }
+
+    template <typename T, typename TOut>
+    void full_single(int idx, const T* _row, TOut* output) {
+        if (idx == 0) {
+            detail::_data_copy2vector(_row, output, m_column_size);
+        }
+
+        for (int i = 0; i < m_column_size; ++i) {
+            if (std::isfinite(_row[i]) && std::isfinite(output[i])) {
+                if (!stats[i].m_is_finish && should_account(_row[i], output[i])) {
+                    ++stats[i].m_count;
+                } else {
+                    stats[i].m_is_finish = true;
+                }
+            }
+        }
+    }
+
+    template <typename TOut>
+    void final_result(TOut* output) {
+        for (int i = 0; i < m_column_size; ++i) {
+            output[i] = stats[i].calc();
+        }
+    }
+
+    void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {
+        if (key == "sign") {
+            sign = std::stoi(value);
+        }
+    }
+};
+
+/**
+ * 返回window内 x[i] 和 x[i+lag] 同号的比例
+ */
+struct rolling_ts_acp_rb_range {
+    struct stat {
+        int m_count{0}, m_pos_count{0};
+        void clear() {
+            m_count = 0;
+            m_pos_count = 0;
+        }
+        double calc() const { return m_pos_count * 1.0 / m_count; }
+    };
+    int m_column_size;
+    std::vector<stat> stats;
+
+    explicit rolling_ts_acp_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
+
+    void init() {
+        for (auto& stat : stats) stat.clear();
+    }
+
+    template <typename T>
+    void full_single(int idx, const T* _row, const T* _lag_row) {
+        for (int i = 0; i < m_column_size; ++i) {
+            if (std::isfinite(_row[i]) && std::isfinite(_lag_row[i])) {
+                ++stats[i].m_count;
+                if (is_same_sign(_row[i], _lag_row[i])) {
+                    ++stats[i].m_pos_count;
+                }
             }
         }
     }
