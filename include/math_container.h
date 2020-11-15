@@ -77,6 +77,13 @@ struct rolling_data_container {
         if (m_head_index == window_size) m_head_index = 0;
         detail::_data_copy2vector(data.data(), m_container[m_head_index], m_column_size);
     }
+
+    std::vector<T> &get_push_row() {
+        ++m_count;
+        ++m_head_index;
+        if (m_head_index == window_size) m_head_index = 0;
+        return m_container[m_head_index];
+    }
 };
 
 template <typename T>

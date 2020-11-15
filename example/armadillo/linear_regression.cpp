@@ -31,11 +31,29 @@ int main() {
     cout << b << endl;
     cout << x << endl;  // [2, 1, -1]^T
 
-    vec x2;
-    bool status = solve(x2, A, b);  // no throw
+    vec coef;
+    bool status = solve(coef, A, b);  // no throw
     cout << "status=" << status << endl;
     cout << A << endl;
     cout << b << endl;
-    cout << x2 << endl;  // [2, 1, -1]^T
+    cout << "coef:\n" << coef << endl;  // [2, 1, -1]^T
+
+    const arma::colvec& fitted = A * coef;
+    const arma::colvec& residual = b - fitted;
+
+    const int n = A.n_rows;
+    const int k = A.n_cols;
+    double s2 = arma::dot(residual, residual) / (n - k);
+    const arma::colvec& std_err = arma::sqrt(s2 * arma::diagvec(arma::pinv(arma::trans(A) * A)));
+    const arma::colvec& tvalue = coef / std_err;
+
+    const arma::colvec& ytot = b - arma::mean(b);
+    double r_squared = 1 - arma::dot(residual, residual) / arma::dot(ytot, ytot);
+
+    cout << "fitted.values:\n" << fitted << endl;
+    cout << "residuals:\n" << residual << endl;
+    cout << "stderr:\n" << std_err << endl;
+    cout << "tvalue:\n" << tvalue << endl;
+    cout << "rsquared: " << r_squared << endl;
     return 0;
 }

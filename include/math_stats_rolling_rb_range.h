@@ -1428,17 +1428,44 @@ struct rolling_regression2_rb_range {
     struct stat {
         long double sum_x{0}, sum_y{0}, sum_x2{0}, sum_xy{0};
         int m_valid_count{0};
+        double a{NAN}, b{NAN}, mean_y, res_squared{0}, y_diff_squared{0};
         void clear() {
+            a = b = NAN;
             sum_x = sum_y = sum_x2 = sum_xy = 0;
             m_valid_count = 0;
         }
-        std::pair<double, double> calc() const {
-            double a = NAN, b = NAN;
+        void calc_coef() {
+            a = b = NAN;
             if (m_valid_count > 1) {
                 b = (m_valid_count * sum_xy - sum_x * sum_y) / (m_valid_count * sum_x2 - sum_x * sum_x);
                 a = (sum_y - b * sum_x) / m_valid_count;
             }
-            return {a, b};
+        }
+        double calc_fitted(double x) const { return a + b * x; }
+        double calc_residual(double x, double y) const { return y - calc_fitted(x); }
+        void r2_pre_calc() {
+            calc_coef();
+            res_squared = y_diff_squared = 0;
+            if (m_valid_count > 1) {
+                mean_y = sum_y / m_valid_count;
+            } else {
+                mean_y = NAN;
+            }
+        }
+        void r2_single(double x, double y) {
+            if (m_valid_count <= 1) return;
+            if (!std::isfinite(x) || !std::isfinite(y)) return;
+            double res = calc_residual(x, y);
+            res_squared += res * res;
+            double diff = y - mean_y;
+            y_diff_squared += diff * diff;
+        }
+        double get_r2() const {
+            if (m_valid_count > 1) {
+                return 1. - res_squared / y_diff_squared;
+            } else {
+                return NAN;
+            }
         }
     };
     int m_column_size;
@@ -1448,15 +1475,60 @@ struct rolling_regression2_rb_range {
         stats.resize(m_column_size);
     }
 
+    template <typename TOut>
+    void get_coefficients(TOut* a, TOut* b) {
+        for (int i = 0; i < m_column_size; ++i) {
+            stats[i].calc_coef();
+            a[i] = stats[i].a;
+            b[i] = stats[i].b;
+        }
+    }
+
     template <typename T, typename TOut>
-    void operator()(const T* old_y, const T* old_x, const T* new_y, const T* new_x, TOut* a, TOut* b) {
+    void get_fitted(const T* new_x, TOut* ret) {
+        for (int i = 0; i < m_column_size; ++i) {
+            stats[i].calc_coef();
+            ret[i] = stats[i].calc_fitted(new_x[i]);
+        }
+    }
+
+    template <typename T, typename TOut>
+    void get_residual(const T* new_y, const T* new_x, TOut* ret) {
+        for (int i = 0; i < m_column_size; ++i) {
+            stats[i].calc_coef();
+            ret[i] = stats[i].calc_residual(new_x[i], new_y[i]);
+        }
+    }
+
+    void r2_pre_calc() {
+        for (int i = 0; i < m_column_size; ++i) {
+            stats[i].r2_pre_calc();
+        }
+    }
+
+    template <typename T>
+    void r2_single(int idx, const T* y_row, const T* x_row) {
+        for (int i = 0; i < m_column_size; ++i) {
+            stats[i].r2_single(x_row[i], y_row[i]);
+        }
+    }
+
+    template <typename TOut>
+    void get_r2(TOut* ret) {
+        for (int i = 0; i < m_column_size; ++i) {
+            stats[i].calc_coef();
+            ret[i] = stats[i].get_r2();
+        }
+    }
+
+    template <typename T>
+    void operator()(const T* old_y, const T* old_x, const T* new_y, const T* new_x) {
         for (int i = 0; i < m_column_size; ++i) {
             auto& st = stats[i];
             if (old_y) {
                 delete_old(st, old_y[i], old_x[i]);
             }
             add_new(st, new_y[i], new_x[i]);
-            std::tie(a[i], b[i]) = st.calc();
         }
     }
 
@@ -1493,14 +1565,6 @@ struct rolling_regression2_rb_range {
         }
     }
 
-    template <typename TOut>
-    void final_result(TOut* a, TOut* b) {
-        for (int i = 0; i < m_column_size; ++i) {
-            auto& st = stats[i];
-            std::tie(a[i], b[i]) = st.calc();
-        }
-    }
-
     void set_row_size(int row) {}
     void set_param(const std::string& key, const std::string& value) {}
 };
@@ -1510,15 +1574,15 @@ struct rolling_regression3_rb_range {
         long double sum_x1_2{0}, sum_x2_2{0}, sum_y_2{0};
         long double sum_x1{0}, sum_x2{0}, sum_y{0};
         long double sum_x12{0}, sum_x1y{0}, sum_x2y{0};  // cross term
-        // double b0{NAN}, b1{NAN}, b2{NAN};
+        double b0{NAN}, b1{NAN}, b2{NAN}, mean_y, res_squared{0}, y_diff_squared{0};
         int m_valid_count{0};
 
         void clear() {
             sum_x1_2 = sum_x2_2 = sum_y_2 = sum_x1 = sum_x2 = sum_y = sum_x12 = sum_x1y = sum_x2y = 0;
             m_valid_count = 0;
         }
-        std::tuple<double, double, double> calc() const {
-            double b0 = NAN, b1 = NAN, b2 = NAN;
+        void calc_coef() {
+            b0 = b1 = b2 = NAN;
             if (m_valid_count >= 3) {
                 double sum_X1_2 = sum_x1_2 - sum_x1 * sum_x1 / m_valid_count;
                 double sum_X2_2 = sum_x2_2 - sum_x2 * sum_x2 / m_valid_count;
@@ -1531,7 +1595,31 @@ struct rolling_regression3_rb_range {
                 b2 = (sum_X1_2 * sum_X2Y - sum_X12 * sum_X1Y) / denominator;
                 b0 = (sum_y - b1 * sum_x1 - b2 * sum_x2) / m_valid_count;
             }
-            return {b0, b1, b2};
+        }
+        double calc_fitted(double x1, double x2) const { return b0 + b1 * x1 + b2 * x2; }
+        double calc_residual(double x1, double x2, double y) const { return y - calc_fitted(x1, x2); }
+        void r2_pre_calc() {
+            calc_coef();
+            res_squared = y_diff_squared = 0;
+            mean_y = NAN;
+            if (m_valid_count > 1) {
+                mean_y = sum_y / m_valid_count;
+            }
+        }
+        void r2_single(double x1, double x2, double y) {
+            if (m_valid_count <= 1) return;
+            if (!std::isfinite(x1) || !std::isfinite(x2) || !std::isfinite(y)) return;
+            double res = calc_residual(x1, x2, y);
+            res_squared += res * res;
+            double diff = y - mean_y;
+            y_diff_squared += diff * diff;
+        }
+        double get_r2() const {
+            if (m_valid_count > 1) {
+                return 1. - res_squared / y_diff_squared;
+            } else {
+                return NAN;
+            }
         }
     };
     int m_column_size;
@@ -1541,16 +1629,62 @@ struct rolling_regression3_rb_range {
         stats.resize(m_column_size);
     }
 
+    template <typename TOut>
+    void get_coefficients(TOut* b0, TOut* b1, TOut* b2) {
+        for (int i = 0; i < m_column_size; ++i) {
+            stats[i].calc_coef();
+            b0[i] = stats[i].b0;
+            b1[i] = stats[i].b1;
+            b2[i] = stats[i].b2;
+        }
+    }
+
     template <typename T, typename TOut>
-    void operator()(const T* old_y, const T* old_x1, const T* old_x2, const T* new_y, const T* new_x1, const T* new_x2,
-                    TOut* b0, TOut* b1, TOut* b2) {
+    void get_fitted(const T* new_x1, const T* new_x2, TOut* ret) {
+        for (int i = 0; i < m_column_size; ++i) {
+            stats[i].calc_coef();
+            ret[i] = stats[i].calc_fitted(new_x1[i], new_x2[i]);
+        }
+    }
+
+    template <typename T, typename TOut>
+    void get_residual(const T* new_y, const T* new_x1, const T* new_x2, TOut* ret) {
+        for (int i = 0; i < m_column_size; ++i) {
+            stats[i].calc_coef();
+            ret[i] = stats[i].calc_residual(new_x1[i], new_x2[i], new_y[i]);
+        }
+    }
+
+    void r2_pre_calc() {
+        for (int i = 0; i < m_column_size; ++i) {
+            stats[i].r2_pre_calc();
+        }
+    }
+
+    template <typename T>
+    void r2_single(int idx, const T* y_row, const T* x1_row, const T* x2_row) {
+        for (int i = 0; i < m_column_size; ++i) {
+            stats[i].r2_single(x1_row[i], x2_row[i], y_row[i]);
+        }
+    }
+
+    template <typename TOut>
+    void get_r2(TOut* ret) {
+        for (int i = 0; i < m_column_size; ++i) {
+            stats[i].calc_coef();
+            ret[i] = stats[i].get_r2();
+        }
+    }
+
+    template <typename T>
+    void operator()(const T* old_y, const T* old_x1, const T* old_x2, const T* new_y, const T* new_x1,
+                    const T* new_x2) {
         for (int i = 0; i < m_column_size; ++i) {
             auto& st = stats[i];
             if (old_y) {
                 delete_old(st, old_y[i], old_x1[i], old_x2[i]);
             }
             add_new(st, new_y[i], new_x1[i], new_x2[i]);
-            std::tie(b0[i], b1[i], b2[i]) = st.calc();
         }
     }
 
@@ -1594,14 +1728,6 @@ struct rolling_regression3_rb_range {
         for (int i = 0; i < m_column_size; ++i) {
             auto& st = stats[i];
             add_new(st, new_y[i], new_x1[i], new_x2[i]);
-        }
-    }
-
-    template <typename TOut>
-    void final_result(TOut* b0, TOut* b1, TOut* b2) {
-        for (int i = 0; i < m_column_size; ++i) {
-            auto& st = stats[i];
-            std::tie(b0[i], b1[i], b2[i]) = st.calc();
         }
     }
 
@@ -1719,15 +1845,38 @@ struct rolling_ols2_rb_range {
     struct stat {
         long double sum_x2{0}, sum_xy{0};
         int m_valid_count{0};
+        double b{NAN}, res_squared{0}, sum_y2{0};
         void clear() {
             sum_x2 = sum_xy = 0;
             m_valid_count = 0;
+            b = NAN;
         }
-        double calc() const {
+
+        void calc_coef() {
+            b = NAN;
             if (m_valid_count > 0) {
-                return sum_xy / sum_x2;
+                b = sum_xy / sum_x2;
             }
-            return NAN;
+        }
+        double calc_fitted(double x) const { return b * x; }
+        double calc_residual(double x, double y) const { return y - calc_fitted(x); }
+        void r2_pre_calc() {
+            calc_coef();
+            res_squared = sum_y2 = 0;
+        }
+        void r2_single(double x, double y) {
+            if (m_valid_count < 1) return;
+            if (!std::isfinite(x) || !std::isfinite(y)) return;
+            double res = calc_residual(x, y);
+            res_squared += res * res;
+            sum_y2 += y * y;
+        }
+        double get_r2() const {
+            if (m_valid_count > 0) {
+                return 1. - res_squared / sum_y2;
+            } else {
+                return NAN;
+            }
         }
     };
     int m_column_size;
@@ -1735,15 +1884,59 @@ struct rolling_ols2_rb_range {
 
     explicit rolling_ols2_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
 
+    template <typename TOut>
+    void get_coefficients(TOut* b) {
+        for (int i = 0; i < m_column_size; ++i) {
+            stats[i].calc_coef();
+            b[i] = stats[i].b;
+        }
+    }
+
     template <typename T, typename TOut>
-    void operator()(const T* old_y, const T* old_x, const T* new_y, const T* new_x, TOut* b) {
+    void get_fitted(const T* new_x, TOut* ret) {
+        for (int i = 0; i < m_column_size; ++i) {
+            stats[i].calc_coef();
+            ret[i] = stats[i].calc_fitted(new_x[i]);
+        }
+    }
+
+    template <typename T, typename TOut>
+    void get_residual(const T* new_y, const T* new_x, TOut* ret) {
+        for (int i = 0; i < m_column_size; ++i) {
+            stats[i].calc_coef();
+            ret[i] = stats[i].calc_residual(new_x[i], new_y[i]);
+        }
+    }
+
+    void r2_pre_calc() {
+        for (int i = 0; i < m_column_size; ++i) {
+            stats[i].r2_pre_calc();
+        }
+    }
+
+    template <typename T>
+    void r2_single(int idx, const T* y_row, const T* x_row) {
+        for (int i = 0; i < m_column_size; ++i) {
+            stats[i].r2_single(x_row[i], y_row[i]);
+        }
+    }
+
+    template <typename TOut>
+    void get_r2(TOut* ret) {
+        for (int i = 0; i < m_column_size; ++i) {
+            stats[i].calc_coef();
+            ret[i] = stats[i].get_r2();
+        }
+    }
+
+    template <typename T>
+    void operator()(const T* old_y, const T* old_x, const T* new_y, const T* new_x) {
         for (int i = 0; i < m_column_size; ++i) {
             auto& st = stats[i];
             if (old_y) {
                 delete_old(st, old_y[i], old_x[i]);
             }
             add_new(st, new_y[i], new_x[i]);
-            b[i] = st.calc();
         }
     }
 
@@ -1776,14 +1969,6 @@ struct rolling_ols2_rb_range {
         }
     }
 
-    template <typename TOut>
-    void final_result(TOut* b) {
-        for (int i = 0; i < m_column_size; ++i) {
-            auto& st = stats[i];
-            b[i] = st.calc();
-        }
-    }
-
     void set_row_size(int row) {}
     void set_param(const std::string& key, const std::string& value) {}
 };
@@ -1792,19 +1977,38 @@ struct rolling_ols3_rb_range {
     struct stat {
         long double sum_x12 = 0, sum_x1_2 = 0, sum_x2_2 = 0, sum_x1y = 0, sum_x2y = 0;
         int m_valid_count{0};
-
+        double b1{NAN}, b2{NAN}, res_squared{0}, y_squared{0};
         void clear() {
             sum_x1_2 = sum_x2_2 = sum_x12 = sum_x1y = sum_x2y = 0;
             m_valid_count = 0;
         }
-        std::tuple<double, double> calc() const {
-            double b1 = NAN, b2 = NAN;
+        void calc_coef() {
+            b1 = b2 = NAN;
             if (m_valid_count >= 2) {
                 long double denominator = sum_x12 * sum_x12 - sum_x1_2 * sum_x2_2;
                 b1 = (sum_x2y * sum_x12 - sum_x1y * sum_x2_2) / denominator;
                 b2 = (sum_x1y * sum_x12 - sum_x2y * sum_x1_2) / denominator;
             }
-            return {b1, b2};
+        }
+        double calc_fitted(double x1, double x2) const { return b1 * x1 + b2 * x2; }
+        double calc_residual(double x1, double x2, double y) const { return y - calc_fitted(x1, x2); }
+        void r2_pre_calc() {
+            calc_coef();
+            res_squared = y_squared = 0;
+        }
+        void r2_single(double x1, double x2, double y) {
+            if (m_valid_count <= 1) return;
+            if (!std::isfinite(x1) || !std::isfinite(x2) || !std::isfinite(y)) return;
+            double res = calc_residual(x1, x2, y);
+            res_squared += res * res;
+            y_squared += y * y;
+        }
+        double get_r2() const {
+            if (m_valid_count >= 2) {
+                return 1. - res_squared / y_squared;
+            } else {
+                return NAN;
+            }
         }
     };
     int m_column_size;
@@ -1812,16 +2016,61 @@ struct rolling_ols3_rb_range {
 
     explicit rolling_ols3_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
 
+    template <typename TOut>
+    void get_coefficients(TOut* b1, TOut* b2) {
+        for (int i = 0; i < m_column_size; ++i) {
+            stats[i].calc_coef();
+            b1[i] = stats[i].b1;
+            b2[i] = stats[i].b2;
+        }
+    }
+
     template <typename T, typename TOut>
-    void operator()(const T* old_y, const T* old_x1, const T* old_x2, const T* new_y, const T* new_x1, const T* new_x2,
-                    TOut* b1, TOut* b2) {
+    void get_fitted(const T* new_x1, const T* new_x2, TOut* ret) {
+        for (int i = 0; i < m_column_size; ++i) {
+            stats[i].calc_coef();
+            ret[i] = stats[i].calc_fitted(new_x1[i], new_x2[i]);
+        }
+    }
+
+    template <typename T, typename TOut>
+    void get_residual(const T* new_y, const T* new_x1, const T* new_x2, TOut* ret) {
+        for (int i = 0; i < m_column_size; ++i) {
+            stats[i].calc_coef();
+            ret[i] = stats[i].calc_residual(new_x1[i], new_x2[i], new_y[i]);
+        }
+    }
+
+    void r2_pre_calc() {
+        for (int i = 0; i < m_column_size; ++i) {
+            stats[i].r2_pre_calc();
+        }
+    }
+
+    template <typename T>
+    void r2_single(int idx, const T* y_row, const T* x1_row, const T* x2_row) {
+        for (int i = 0; i < m_column_size; ++i) {
+            stats[i].r2_single(x1_row[i], x2_row[i], y_row[i]);
+        }
+    }
+
+    template <typename TOut>
+    void get_r2(TOut* ret) {
+        for (int i = 0; i < m_column_size; ++i) {
+            stats[i].calc_coef();
+            ret[i] = stats[i].get_r2();
+        }
+    }
+
+    template <typename T>
+    void operator()(const T* old_y, const T* old_x1, const T* old_x2, const T* new_y, const T* new_x1,
+                    const T* new_x2) {
         for (int i = 0; i < m_column_size; ++i) {
             auto& st = stats[i];
             if (old_y) {
                 delete_old(st, old_y[i], old_x1[i], old_x2[i]);
             }
             add_new(st, new_y[i], new_x1[i], new_x2[i]);
-            std::tie(b1[i], b2[i]) = st.calc();
         }
     }
 
@@ -1857,14 +2106,6 @@ struct rolling_ols3_rb_range {
         for (int i = 0; i < m_column_size; ++i) {
             auto& st = stats[i];
             add_new(st, new_y[i], new_x1[i], new_x2[i]);
-        }
-    }
-
-    template <typename TOut>
-    void final_result(TOut* b1, TOut* b2) {
-        for (int i = 0; i < m_column_size; ++i) {
-            auto& st = stats[i];
-            std::tie(b1[i], b2[i]) = st.calc();
         }
     }
 
@@ -2337,7 +2578,7 @@ struct ts_cross_rb_range {
             } else if (x0 < y0 && x1 > y1) {
                 output[i] = 1;
             } else if (x0 > y0 && x1 < y1) {
-                output[i] = 1;
+                output[i] = -1;
             } else {
                 output[i] = 0;
             }
@@ -2370,8 +2611,7 @@ struct rolling_backward_cpn_rb_range {
         stats.resize(m_column_size);
     }
 
-    template <typename T>
-    bool should_account(T value, T latest_value) {
+    bool should_account(double value, double latest_value) {
         return (sign != 0 && is_same_sign(value, sign)) || is_same_sign(value, latest_value);
     }
 
