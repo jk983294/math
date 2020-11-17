@@ -1516,7 +1516,6 @@ struct rolling_regression2_rb_range {
     template <typename TOut>
     void get_r2(TOut* ret) {
         for (int i = 0; i < m_column_size; ++i) {
-            stats[i].calc_coef();
             ret[i] = stats[i].get_r2();
         }
     }
@@ -1671,7 +1670,6 @@ struct rolling_regression3_rb_range {
     template <typename TOut>
     void get_r2(TOut* ret) {
         for (int i = 0; i < m_column_size; ++i) {
-            stats[i].calc_coef();
             ret[i] = stats[i].get_r2();
         }
     }
@@ -1924,7 +1922,6 @@ struct rolling_ols2_rb_range {
     template <typename TOut>
     void get_r2(TOut* ret) {
         for (int i = 0; i < m_column_size; ++i) {
-            stats[i].calc_coef();
             ret[i] = stats[i].get_r2();
         }
     }
@@ -2057,7 +2054,6 @@ struct rolling_ols3_rb_range {
     template <typename TOut>
     void get_r2(TOut* ret) {
         for (int i = 0; i < m_column_size; ++i) {
-            stats[i].calc_coef();
             ret[i] = stats[i].get_r2();
         }
     }
