@@ -1198,7 +1198,7 @@ void test_rank2_by_window(const vector<double>& x_, const vector<double>& x1_, i
 
     double ret = 0;
     for (size_t i = 0; i < x_.size(); ++i) {
-        double d = x_[i];
+        double d = x1_[i];
         add_window_vector(y, window, d);
 
         row[0] = d;

@@ -1411,7 +1411,7 @@ struct rolling_rank2_count_rb_range {
     }
 
     template <typename TOut>
-    void operator()(const T* old_row, const T* old_cmp_row, const T* new_row, const T* cmp_row, TOut* output) {
+    void operator()(const T* old_cmp_row, const T* old_row, const T* cmp_row, const T* new_row, TOut* output) {
         int pos = m_count % window_size;
         ++m_count;
         for (int i = 0; i < m_column_size; ++i) {
@@ -2252,7 +2252,7 @@ struct rolling_sharpe_rb_range {
             if (m_valid_count <= 1) return NAN;
             long double mean = total_sum / m_valid_count;
             long double sd = sqrt((total_square_sum - mean * mean * m_valid_count) / (m_valid_count - 1.0));
-            return sd > 0 ? mean / sd : NAN;
+            return sd > 1e-16 ? mean / sd : NAN;
         }
     };
     int m_column_size;
@@ -2407,8 +2407,8 @@ struct rolling_rsharpe_rb_range {  // reverse sharpe = sd / mean
         }
         double calc() const {
             if (m_valid_count <= 1) return NAN;
-            long double mean = total_sum / m_valid_count;
-            long double sd = sqrt((total_square_sum - mean * mean * m_valid_count) / (m_valid_count - 1.0));
+            double mean = total_sum / m_valid_count;
+            double sd = sqrt((total_square_sum - mean * mean * m_valid_count) / (m_valid_count - 1.0));
             return sd > 0 ? sd / mean : NAN;
         }
     };
@@ -2484,7 +2484,7 @@ struct rolling_dcor_rb_range {
         double calc() const {
             if (m_valid_count > 0) {
                 long double d = sum_x2 * sum_y2;
-                return d > 0 ? sumxy / std::sqrt(d) : NAN;
+                return d > 1e-16 ? sumxy / std::sqrt(d) : NAN;
             }
             return NAN;
         }
