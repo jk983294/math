@@ -14,21 +14,32 @@ using std::isfinite;
  */
 
 namespace ornate {
-
-template <typename R = double, typename T1, typename T2>
-R mean_weighted(const T1 *data, const T2 *weight, size_t n) {
-    R sum = 0;
-    size_t count = 0;
-    for (size_t i = 0; i < n; ++i) {
-        if (IsValidData(data[i])) {
-            ++count;
+template <typename T, typename T1>
+double mean_weighted(const T *data, const T1 *weight, int32_t n) {
+    double sum = 0, wgt_sum = 0;
+    uint32_t count = 0;
+    for (int32_t i = 0; i < n; i++) {
+        if (isvalid(data[i]) && isvalid(weight[i])) {
             sum += data[i] * weight[i];
+            wgt_sum += weight[i];
+            count++;
         }
     }
-    if (count == 0)
-        return NAN;
+    if (count > 0)
+        return sum / wgt_sum;
     else
-        return sum / count;
+        return NAN;
+}
+
+/**
+ * get wgt mean. will consider nan, [start_idx, end_idx), -1 to use all
+ */
+template <typename T, typename T1>
+double mean_weighted(IN const std::vector<T> &n, IN const std::vector<T1> &n1, int32_t start_idx = -1,
+                     int32_t end_idx = -1) {
+    if (start_idx < 0) start_idx = 0;
+    if (end_idx < 0) end_idx = static_cast<int32_t>(n.size());
+    return mean_weighted(n.data() + start_idx, n1.data() + start_idx, end_idx - start_idx);
 }
 
 template <int dof = 1, typename R = double, typename T>
