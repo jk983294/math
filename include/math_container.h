@@ -46,7 +46,8 @@ struct rolling_data_container {
     void set(int size, int m_column_size_) {
         window_size = size + 1;
         m_column_size = m_column_size_;
-        m_container.resize(window_size, std::vector<T>(m_column_size));
+        m_container.resize(window_size);
+        for (auto &c : m_container) c.resize(m_column_size);
     }
 
     const T *get_old_row() {

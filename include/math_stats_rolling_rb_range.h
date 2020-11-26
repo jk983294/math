@@ -27,6 +27,11 @@ struct rolling_mean_rb_range {
 
     explicit rolling_mean_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
 
+    void set_ins_num(int ins_num) {
+        m_column_size = ins_num;
+        stats.resize(m_column_size);
+    }
+
     template <typename T, typename TOut>
     void operator()(const T* old_row, const T* new_row, TOut* output) {
         for (int i = 0; i < m_column_size; ++i) {
@@ -94,6 +99,11 @@ struct rolling_sum_rb_range {
     int sign{0};  // 0: all, 1: + only, -1: - only
 
     explicit rolling_sum_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
+
+    void set_ins_num(int ins_num) {
+        m_column_size = ins_num;
+        stats.resize(m_column_size);
+    }
 
     template <typename T, typename TOut>
     void operator()(const T* old_row, const T* new_row, TOut* output) {
@@ -175,6 +185,11 @@ struct rolling_prod_rb_range {
 
     explicit rolling_prod_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
 
+    void set_ins_num(int ins_num) {
+        m_column_size = ins_num;
+        stats.resize(m_column_size);
+    }
+
     template <typename T, typename TOut>
     void operator()(const T* old_row, const T* new_row, TOut* output) {
         for (int i = 0; i < m_column_size; ++i) {
@@ -227,6 +242,8 @@ struct rolling_delay_rb_range {
 
     explicit rolling_delay_rb_range(int column_size_) : m_column_size{column_size_} {}
 
+    void set_ins_num(int ins_num) { m_column_size = ins_num; }
+
     template <typename T, typename TOut>
     void operator()(const T* old_row, const T* new_row, TOut* output) {
         if (old_row) {
@@ -244,6 +261,8 @@ struct rolling_delta_rb_range {
     int m_column_size;
 
     explicit rolling_delta_rb_range(int column_size_) : m_column_size{column_size_} {}
+
+    void set_ins_num(int ins_num) { m_column_size = ins_num; }
 
     template <typename T, typename TOut>
     void operator()(const T* old_row, const T* new_row, TOut* output) {
@@ -264,6 +283,8 @@ struct rolling_pct_rb_range {
     int m_column_size;
 
     explicit rolling_pct_rb_range(int column_size_) : m_column_size{column_size_} {}
+
+    void set_ins_num(int ins_num) { m_column_size = ins_num; }
 
     template <typename T, typename TOut>
     void operator()(const T* old_row, const T* new_row, TOut* output) {
@@ -307,6 +328,11 @@ struct rolling_variance_rb_range {
     bool demean{true};  // for some series, its mean is 0, like return, no need to - mean
 
     explicit rolling_variance_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
+
+    void set_ins_num(int ins_num) {
+        m_column_size = ins_num;
+        stats.resize(m_column_size);
+    }
 
     template <typename T, typename TOut>
     void operator()(const T* old_row, const T* new_row, TOut* output) {
@@ -395,6 +421,11 @@ struct rolling_std_rb_range {
 
     explicit rolling_std_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
 
+    void set_ins_num(int ins_num) {
+        m_column_size = ins_num;
+        stats.resize(m_column_size);
+    }
+
     template <typename T, typename TOut>
     void operator()(const T* old_row, const T* new_row, TOut* output) {
         for (int i = 0; i < m_column_size; ++i) {
@@ -477,6 +508,11 @@ struct rolling_zscore_rb_range {
     std::vector<stat> stats;
 
     explicit rolling_zscore_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
+
+    void set_ins_num(int ins_num) {
+        m_column_size = ins_num;
+        stats.resize(m_column_size);
+    }
 
     template <typename T, typename TOut>
     void operator()(const T* old_row, const T* new_row, TOut* output) {
@@ -561,6 +597,11 @@ struct rolling_score_rb_range {
 
     explicit rolling_score_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
 
+    void set_ins_num(int ins_num) {
+        m_column_size = ins_num;
+        stats.resize(m_column_size);
+    }
+
     template <typename T, typename TOut>
     void operator()(const T* old_row, const T* new_row, TOut* output) {
         for (int i = 0; i < m_column_size; ++i) {
@@ -632,6 +673,11 @@ struct rolling_cov_rb_range {
     std::vector<stat> stats;
 
     explicit rolling_cov_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
+
+    void set_ins_num(int ins_num) {
+        m_column_size = ins_num;
+        stats.resize(m_column_size);
+    }
 
     template <typename T, typename TOut>
     void operator()(const T* old_row0, const T* old_row1, const T* new_row0, const T* new_row1, TOut* output) {
@@ -715,6 +761,11 @@ struct rolling_corr_rb_range {
     std::vector<stat> stats;
 
     explicit rolling_corr_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
+
+    void set_ins_num(int ins_num) {
+        m_column_size = ins_num;
+        stats.resize(m_column_size);
+    }
 
     template <typename T, typename TOut>
     void operator()(const T* old_row0, const T* old_row1, const T* new_row0, const T* new_row1, TOut* output) {
@@ -813,6 +864,11 @@ struct rolling_skew_rb_range {
 
     explicit rolling_skew_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
 
+    void set_ins_num(int ins_num) {
+        m_column_size = ins_num;
+        stats.resize(m_column_size);
+    }
+
     template <typename T, typename TOut>
     void operator()(const T* old_row, const T* new_row, TOut* output) {
         for (int i = 0; i < m_column_size; ++i) {
@@ -902,6 +958,11 @@ struct rolling_kurtosis_rb_range {
 
     explicit rolling_kurtosis_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
 
+    void set_ins_num(int ins_num) {
+        m_column_size = ins_num;
+        stats.resize(m_column_size);
+    }
+
     template <typename T, typename TOut>
     void operator()(const T* old_row, const T* new_row, TOut* output) {
         for (int i = 0; i < m_column_size; ++i) {
@@ -986,6 +1047,11 @@ struct rolling_decay_rb_range {
     std::vector<stat> stats;
 
     explicit rolling_decay_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
+
+    void set_ins_num(int ins_num) {
+        m_column_size = ins_num;
+        stats.resize(m_column_size);
+    }
 
     void set_row_size(int row) { m_row_size = row; }
     void set_param(const std::string& key, const std::string& value) {}
@@ -1082,6 +1148,10 @@ public:
     explicit rolling_mq_rb_range(int column_size_) : m_column_size{column_size_} {
         stats.resize(m_column_size);
         cmp = TCmp();
+    }
+    void set_ins_num(int ins_num) {
+        m_column_size = ins_num;
+        stats.resize(m_column_size);
     }
     void set_row_size(int row) {
         capacity = row + 1;
@@ -1221,6 +1291,12 @@ public:
     std::vector<SortItem> m_sorted_data_;
 
     explicit rolling_rank_base_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
+
+    void set_ins_num(int ins_num) {
+        m_column_size = ins_num;
+        stats.resize(m_column_size);
+    }
+
     void set_row_size(int row) {
         window_size = row + 1;
         m_sorted_data_.resize(row * m_column_size);
@@ -1348,6 +1424,9 @@ struct rolling_rank_count_rb_range {
     std::vector<T> m_container;
 
     explicit rolling_rank_count_rb_range(int column_size_) : m_column_size{column_size_} {}
+
+    void set_ins_num(int ins_num) { m_column_size = ins_num; }
+
     void set_row_size(int row) {
         window_size = row;
         m_container.resize(window_size * m_column_size);
@@ -1391,6 +1470,9 @@ struct rolling_rank2_count_rb_range {
     std::vector<T> m_container;
 
     explicit rolling_rank2_count_rb_range(int column_size_) : m_column_size{column_size_} {}
+
+    void set_ins_num(int ins_num) { m_column_size = ins_num; }
+
     void set_row_size(int row) {
         window_size = row;
         m_container.resize(window_size * m_column_size);
@@ -1472,6 +1554,11 @@ struct rolling_regression2_rb_range {
     std::vector<stat> stats;
 
     explicit rolling_regression2_rb_range(int column_size_) : m_column_size{column_size_} {
+        stats.resize(m_column_size);
+    }
+
+    void set_ins_num(int ins_num) {
+        m_column_size = ins_num;
         stats.resize(m_column_size);
     }
 
@@ -1628,6 +1715,11 @@ struct rolling_regression3_rb_range {
         stats.resize(m_column_size);
     }
 
+    void set_ins_num(int ins_num) {
+        m_column_size = ins_num;
+        stats.resize(m_column_size);
+    }
+
     template <typename TOut>
     void get_coefficients(TOut* b0, TOut* b1, TOut* b2) {
         for (int i = 0; i < m_column_size; ++i) {
@@ -1758,6 +1850,11 @@ struct rolling_ema_hl_rb_range {
 
     explicit rolling_ema_hl_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
 
+    void set_ins_num(int ins_num) {
+        m_column_size = ins_num;
+        stats.resize(m_column_size);
+    }
+
     void set_row_size(int row) {
         m_row_size = row;
         decay_coeff = ema_hl2decay(row);
@@ -1881,6 +1978,11 @@ struct rolling_ols2_rb_range {
     std::vector<stat> stats;
 
     explicit rolling_ols2_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
+
+    void set_ins_num(int ins_num) {
+        m_column_size = ins_num;
+        stats.resize(m_column_size);
+    }
 
     template <typename TOut>
     void get_coefficients(TOut* b) {
@@ -2013,6 +2115,11 @@ struct rolling_ols3_rb_range {
 
     explicit rolling_ols3_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
 
+    void set_ins_num(int ins_num) {
+        m_column_size = ins_num;
+        stats.resize(m_column_size);
+    }
+
     template <typename TOut>
     void get_coefficients(TOut* b1, TOut* b2) {
         for (int i = 0; i < m_column_size; ++i) {
@@ -2133,6 +2240,11 @@ struct slope_no_intercept_rb_range {
         stats.resize(m_column_size);
     }
 
+    void set_ins_num(int ins_num) {
+        m_column_size = ins_num;
+        stats.resize(m_column_size);
+    }
+
     template <typename T>
     void add_new(stat& st, T y, int idx_) {
         if (std::isfinite(y)) {
@@ -2197,6 +2309,11 @@ struct slope_rb_range {
 
     explicit slope_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
 
+    void set_ins_num(int ins_num) {
+        m_column_size = ins_num;
+        stats.resize(m_column_size);
+    }
+
     template <typename T>
     void add_new(stat& st, T y, int idx_) {
         if (std::isfinite(y)) {
@@ -2259,6 +2376,11 @@ struct rolling_sharpe_rb_range {
     std::vector<stat> stats;
 
     explicit rolling_sharpe_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
+
+    void set_ins_num(int ins_num) {
+        m_column_size = ins_num;
+        stats.resize(m_column_size);
+    }
 
     template <typename T, typename TOut>
     void operator()(const T* old_row, const T* new_row, TOut* output) {
@@ -2336,6 +2458,11 @@ struct rolling_scale_rb_range {
     std::vector<stat> stats;
 
     explicit rolling_scale_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
+
+    void set_ins_num(int ins_num) {
+        m_column_size = ins_num;
+        stats.resize(m_column_size);
+    }
 
     template <typename T, typename TOut>
     void operator()(const T* old_row, const T* new_row, TOut* output) {
@@ -2417,6 +2544,11 @@ struct rolling_rsharpe_rb_range {  // reverse sharpe = sd / mean
 
     explicit rolling_rsharpe_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
 
+    void set_ins_num(int ins_num) {
+        m_column_size = ins_num;
+        stats.resize(m_column_size);
+    }
+
     template <typename T, typename TOut>
     void operator()(const T* old_row, const T* new_row, TOut* output) {
         for (int i = 0; i < m_column_size; ++i) {
@@ -2494,6 +2626,11 @@ struct rolling_dcor_rb_range {
 
     explicit rolling_dcor_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
 
+    void set_ins_num(int ins_num) {
+        m_column_size = ins_num;
+        stats.resize(m_column_size);
+    }
+
     template <typename T, typename TOut>
     void operator()(const T* old_row0, const T* old_row1, const T* new_row0, const T* new_row1, TOut* output) {
         for (int i = 0; i < m_column_size; ++i) {
@@ -2558,6 +2695,8 @@ struct ts_cross_rb_range {
 
     explicit ts_cross_rb_range(int column_size_) : m_column_size{column_size_} {}
 
+    void set_ins_num(int ins_num) { m_column_size = ins_num; }
+
     template <typename T, typename TOut>
     void operator()(const T* _row_x0, const T* _row_y0, const T* _row_x1, const T* _row_y1, TOut* output) {
         if (_row_x0 == nullptr || _row_y0 == nullptr) {
@@ -2607,7 +2746,12 @@ struct rolling_backward_cpn_rb_range {
         stats.resize(m_column_size);
     }
 
-    bool should_account(double value, double latest_value) {
+    void set_ins_num(int ins_num) {
+        m_column_size = ins_num;
+        stats.resize(m_column_size);
+    }
+
+    bool should_account(double value, double latest_value) const {
         return (sign != 0 && is_same_sign(value, sign)) || is_same_sign(value, latest_value);
     }
 
@@ -2663,6 +2807,11 @@ struct rolling_ts_acp_rb_range {
     std::vector<stat> stats;
 
     explicit rolling_ts_acp_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
+
+    void set_ins_num(int ins_num) {
+        m_column_size = ins_num;
+        stats.resize(m_column_size);
+    }
 
     void init() {
         for (auto& stat : stats) stat.clear();
