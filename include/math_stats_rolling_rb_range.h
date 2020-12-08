@@ -168,15 +168,18 @@ struct rolling_sum_rb_range {
 struct rolling_prod_rb_range {
     struct stat {
         long double total_prod{1};
-        int m_valid_count{0};
+        int m_valid_count{0}, m_zero_count{0};
         void clear() {
             total_prod = 1;
-            m_valid_count = 0;
+            m_valid_count = m_zero_count = 0;
         }
         double calc() const {
-            if (m_valid_count > 0)
-                return total_prod;
-            else
+            if (m_valid_count > 0) {
+                if (m_zero_count > 0)
+                    return 0;
+                else
+                    return total_prod;
+            } else
                 return NAN;
         }
     };
@@ -197,14 +200,22 @@ struct rolling_prod_rb_range {
             if (old_row) {
                 auto old_value = old_row[i];
                 if (std::isfinite(old_value)) {
-                    stat.total_prod /= old_value;
+                    if (old_value == 0) {
+                        --stat.m_zero_count;
+                    } else {
+                        stat.total_prod /= old_value;
+                    }
                     --stat.m_valid_count;
                 }
             }
 
             auto new_value = new_row[i];
             if (std::isfinite(new_value)) {
-                stat.total_prod *= new_value;
+                if (new_value == 0) {
+                    ++stat.m_zero_count;
+                } else {
+                    stat.total_prod *= new_value;
+                }
                 ++stat.m_valid_count;
             }
 
@@ -2216,6 +2227,10 @@ struct rolling_ols3_rb_range {
     void set_param(const std::string& key, const std::string& value) {}
 };
 
+/**
+ * 因为 sum_x2 不能 rolling, 所以没有 rolling 算法
+ * 如果 input 没有 nan,那么可以rolling, 当有nan数据的时候, sigma(i*i)没法rolling
+ */
 struct slope_no_intercept_rb_range {
     struct stat {
         long double sum_x2{0}, sum_xy{0};
