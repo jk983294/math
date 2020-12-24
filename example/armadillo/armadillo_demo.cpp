@@ -20,6 +20,12 @@ int main(int argc, char** argv) {
     A(1, 2) = 456.0;  // directly access an element (indexing starts at 0)
     A.print("A:");
 
+    /**
+     * column major layout
+     */
+    double* arr = A.memptr();
+    printf("A=%f,%f,%f,%f,%f,%f\n", arr[0], arr[1], arr[2], arr[3], arr[4], arr[5]);
+
     A = 5.0;  // scalars are treated as a 1x1 matrix
     A.print("A:");
 

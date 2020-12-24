@@ -26,6 +26,9 @@ int main() {
     b[7] = 4.0;
     b[8] = 5.0;
 
+    /**
+     * solve不会改变原 A/b 的值
+     */
     vec x = solve(A, b);  // throw if no solution found
     cout << A << endl;
     cout << b << endl;
