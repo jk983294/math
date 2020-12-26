@@ -2,4 +2,4 @@
 #add_subdirectory(stats)
 add_subdirectory(recipe)
 add_subdirectory(play)
-#add_subdirectory(armadillo)
+add_subdirectory(armadillo)
