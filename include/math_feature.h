@@ -14,7 +14,7 @@ public:
     enum AssessCriterion { AdjustR2, AIC };
 
     ~ForwardStep() {
-        for(auto* container_ : m_containers) delete container_;
+        for (auto* container_ : m_containers) delete container_;
         m_containers.clear();
     }
     void add_data(int id, double* data) {
@@ -32,7 +32,7 @@ public:
                         ++na_idx;
                     } else {
                         // purge
-                        if(std::isfinite(data[i])) {
+                        if (std::isfinite(data[i])) {
                             container_.push_back(data[i]);
                         } else {
                             container_.push_back(0.0);
@@ -51,7 +51,7 @@ public:
         original_n = n_;
         if (remove_na_ret) {
             for (size_t i = 0; i < n_; ++i) {
-                if(std::isfinite(data[i])) {
+                if (std::isfinite(data[i])) {
                     y_container.push_back(data[i]);
                 } else {
                     m_na_index.push_back(i);
@@ -73,6 +73,7 @@ public:
         m_candidates.clear();
         for (const auto& item : m_id2data) m_candidates.push_back(item.first);
         printf("cnt=%zu\n", m_candidates.size());
+        fflush(stdout);
 
         while (!m_candidates.empty()) {
             double curr_best = NAN;
@@ -80,14 +81,15 @@ public:
             int choice_cnt = (int)m_candidates.size();
             std::vector<double> scores(choice_cnt);
 
-            #pragma omp parallel for schedule(dynamic, 1) num_threads(thread_num)
+#pragma omp parallel for schedule(dynamic, 1) num_threads(thread_num)
             for (int i = 0; i < choice_cnt; ++i) {
                 int id = m_candidates[i];
                 scores[i] = calc_criterion(id);
             }
 
             for (int i = 0; i < choice_cnt; ++i) {
-                // printf("id=%d, score=%f\n", m_candidates[i], scores[i]);
+                printf("id=%d, score=%f\n", m_candidates[i], scores[i]);
+                fflush(stdout);
                 if (std::isnan(curr_best) || curr_best < scores[i]) {
                     curr_best = scores[i];
                     curr_best_id = m_candidates[i];
@@ -95,9 +97,10 @@ public:
             }
 
             printf("current round id=%d, best=%f\n", curr_best_id, curr_best);
+            fflush(stdout);
             if (std::isnan(history_best) || history_best < curr_best) {
                 auto itr = std::find(m_candidates.begin(), m_candidates.end(), curr_best_id);
-                if(itr != m_candidates.end()) {
+                if (itr != m_candidates.end()) {
                     m_selected.push_back(curr_best_id);
                     m_candidates.erase(itr);
                     history_best = curr_best;
@@ -114,8 +117,10 @@ public:
     void set_remove_na_ret(bool remove_na_ret_) { remove_na_ret = remove_na_ret_; }
     void set_has_intercept(bool has_intercept_) { has_intercept = has_intercept_; }
     void set_criterion(const std::string& criterion) {
-        if (criterion == "aic") m_criterion = AssessCriterion::AIC;
-        else m_criterion = AssessCriterion::AdjustR2;
+        if (criterion == "aic")
+            m_criterion = AssessCriterion::AIC;
+        else
+            m_criterion = AssessCriterion::AdjustR2;
     }
     std::vector<int> get_selected() { return m_selected; }
 
@@ -165,7 +170,7 @@ private:
         arma::vec b(y, n);
         arma::vec coef;
         // A.print("A:");
-        bool status = solve(coef, A, b);
+        bool status = solve(coef, A, b, arma::solve_opts::fast);
         if (!status) return NAN;
 
         const arma::colvec& fitted = A * coef;
@@ -198,8 +203,8 @@ private:
     std::vector<int> m_selected;
     std::vector<int> m_candidates;
     std::unordered_map<int, double*> m_id2data;
-    size_t original_n{0}; // from ret vector
-    size_t n{0};  // observation count
+    size_t original_n{0};  // from ret vector
+    size_t n{0};           // observation count
     int thread_num{1};
     bool has_intercept{false};
     bool remove_na_ret{false};
@@ -209,6 +214,6 @@ private:
     std::vector<std::vector<double>*> m_containers;
     AssessCriterion m_criterion{AssessCriterion::AdjustR2};
 };
-}
+}  // namespace ornate
 
 #endif

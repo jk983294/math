@@ -1,33 +1,41 @@
 #include <math_feature.h>
-#include <math_random.h>
+#include <thread>
 #include <vector>
 
 using namespace std;
 
+void generate_random_data(vector<double>& data, size_t n, mt19937& generator) {
+    uniform_real_distribution<double> uid(-1.0, 1.0);
+    data.resize(n);
+    for (size_t i = 0; i < n; ++i) {
+        data[i] = uid(generator);
+    }
+}
+
 int main() {
-    size_t n = 10;
+    random_device rd;  // non-deterministic generator
+    mt19937 generator(42);
+    size_t n = 10000000;
+    int f_cnt = 10;
+    vector<vector<double>> features;
+
     ornate::ForwardStep fs;
+    fs.set_thread_num(std::thread::hardware_concurrency());
     fs.set_remove_na_ret(true);
     fs.set_has_intercept(true);
     // fs.set_criterion("aic");
-    vector<double> ret = ornate::generate_uniform_float<double>(n, 0.0, 1.0);
-    vector<double> f0 = ornate::generate_uniform_float<double>(n, 0.0, 1.0);
-    vector<double> f1 = ornate::generate_uniform_float<double>(n, 0.0, 1.0);
-    vector<double> f2 = ornate::generate_uniform_float<double>(n, 0.0, 1.0);
-    vector<double> f3 = ornate::generate_uniform_float<double>(n, 0.0, 1.0);
-    vector<double> f4 = ornate::generate_uniform_float<double>(n, 0.0, 1.0);
-    vector<double> f5 = ornate::generate_uniform_float<double>(n, 0.0, 1.0);
-//    printf("ret:%f,%f,%f,%f,%f\n", ret[0], ret[1], ret[2], ret[3], ret[4]);
-//    printf("%f,%f,%f,%f,%f\n", f0[0], f0[1], f0[2], f0[3], f0[4]);
-//    printf("%f,%f,%f,%f,%f\n", f1[0], f1[1], f1[2], f1[3], f1[4]);
-//    printf("%f,%f,%f,%f,%f\n", f2[0], f2[1], f2[2], f2[3], f2[4]);
+    features.push_back(vector<double>(n, 0));
+    auto& ret = features.back();
+    generate_random_data(ret, n, generator);
     fs.set_y(ret.data(), n);
-    fs.add_data(0, f0.data());
-    fs.add_data(1, f1.data());
-    fs.add_data(2, f2.data());
-    fs.add_data(3, f3.data());
-    fs.add_data(4, f4.data());
-    fs.add_data(5, f5.data());
+
+    for (int i = 0; i < f_cnt; ++i) {
+        features.push_back(vector<double>(n, 0));
+        auto& feature = features.back();
+        generate_random_data(feature, n, generator);
+        fs.add_data(i, feature.data());
+    }
+
     fs.process();
     auto selected = fs.get_selected();
     printf("selected=");
