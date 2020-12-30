@@ -425,8 +425,17 @@ double ema_decay(const T *data, int n, int i, double decay) {
 
 template <typename T = float>
 double ema_decay(const std::vector<T> &data, int n, int i, double decay) {
-    if ((size_t)n > data.size()) return NAN;
-    return ema_decay(data.data(), n, i, decay);
+    if (data.empty()) return NAN;
+    if (data.size() < (size_t)n) {
+        int new_n = (int)data.size();
+        int diff = n - i;
+        if (new_n - diff >= 0) {
+            return ema_decay(data.data(), new_n, new_n - diff, decay);
+        } else
+            return NAN;
+    } else {
+        return ema_decay(data.data(), n, i, decay);
+    }
 }
 
 template <typename T = float>
@@ -437,8 +446,8 @@ double ema_hl(const T *data, int n, int i, double hl) {
 
 template <typename T = float>
 double ema_hl(const std::vector<T> &data, int n, int i, double hl) {
-    if ((size_t)n > data.size()) return NAN;
-    return ema_hl(data.data(), n, i, hl);
+    double decay = ema_hl2decay(hl);
+    return ema_decay(data, n, i, decay);
 }
 
 template <typename T = float>

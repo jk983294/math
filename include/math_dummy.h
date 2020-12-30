@@ -1,6 +1,7 @@
 #ifndef ORNATE_MATH_DUMMY_H
 #define ORNATE_MATH_DUMMY_H
 
+#include <cmath>
 #include <cstddef>
 #include <vector>
 
@@ -18,6 +19,26 @@ double dummy_r2(const std::vector<double>& x1_, const std::vector<double>& x2_, 
 double dummy_r2_no_slope(const std::vector<double>& x_, const std::vector<double>& y_, double b, int window);
 double dummy_r2_no_slope(const std::vector<double>& x1_, const std::vector<double>& x2_, const std::vector<double>& y_,
                          double b1, double b2, int window);
+double dummy_skew(const std::vector<double>& data_);
+double dummy_kurtosis(const std::vector<double>& data_);
+
+template <typename T>
+double dummy_decay(const std::vector<T>& data_) {
+    int size = (int)data_.size();
+    double res = 0;
+    int count = 0;
+    for (int i = 0; i < size; ++i) {
+        if (std::isfinite(data_[i])) {
+            res += data_[i] * (i + 1);
+            count += (i + 1);
+        }
+    }
+    if (count > 0) {
+        return res / count;
+    } else {
+        return NAN;
+    }
+}
 }  // namespace ornate
 
 #endif

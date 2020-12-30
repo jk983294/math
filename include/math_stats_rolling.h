@@ -419,19 +419,20 @@ struct slope_no_intercept_rolling {
         if (m_count > window_size) {
             m_data.pop_front();
         }
-        if (m_count >= window_size) {
-            double sum_x2{0}, sum_xy{0};
-            int m_valid_count = 0;
-            for (int i = 0; i < window_size; ++i) {
-                if (isfinite(m_data[i])) {
-                    sum_x2 += i * i;
-                    sum_xy += m_data[i] * i;
-                    ++m_valid_count;
-                }
+        int n = (int)m_data.size();
+        double sum_x2{0}, sum_xy{0};
+        int m_valid_count = 0;
+        for (int i = 0; i < n; ++i) {
+            if (isfinite(m_data[i])) {
+                sum_x2 += i * i;
+                sum_xy += m_data[i] * i;
+                ++m_valid_count;
             }
-            if (m_valid_count > 0) return sum_xy / sum_x2;
         }
-        return NAN;
+        if (m_valid_count > 0)
+            return sum_xy / sum_x2;
+        else
+            return NAN;
     }
 };
 
@@ -450,25 +451,25 @@ struct slope_rolling {
         if (m_count > window_size) {
             m_data.pop_front();
         }
-        if (m_count >= window_size) {
-            double sum_x2{0}, sum_xy{0}, sum_x{0}, sum_y{0};
-            int m_valid_count = 0;
-            for (int i = 0; i < window_size; ++i) {
-                if (isfinite(m_data[i])) {
-                    sum_x += i;
-                    sum_y += m_data[i];
-                    sum_x2 += i * i;
-                    sum_xy += m_data[i] * i;
-                    ++m_valid_count;
-                }
-            }
-            if (m_valid_count > 0) {
-                long double cov_xy = sum_xy * m_valid_count - sum_x * sum_y;
-                long double var_x = sum_x2 * m_valid_count - sum_x * sum_x;
-                return var_x > 0 ? cov_xy / var_x : NAN;
+
+        int n = (int)m_data.size();
+        double sum_x2{0}, sum_xy{0}, sum_x{0}, sum_y{0};
+        int m_valid_count = 0;
+        for (int i = 0; i < n; ++i) {
+            if (isfinite(m_data[i])) {
+                sum_x += i;
+                sum_y += m_data[i];
+                sum_x2 += i * i;
+                sum_xy += m_data[i] * i;
+                ++m_valid_count;
             }
         }
-        return NAN;
+        if (m_valid_count > 0) {
+            long double cov_xy = sum_xy * m_valid_count - sum_x * sum_y;
+            long double var_x = sum_x2 * m_valid_count - sum_x * sum_x;
+            return var_x > 0 ? cov_xy / var_x : NAN;
+        } else
+            return NAN;
     }
 };
 

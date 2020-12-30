@@ -251,13 +251,13 @@ std::vector<uint32_t> filter(INOUT std::vector<T>& n) {
 /**
  * @param x
  * @param i x[i]在window内的rank值
- * @param n = 0 表示i之前的所有数据参与rank, 给了n，但是数据长度不够一律返回NAN
+ * @param n = 0 表示i之前的所有数据参与rank
  */
 template <typename T>
 double rank_last(IN const T* x, int i, int n) {
     const int size = i + 1;
     T last = x[i];
-    if (std::isnan(last) || (n > 0 && i + 1 < n)) {
+    if (std::isnan(last)) {
         return NAN;
     }
     const int N = (n == 0) ? size : std::min(size, n);

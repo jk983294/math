@@ -1115,12 +1115,12 @@ struct rolling_decay_rb_range {
     }
 
     template <typename T, typename TOut>
-    void full_single(int idx, const T* _row, TOut* output) {
+    void full_single(int idx, int window, const T* _row, TOut* output) {
         ++count;
         for (int i = 0; i < m_column_size; ++i) {
             if (std::isfinite(_row[i])) {
-                stats[i].m_valid_count += (m_row_size - idx);
-                stats[i].total += _row[i] * (m_row_size - idx);
+                stats[i].m_valid_count += (window - idx);
+                stats[i].total += _row[i] * (window - idx);
                 stats[i].total_x1 += _row[i];
                 ++stats[i].m_valid_x1_count;
             }
@@ -1443,12 +1443,13 @@ struct rolling_rank_count_rb_range {
         m_container.resize(window_size * m_column_size);
     }
 
-    double calc(const T* x, T new_value) {
-        if (std::isnan(new_value) || m_count < window_size) {
+    double calc(const T* x, T new_value, int real_size) {
+        if (std::isnan(new_value)) {
             return NAN;
         }
         int nlte = 0, neq = 0, nv = 0;
-        for (int i = 0; i < window_size; ++i) {
+
+        for (int i = 0; i < real_size; ++i) {
             const T val = x[i];
             if (std::isnan(val)) continue;
             if (val <= new_value) nlte++;
@@ -1463,11 +1464,12 @@ struct rolling_rank_count_rb_range {
     void operator()(const T* old_row, const T* new_row, TOut* output) {
         int pos = m_count % window_size;
         ++m_count;
+        int real_size = std::min(m_count, window_size);
         for (int i = 0; i < m_column_size; ++i) {
             auto* start_data = m_container.data() + i * window_size;
             const T new_val = new_row[i];
             start_data[pos] = new_val;
-            output[i] = calc(start_data, new_val);
+            output[i] = calc(start_data, new_val, real_size);
         }
     }
 
@@ -1896,10 +1898,6 @@ struct rolling_ema_hl_rb_range {
             }
             output[i] = add_new(st, new_row[i]);
         }
-
-        if (count < m_row_size) {
-            std::fill(output, output + m_column_size, NAN);
-        }
     }
 
     template <typename T>
@@ -2274,8 +2272,8 @@ struct slope_no_intercept_rb_range {
     }
 
     template <typename T, typename TOut>
-    void full_single(int idx, const T* y_row, TOut* output) {
-        int x_idx = m_row_size - 1 - idx;
+    void full_single(int idx, int window, const T* y_row, TOut* output) {
+        int x_idx = window - 1 - idx;
         for (int i = 0; i < m_column_size; ++i) {
             auto& st = stats[i];
             add_new(st, y_row[i], x_idx);
@@ -2345,8 +2343,8 @@ struct slope_rb_range {
     }
 
     template <typename T, typename TOut>
-    void full_single(int idx, const T* y_row, TOut* output) {
-        int x_idx = m_row_size - 1 - idx;
+    void full_single(int idx, int window, const T* y_row, TOut* output) {
+        int x_idx = window - 1 - idx;
         for (int i = 0; i < m_column_size; ++i) {
             auto& st = stats[i];
             add_new(st, y_row[i], x_idx);

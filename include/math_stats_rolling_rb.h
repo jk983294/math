@@ -501,11 +501,13 @@ struct rolling_rank_count_rb {
 
     double operator()(T new_value) {
         m_container[(m_count++) % window_size] = new_value;
-        if (std::isnan(new_value) || m_count < window_size) {
+        if (std::isnan(new_value)) {
             return NAN;
         }
         int nlte = 0, neq = 0, nv = 0;
-        for (T val : m_container) {
+        int real_size = std::min(m_count, window_size);
+        for (int i = 0; i < real_size; ++i) {
+            const T val = m_container[i];
             if (std::isnan(val)) continue;
             if (val <= new_value) nlte++;
             if (val == new_value) neq++;
@@ -679,7 +681,7 @@ struct rolling_ema_hl_rb : public rolling_rb_base<double> {
             total_w = total_w * decay_coeff;
         }
 
-        if (m_count > window_size - 2 && m_valid_count > 0)
+        if (m_valid_count > 0)
             result = total_ / total_w;
         else
             result = NAN;

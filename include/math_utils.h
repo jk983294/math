@@ -29,8 +29,8 @@ bool FloatEqual(T1 a, T2 b) {
     }
 }
 
-template <typename T>
-void add_window_vector(std::vector<T>& y, size_t window, T val) {
+template <typename T, typename T1>
+void add_window_vector(std::vector<T>& y, size_t window, T1 val) {
     if (y.size() < window)
         y.push_back(val);
     else {

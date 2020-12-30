@@ -130,7 +130,7 @@ TEST_CASE("rank_last", "[MathStats]") {
     std::vector<double> v = {1, 2, 3, 4, 1};
     REQUIRE(FloatEqual(ornate::rank_last(v.data(), 4, 0), 0.125));
     REQUIRE(FloatEqual(ornate::rank_last(v.data(), 4, 5), 0.125));
-    REQUIRE(FloatEqual(ornate::rank_last(v.data(), 3, 5), NAN));
+    REQUIRE(FloatEqual(ornate::rank_last(v.data(), 3, 5), 1.0));
     //    REQUIRE(FloatEqual(ornate::rank_last(v.data(), 4, 0), 0.25));
     //    REQUIRE(FloatEqual(ornate::rank_last(v.data(), 4, 5), 0.25));
 }

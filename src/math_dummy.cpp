@@ -33,9 +33,6 @@ double dummy_ts_cross(const double* x_, const double* y, std::size_t i, std::siz
 
 double dummy_ts_backward_cpn(const double* x, std::size_t i, std::size_t n, int sign) {
     const std::size_t size = i + 1;
-    if (size < n) {
-        return NAN;
-    }
     const std::size_t N = (n == 0) ? size : std::min(size, n);
     double num = 0;
     for (std::size_t j = 0; j < N; j++) {
@@ -71,14 +68,19 @@ double dummy_ts_acp(const double* x, int i, int n, int lag) {
 }
 
 double dummy_dcor(const std::vector<double>& x_, const std::vector<double>& y_) {
+    std::vector<double> x, y;
+    for (size_t j = 1; j < x_.size(); ++j) {
+        x.push_back(x_[j] - x_[j - 1]);
+        y.push_back(y_[j] - y_[j - 1]);
+    }
     long double axx = 0, ayy = 0, axy = 0;
     std::size_t nv = 0;
-    for (size_t i = 0; i < x_.size(); ++i) {
-        if (std::isnan(x_[i]) || std::isnan(y_[i])) continue;
+    for (size_t i = 0; i < x.size(); ++i) {
+        if (std::isnan(x[i]) || std::isnan(y[i])) continue;
         nv++;
-        axx += x_[i] * x_[i];
-        ayy += y_[i] * y_[i];
-        axy += x_[i] * y_[i];
+        axx += x[i] * x[i];
+        ayy += y[i] * y[i];
+        axy += x[i] * y[i];
     }
     if (nv < 1) {
         return NAN;
@@ -162,5 +164,49 @@ double dummy_r2_no_slope(const std::vector<double>& x1_, const std::vector<doubl
         return 1. - err / diff;
     else
         return NAN;
+}
+
+double dummy_skew(const vector<double>& data_) {
+    double mean_ = mean(data_);
+    double std_ = 0;
+    int valid_count = 0;
+    for (double i : data_) {
+        if (std::isfinite(i)) {
+            ++valid_count;
+            std_ += std::pow((i - mean_), 2);
+        }
+    }
+    if (valid_count < 2) return NAN;
+    std_ = sqrt(std_ / valid_count);
+    if (std_ < 1e-7) return NAN;
+    double ret = 0;
+    for (double i : data_) {
+        if (std::isfinite(i)) {
+            ret += std::pow((i - mean_) / std_, 3);
+        }
+    }
+    return ret / valid_count;
+}
+
+double dummy_kurtosis(const std::vector<double>& data_) {
+    double mean_ = mean(data_);
+    double std_ = 0;
+    int valid_count = 0;
+    for (double i : data_) {
+        if (std::isfinite(i)) {
+            ++valid_count;
+            std_ += std::pow((i - mean_), 2);
+        }
+    }
+    if (valid_count < 2) return NAN;
+    std_ = sqrt(std_ / valid_count);
+    if (std_ < 1e-7) return NAN;
+    double ret = 0;
+    for (double i : data_) {
+        if (std::isfinite(i)) {
+            ret += std::pow((i - mean_) / std_, 4);
+        }
+    }
+    return ret / valid_count - 3.0;
 }
 }  // namespace ornate

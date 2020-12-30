@@ -1,5 +1,4 @@
 #include <math_dummy.h>
-//#include <math_stats_no_roll_rb_range.h>
 #include <math_stats_rolling_rb_range.h>
 #include <math_utils.h>
 #include <iostream>
@@ -56,16 +55,16 @@ void test_variance_rolling(const vector<double>& _data, int window) {
         REQUIRE(FloatEqual(sqrtf(rvr.variance), std_naive));
         REQUIRE(FloatEqual(sqrtf(row[0]), std_naive));
 
-        if (container.m_count >= window) {
-            nrvrr.init();
-            if (container.m_count >= window) {
-                for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
-                    nrvrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), row.data());
-                }
-                nrvrr.final_result(row.data());
-            }
-            REQUIRE(FloatEqual(sqrtf(row[0]), std_naive));
+        int real_window = window;
+        if (container.m_count < window) {
+            real_window = container.m_count;
         }
+        nrvrr.init();
+        for (int ts_idx = 0; ts_idx < real_window; ++ts_idx) {
+            nrvrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), row.data());
+        }
+        nrvrr.final_result(row.data());
+        REQUIRE(FloatEqual(sqrtf(row[0]), std_naive));
     }
 }
 
@@ -111,17 +110,17 @@ void test_covariance_rolling(const vector<double>& _data1, const vector<double>&
         REQUIRE(FloatEqual(rcr.covariance, cov_naive));
         REQUIRE(FloatEqual(row[0], cov_naive));
 
-        if (container.m_count >= window) {
-            nrcrr.init();
-            if (container.m_count >= window) {
-                for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
-                    nrcrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx),
-                                      row.data());
-                }
-                nrcrr.final_result(row.data());
-            }
-            REQUIRE(FloatEqual(row[0], cov_naive));
+        int real_window = window;
+        if (container.m_count < window) {
+            real_window = container.m_count;
         }
+
+        nrcrr.init();
+        for (int ts_idx = 0; ts_idx < real_window; ++ts_idx) {
+            nrcrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx), row.data());
+        }
+        nrcrr.final_result(row.data());
+        REQUIRE(FloatEqual(row[0], cov_naive));
     }
 }
 
@@ -210,17 +209,17 @@ void test_corr_rolling(const vector<double>& _data1, const vector<double>& _data
         REQUIRE(FloatEqual(rcr.corr, corr_naive));
         REQUIRE(FloatEqual(row[0], corr_naive));
 
-        if (container.m_count >= window) {
-            nrcrr.init();
-            if (container.m_count >= window) {
-                for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
-                    nrcrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx),
-                                      row.data());
-                }
-                nrcrr.final_result(row.data());
-            }
-            REQUIRE(FloatEqual(row[0], corr_naive));
+        int real_window = window;
+        if (container.m_count < window) {
+            real_window = container.m_count;
         }
+
+        nrcrr.init();
+        for (int ts_idx = 0; ts_idx < real_window; ++ts_idx) {
+            nrcrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx), row.data());
+        }
+        nrcrr.final_result(row.data());
+        REQUIRE(FloatEqual(row[0], corr_naive));
     }
 }
 
@@ -242,28 +241,6 @@ TEST_CASE("corr rolling", "[MathStatsRolling]") {
     test_corr_rolling(_data1, _data2, 5);
 }
 
-static double calc_skew(const vector<double>& data_) {
-    double mean_ = mean(data_);
-    double std_ = 0;
-    int valid_count = 0;
-    for (double i : data_) {
-        if (isfinite(i)) {
-            ++valid_count;
-            std_ += std::pow((i - mean_), 2);
-        }
-    }
-    if (valid_count < 2) return NAN;
-    std_ = sqrt(std_ / valid_count);
-    if (std_ < 1e-7) return NAN;
-    double ret = 0;
-    for (double i : data_) {
-        if (isfinite(i)) {
-            ret += std::pow((i - mean_) / std_, 3);
-        }
-    }
-    return ret / valid_count;
-}
-
 void test_skew_by_window(const vector<double>& x_, int window) {
     rolling_skew_rb sr(window);
     vector<double> y;
@@ -282,20 +259,21 @@ void test_skew_by_window(const vector<double>& x_, int window) {
         container.push(row);
         rsrr(container.get_old_row(), container.get_new_row(), row.data());
 
-        double expected = calc_skew(y);
+        double expected = dummy_skew(y);
         REQUIRE(FloatEqual(ret, expected));
         REQUIRE(FloatEqual(row[0], expected));
 
-        if (container.m_count >= window) {
-            nrsrr.init();
-            if (container.m_count >= window) {
-                for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
-                    nrsrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), row.data());
-                }
-                nrsrr.final_result(row.data());
-            }
-            REQUIRE(FloatEqual(row[0], expected));
+        int real_window = window;
+        if (container.m_count < window) {
+            real_window = container.m_count;
         }
+
+        nrsrr.init();
+        for (int ts_idx = 0; ts_idx < real_window; ++ts_idx) {
+            nrsrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), row.data());
+        }
+        nrsrr.final_result(row.data());
+        REQUIRE(FloatEqual(row[0], expected));
     }
 }
 
@@ -307,10 +285,10 @@ TEST_CASE("skew rolling nan", "[MathStatsRolling]") {
 }
 
 TEST_CASE("mean rolling", "[MathStatsRolling]") {
-    int ts_window = 4;
-    mean_rolling<> sr(ts_window);
-    rolling_mean_rb rmr(ts_window);
-    rolling_data_container<> container(ts_window, 1);
+    int window = 4;
+    mean_rolling<> sr(window);
+    rolling_mean_rb rmr(window);
+    rolling_data_container<> container(window, 1);
     vector<double> row(1, 0);
     rolling_mean_rb_range rmrr(1);
     rolling_mean_rb_range nrmrr(1);
@@ -325,24 +303,25 @@ TEST_CASE("mean rolling", "[MathStatsRolling]") {
         REQUIRE(FloatEqual(ret, rmr.mean));
         REQUIRE(FloatEqual(ret, row[0]));
 
-        if (container.m_count >= ts_window) {
-            nrmrr.init();
-            if (container.m_count >= ts_window) {
-                for (int ts_idx = 0; ts_idx < ts_window; ++ts_idx) {
-                    nrmrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), row.data());
-                }
-                nrmrr.final_result(row.data());
-            }
-            REQUIRE(FloatEqual(ret, row[0]));
+        int real_window = window;
+        if (container.m_count < window) {
+            real_window = container.m_count;
         }
+
+        nrmrr.init();
+        for (int ts_idx = 0; ts_idx < real_window; ++ts_idx) {
+            nrmrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), row.data());
+        }
+        nrmrr.final_result(row.data());
+        REQUIRE(FloatEqual(ret, row[0]));
     }
 }
 
 TEST_CASE("mean rolling nan", "[MathStatsRolling]") {
-    int ts_window = 4;
-    mean_rolling<> sr(ts_window);
-    rolling_mean_rb rmr(ts_window);
-    rolling_data_container<> container(ts_window, 1);
+    int window = 4;
+    mean_rolling<> sr(window);
+    rolling_mean_rb rmr(window);
+    rolling_data_container<> container(window, 1);
     vector<double> row(1, 0);
     rolling_mean_rb_range rmrr(1);
     rolling_mean_rb_range nrmrr(1);
@@ -358,39 +337,18 @@ TEST_CASE("mean rolling nan", "[MathStatsRolling]") {
         REQUIRE(FloatEqual(ret, rmr.mean));
         REQUIRE(FloatEqual(ret, row[0]));
 
-        if (container.m_count >= ts_window) {
-            nrmrr.init();
-            if (container.m_count >= ts_window) {
-                for (int ts_idx = 0; ts_idx < ts_window; ++ts_idx) {
-                    nrmrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), row.data());
-                }
-                nrmrr.final_result(row.data());
-            }
-            REQUIRE(FloatEqual(ret, row[0]));
+        int real_window = window;
+        if (container.m_count < window) {
+            real_window = container.m_count;
         }
-    }
-}
 
-static double calc_kurtosis(const vector<double>& data_) {
-    double mean_ = mean(data_);
-    double std_ = 0;
-    int valid_count = 0;
-    for (double i : data_) {
-        if (isfinite(i)) {
-            ++valid_count;
-            std_ += std::pow((i - mean_), 2);
+        nrmrr.init();
+        for (int ts_idx = 0; ts_idx < real_window; ++ts_idx) {
+            nrmrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), row.data());
         }
+        nrmrr.final_result(row.data());
+        REQUIRE(FloatEqual(ret, row[0]));
     }
-    if (valid_count < 2) return NAN;
-    std_ = sqrt(std_ / valid_count);
-    if (std_ < 1e-7) return NAN;
-    double ret = 0;
-    for (double i : data_) {
-        if (isfinite(i)) {
-            ret += std::pow((i - mean_) / std_, 4);
-        }
-    }
-    return ret / valid_count - 3.0;
 }
 
 void test_kurtosis_by_window(const vector<double>& x_, int window) {
@@ -411,21 +369,22 @@ void test_kurtosis_by_window(const vector<double>& x_, int window) {
         container.push(row);
         rkrr(container.get_old_row(), container.get_new_row(), row.data());
 
-        double expected = calc_kurtosis(y);
+        double expected = dummy_kurtosis(y);
 
         REQUIRE(FloatEqual(ret, expected));
         REQUIRE(FloatEqual(row[0], expected));
 
-        if (container.m_count >= window) {
-            nrkrr.init();
-            if (container.m_count >= window) {
-                for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
-                    nrkrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), row.data());
-                }
-                nrkrr.final_result(row.data());
-            }
-            REQUIRE(FloatEqual(ret, row[0]));
+        int real_window = window;
+        if (container.m_count < window) {
+            real_window = container.m_count;
         }
+
+        nrkrr.init();
+        for (int ts_idx = 0; ts_idx < real_window; ++ts_idx) {
+            nrkrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), row.data());
+        }
+        nrkrr.final_result(row.data());
+        REQUIRE(FloatEqual(ret, row[0]));
     }
 }
 
@@ -434,23 +393,6 @@ TEST_CASE("kurtosis rolling nan", "[MathStatsRolling]") {
     test_kurtosis_by_window(x, 4);
     test_kurtosis_by_window(x, 5);
     test_kurtosis_by_window(x, 6);
-}
-
-static double calc_decay(const vector<double>& data_) {
-    int size = data_.size();
-    double res = 0;
-    int count = 0;
-    for (int i = 0; i < size; ++i) {
-        if (std::isfinite(data_[i])) {
-            res += data_[i] * (i + 1);
-            count += (i + 1);
-        }
-    }
-    if (count > 0) {
-        return res / count;
-    } else {
-        return NAN;
-    }
 }
 
 void test_decay_by_window(const vector<double>& x_, int window) {
@@ -470,24 +412,20 @@ void test_decay_by_window(const vector<double>& x_, int window) {
         container.push(row);
         rdrr(container.get_old_row(), container.get_new_row(), row.data());
 
-        double expected = calc_decay(y);
-        if (!FloatEqual(row[0], expected)) {
-            cout << row[0] << " " << expected << endl;
-            rdrr(container.get_old_row(), container.get_new_row(), row.data());
-            cout << row[0] << " " << expected << endl;
-        }
+        double expected = dummy_decay(y);
         REQUIRE(FloatEqual(row[0], expected));
 
-        if (container.m_count >= window) {
-            nrdrr.init();
-            if (container.m_count >= window) {
-                for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
-                    nrdrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), row.data());
-                }
-                nrdrr.final_result(row.data());
-            }
-            REQUIRE(FloatEqual(expected, row[0]));
+        int real_window = window;
+        if (container.m_count < window) {
+            real_window = container.m_count;
         }
+
+        nrdrr.init();
+        for (int ts_idx = 0; ts_idx < real_window; ++ts_idx) {
+            nrdrr.full_single(ts_idx, real_window, container.get_row_by_idx(ts_idx), row.data());
+        }
+        nrdrr.final_result(row.data());
+        REQUIRE(FloatEqual(expected, row[0]));
     }
 }
 
@@ -581,20 +519,23 @@ void test_regression_by_window(const vector<double>& x_, const vector<double>& y
         rrrr.get_residual(container.get_new_row(), container2.get_new_row(), row2.data());
         REQUIRE(FloatEqual(row2[0], y_[i] - (a + b * x_[i])));
 
-        if (container.m_count >= window) {
-            rrrr.r2_pre_calc();
-            for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
-                rrrr.r2_single(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx));
-            }
-            rrrr.get_r2(row2.data());
-            double expected_r2 = dummy_r2(_x, _y, a, b, window);
-            REQUIRE(FloatEqual(row2[0], expected_r2));
+        int real_window = window;
+        if (container.m_count < window) {
+            real_window = container.m_count;
         }
 
-        if (container.m_count >= window) {
+        rrrr.r2_pre_calc();
+        for (int ts_idx = 0; ts_idx < real_window; ++ts_idx) {
+            rrrr.r2_single(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx));
+        }
+        rrrr.get_r2(row2.data());
+        double expected_r2 = dummy_r2(_x, _y, a, b, real_window);
+        REQUIRE(FloatEqual(row2[0], expected_r2));
+
+        {
             nrrrr.init();
 
-            for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
+            for (int ts_idx = 0; ts_idx < real_window; ++ts_idx) {
                 nrrrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx));
             }
             nrrrr.get_coefficients(row.data(), row2.data());
@@ -608,11 +549,11 @@ void test_regression_by_window(const vector<double>& x_, const vector<double>& y
             REQUIRE(FloatEqual(row2[0], y_[i] - (a + b * x_[i])));
 
             nrrrr.r2_pre_calc();
-            for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
+            for (int ts_idx = 0; ts_idx < real_window; ++ts_idx) {
                 nrrrr.r2_single(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx));
             }
             nrrrr.get_r2(row2.data());
-            double expected_r2 = dummy_r2(_x, _y, a, b, window);
+            expected_r2 = dummy_r2(_x, _y, a, b, real_window);
             REQUIRE(FloatEqual(row2[0], expected_r2));
         }
     }
@@ -651,10 +592,6 @@ void test_regression3_by_window(const vector<double>& x1_, const vector<double>&
         ornate::regression3(_y, _x1, _x2, &b0, &b1, &b2);
 
         rrrb(y_[i], x1_[i], x2_[i]);
-
-        if (!FloatEqual(rrrb.b0, b0)) {
-            cout << rrrb.b0 << endl;
-        }
         REQUIRE(FloatEqual(rrrb.b0, b0));
         REQUIRE(FloatEqual(rrrb.b1, b1));
         REQUIRE(FloatEqual(rrrb.b2, b2));
@@ -683,21 +620,24 @@ void test_regression3_by_window(const vector<double>& x1_, const vector<double>&
         rrrr.get_residual(container.get_new_row(), container2.get_new_row(), container3.get_new_row(), row2.data());
         REQUIRE(FloatEqual(row2[0], y_[i] - (b0 + b1 * x1_[i] + b2 * x2_[i])));
 
-        if (container.m_count >= window) {
-            rrrr.r2_pre_calc();
-            for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
-                rrrr.r2_single(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx),
-                               container3.get_row_by_idx(ts_idx));
-            }
-            rrrr.get_r2(row2.data());
-            double expected_r2 = dummy_r2(_x1, _x2, _y, b0, b1, b2, window);
-            REQUIRE(FloatEqual(row2[0], expected_r2));
+        int real_window = window;
+        if (container.m_count < window) {
+            real_window = container.m_count;
         }
 
-        if (container.m_count >= window) {
+        rrrr.r2_pre_calc();
+        for (int ts_idx = 0; ts_idx < real_window; ++ts_idx) {
+            rrrr.r2_single(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx),
+                           container3.get_row_by_idx(ts_idx));
+        }
+        rrrr.get_r2(row2.data());
+        double expected_r2 = dummy_r2(_x1, _x2, _y, b0, b1, b2, real_window);
+        REQUIRE(FloatEqual(row2[0], expected_r2));
+
+        {
             nrrrr.init();
 
-            for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
+            for (int ts_idx = 0; ts_idx < real_window; ++ts_idx) {
                 nrrrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx),
                                   container3.get_row_by_idx(ts_idx));
             }
@@ -713,12 +653,12 @@ void test_regression3_by_window(const vector<double>& x1_, const vector<double>&
             REQUIRE(FloatEqual(row2[0], y_[i] - (b0 + b1 * x1_[i] + b2 * x2_[i])));
 
             nrrrr.r2_pre_calc();
-            for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
+            for (int ts_idx = 0; ts_idx < real_window; ++ts_idx) {
                 nrrrr.r2_single(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx),
                                 container3.get_row_by_idx(ts_idx));
             }
             nrrrr.get_r2(row2.data());
-            double expected_r2 = dummy_r2(_x1, _x2, _y, b0, b1, b2, window);
+            expected_r2 = dummy_r2(_x1, _x2, _y, b0, b1, b2, real_window);
             REQUIRE(FloatEqual(row2[0], expected_r2));
         }
     }
@@ -795,23 +735,21 @@ void test_ema_hl_by_window(const vector<double>& x_, int window) {
         vector<double> tmp = y;
         double expected = ornate::ema_hl(tmp, window, window - 1, 4);
 
-        if (!FloatEqual(ret, expected)) {
-            cout << ret << " " << expected << endl;
-        }
         REQUIRE(FloatEqual(ret, expected));
         REQUIRE(FloatEqual(row[0], expected));
         REQUIRE(FloatEqual(row[1], expected));
 
-        if (container.m_count >= window) {
-            nrerr.init();
-            if (container.m_count >= window) {
-                for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
-                    nrerr.full_single(ts_idx, container.get_row_by_idx(ts_idx), row.data());
-                }
-                nrerr.final_result(row.data());
-            }
-            REQUIRE(FloatEqual(expected, row[0]));
+        int real_window = window;
+        if (container.m_count < window) {
+            real_window = container.m_count;
         }
+
+        nrerr.init();
+        for (int ts_idx = 0; ts_idx < real_window; ++ts_idx) {
+            nrerr.full_single(ts_idx, container.get_row_by_idx(ts_idx), row.data());
+        }
+        nrerr.final_result(row.data());
+        REQUIRE(FloatEqual(expected, row[0]));
     }
 }
 
@@ -866,20 +804,23 @@ void test_ols_by_window(const vector<double>& x_, const vector<double>& y_, int 
         rrrr.get_residual(container.get_new_row(), container2.get_new_row(), row2.data());
         REQUIRE(FloatEqual(row2[0], y_[i] - (b * x_[i])));
 
-        if (container.m_count >= window) {
-            rrrr.r2_pre_calc();
-            for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
-                rrrr.r2_single(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx));
-            }
-            rrrr.get_r2(row2.data());
-            double expected_r2 = dummy_r2_no_slope(_x, _y, b, window);
-            REQUIRE(FloatEqual(row2[0], expected_r2));
+        int real_window = window;
+        if (container.m_count < window) {
+            real_window = container.m_count;
         }
 
-        if (container.m_count >= window) {
+        rrrr.r2_pre_calc();
+        for (int ts_idx = 0; ts_idx < real_window; ++ts_idx) {
+            rrrr.r2_single(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx));
+        }
+        rrrr.get_r2(row2.data());
+        double expected_r2 = dummy_r2_no_slope(_x, _y, b, real_window);
+        REQUIRE(FloatEqual(row2[0], expected_r2));
+
+        {
             nrrrr.init();
 
-            for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
+            for (int ts_idx = 0; ts_idx < real_window; ++ts_idx) {
                 nrrrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx));
             }
             nrrrr.get_coefficients(row2.data());
@@ -892,11 +833,11 @@ void test_ols_by_window(const vector<double>& x_, const vector<double>& y_, int 
             REQUIRE(FloatEqual(row2[0], y_[i] - (b * x_[i])));
 
             nrrrr.r2_pre_calc();
-            for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
+            for (int ts_idx = 0; ts_idx < real_window; ++ts_idx) {
                 nrrrr.r2_single(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx));
             }
             nrrrr.get_r2(row2.data());
-            double expected_r2 = dummy_r2_no_slope(_x, _y, b, window);
+            expected_r2 = dummy_r2_no_slope(_x, _y, b, real_window);
             REQUIRE(FloatEqual(row2[0], expected_r2));
         }
     }
@@ -960,21 +901,26 @@ void test_ols3_by_window(const vector<double>& x1_, const vector<double>& x2_, c
         rrrr.get_residual(container.get_new_row(), container2.get_new_row(), container3.get_new_row(), row2.data());
         REQUIRE(FloatEqual(row2[0], y_[i] - (b1 * x1_[i] + b2 * x2_[i])));
 
-        if (container.m_count >= window) {
+        int real_window = window;
+        if (container.m_count < window) {
+            real_window = container.m_count;
+        }
+
+        {
             rrrr.r2_pre_calc();
-            for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
+            for (int ts_idx = 0; ts_idx < real_window; ++ts_idx) {
                 rrrr.r2_single(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx),
                                container3.get_row_by_idx(ts_idx));
             }
             rrrr.get_r2(row2.data());
-            double expected_r2 = dummy_r2_no_slope(_x1, _x2, _y, b1, b2, window);
+            double expected_r2 = dummy_r2_no_slope(_x1, _x2, _y, b1, b2, real_window);
             REQUIRE(FloatEqual(row2[0], expected_r2));
         }
 
-        if (container.m_count >= window) {
+        {
             nrrrr.init();
 
-            for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
+            for (int ts_idx = 0; ts_idx < real_window; ++ts_idx) {
                 nrrrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx),
                                   container3.get_row_by_idx(ts_idx));
             }
@@ -990,12 +936,12 @@ void test_ols3_by_window(const vector<double>& x1_, const vector<double>& x2_, c
             REQUIRE(FloatEqual(row2[0], y_[i] - (b1 * x1_[i] + b2 * x2_[i])));
 
             nrrrr.r2_pre_calc();
-            for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
+            for (int ts_idx = 0; ts_idx < real_window; ++ts_idx) {
                 nrrrr.r2_single(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx),
                                 container3.get_row_by_idx(ts_idx));
             }
             nrrrr.get_r2(row2.data());
-            double expected_r2 = dummy_r2_no_slope(_x1, _x2, _y, b1, b2, window);
+            double expected_r2 = dummy_r2_no_slope(_x1, _x2, _y, b1, b2, real_window);
             REQUIRE(FloatEqual(row2[0], expected_r2));
         }
     }
@@ -1022,26 +968,24 @@ void test_slope_no_intercept_by_window(const vector<double>& y_, int window) {
         add_window_vector(_y, window, y_[i]);
 
         double b = ornate::slope_no_intercept(_y);
-
         double b1 = rr(y_[i]);
-        if (i + 1 < (size_t)window) {
-            REQUIRE(std::isnan(b1));
-        } else {
-            REQUIRE(FloatEqual(b1, b));
-        }
+        REQUIRE(FloatEqual(b1, b));
 
         row[0] = y_[i];
         row[1] = y_[i];
         container.push(row);
 
-        if (container.m_count >= window) {
+        int real_window = window;
+        if (container.m_count < window) {
+            real_window = container.m_count;
+        }
+
+        {
             nrrrr.init();
-            if (container.m_count >= window) {
-                for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
-                    nrrrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), row.data());
-                }
-                nrrrr.final_result(row.data());
+            for (int ts_idx = 0; ts_idx < real_window; ++ts_idx) {
+                nrrrr.full_single(ts_idx, real_window, container.get_row_by_idx(ts_idx), row.data());
             }
+            nrrrr.final_result(row.data());
             REQUIRE(FloatEqual(b, row[0]));
         }
     }
@@ -1070,24 +1014,23 @@ void test_slope_by_window(const vector<double>& y_, int window) {
         double b = ornate::ts_slope(_y);
 
         double b1 = rr(y_[i]);
-        if (i + 1 < (size_t)window) {
-            REQUIRE(std::isnan(b1));
-        } else {
-            REQUIRE(FloatEqual(b1, b));
-        }
+        REQUIRE(FloatEqual(b1, b));
 
         row[0] = y_[i];
         row[1] = y_[i];
         container.push(row);
 
-        if (container.m_count >= window) {
+        int real_window = window;
+        if (container.m_count < window) {
+            real_window = container.m_count;
+        }
+
+        {
             nrrrr.init();
-            if (container.m_count >= window) {
-                for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
-                    nrrrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), row.data());
-                }
-                nrrrr.final_result(row.data());
+            for (int ts_idx = 0; ts_idx < real_window; ++ts_idx) {
+                nrrrr.full_single(ts_idx, real_window, container.get_row_by_idx(ts_idx), row.data());
             }
+            nrrrr.final_result(row.data());
             REQUIRE(FloatEqual(b, row[0]));
         }
     }
@@ -1123,14 +1066,17 @@ void test_sharpe_by_window(const vector<double>& y_, int window) {
         REQUIRE(FloatEqual(row[0], b));
         REQUIRE(FloatEqual(row[1], b));
 
-        if (container.m_count >= window) {
+        int real_window = window;
+        if (container.m_count < window) {
+            real_window = container.m_count;
+        }
+
+        {
             nrsrr.init();
-            if (container.m_count >= window) {
-                for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
-                    nrsrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), row.data());
-                }
-                nrsrr.final_result(row.data());
+            for (int ts_idx = 0; ts_idx < real_window; ++ts_idx) {
+                nrsrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), row.data());
             }
+            nrsrr.final_result(row.data());
             REQUIRE(FloatEqual(b, row[0]));
         }
     }
@@ -1166,14 +1112,17 @@ void test_scale_by_window(const vector<double>& y_, int window) {
         REQUIRE(FloatEqual(row[0], b));
         REQUIRE(FloatEqual(row[1], b));
 
-        if (container.m_count >= window) {
+        int real_window = window;
+        if (container.m_count < window) {
+            real_window = container.m_count;
+        }
+
+        {
             nrsrr.init();
-            if (container.m_count >= window) {
-                for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
-                    nrsrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), row.data());
-                }
-                nrsrr.final_result(row.data());
+            for (int ts_idx = 0; ts_idx < real_window; ++ts_idx) {
+                nrsrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), row.data());
             }
+            nrsrr.final_result(row.data());
             REQUIRE(FloatEqual(b, row[0]));
         }
     }
@@ -1198,11 +1147,10 @@ void test_rank2_by_window(const vector<double>& x_, const vector<double>& x1_, i
 
     double ret = 0;
     for (size_t i = 0; i < x_.size(); ++i) {
-        double d = x1_[i];
-        add_window_vector(y, window, d);
+        add_window_vector(y, window, x1_[i]);
 
-        row[0] = d;
-        row[1] = d;
+        row[0] = x_[i];
+        row[1] = x_[i];
         container.push(row);
         row1[0] = x1_[i];
         row1[1] = x1_[i];
@@ -1210,7 +1158,7 @@ void test_rank2_by_window(const vector<double>& x_, const vector<double>& x1_, i
         rrrr(container.get_old_row(), container1.get_old_row(), container.get_new_row(), container1.get_new_row(),
              row.data());
 
-        double expected = ornate::rank2_last(y.data(), x1_[i], y.size() - 1, window);
+        double expected = ornate::rank2_last(y.data(), x_[i], y.size() - 1, window);
 
         REQUIRE(FloatEqual(row[0], expected));
         REQUIRE(FloatEqual(row[1], expected));
@@ -1236,11 +1184,13 @@ void test_dcor_rolling(const vector<double>& _data1, const vector<double>& _data
     rolling_dcor_rb_range rdrr(1);
     rdrr.set_row_size(window);
 
+    x_.push_back(_data1[0]);
+    y.push_back(_data2[0]);
     for (size_t i = 1; i < _data1.size(); ++i) {
         double d = _data1[i] - _data1[i - 1];
-        add_window_vector(x_, window, d);
+        add_window_vector(x_, window + 1, _data1[i]);
         double d1 = _data2[i] - _data2[i - 1];
-        add_window_vector(y, window, d1);
+        add_window_vector(y, window + 1, _data2[i]);
 
         row[0] = d;
         container.push(row);
@@ -1252,15 +1202,18 @@ void test_dcor_rolling(const vector<double>& _data1, const vector<double>& _data
         double corr_naive = dummy_dcor(x_, y);
         REQUIRE(FloatEqual(row[0], corr_naive));
 
-        if (container.m_count >= window) {
+        int real_window = window;
+        if (container.m_count < window) {
+            real_window = container.m_count;
+        }
+
+        {
             nrdrr.init();
-            if (container.m_count >= window) {
-                for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
-                    nrdrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx),
-                                      row.data());
-                }
-                nrdrr.final_result(row.data());
+            for (int ts_idx = 0; ts_idx < real_window; ++ts_idx) {
+                nrdrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), container2.get_row_by_idx(ts_idx),
+                                  row.data());
             }
+            nrdrr.final_result(row.data());
             REQUIRE(FloatEqual(row[0], corr_naive));
         }
     }
@@ -1318,14 +1271,17 @@ void test_ts_backward_cpn_rolling(const vector<double>& _data1, int window) {
         container.push(row);
         double _naive = dummy_ts_backward_cpn(_data1.data(), i, window, 0);
 
-        if (container.m_count >= window) {
-            nrdrr.init();
+        int real_window = window;
+        if (container.m_count < window) {
+            real_window = container.m_count;
+        }
 
-            for (int ts_idx = 0; ts_idx < window; ++ts_idx) {
+        {
+            nrdrr.init();
+            for (int ts_idx = 0; ts_idx < real_window; ++ts_idx) {
                 nrdrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), row.data());
             }
             nrdrr.final_result(row.data());
-
             REQUIRE(FloatEqual(row[0], _naive));
         }
     }
@@ -1350,18 +1306,17 @@ void test_ts_acp_rolling(const vector<double>& _data1, int window) {
         container.push(row);
         double _naive = dummy_ts_acp(_data1.data(), i, window, lag);
 
-        if (container.m_count >= window) {
-            nrdrr.init();
+        int real_window = window;
+        if (container.m_count < window) {
+            real_window = container.m_count;
+        }
 
-            for (int ts_idx = 0; ts_idx < window - lag; ++ts_idx) {
+        {
+            nrdrr.init();
+            for (int ts_idx = 0; ts_idx < real_window - lag; ++ts_idx) {
                 nrdrr.full_single(ts_idx, container.get_row_by_idx(ts_idx), container.get_row_by_idx(ts_idx + lag));
             }
             nrdrr.final_result(row.data());
-
-            if (!FloatEqual(row[0], _naive)) {
-                _naive = dummy_ts_acp(_data1.data(), i, window, lag);
-                FloatEqual(row[0], _naive);
-            }
             REQUIRE(FloatEqual(row[0], _naive));
         }
     }
