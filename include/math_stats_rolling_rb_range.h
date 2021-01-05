@@ -1874,7 +1874,7 @@ struct rolling_ema_hl_rb_range {
         calc_cached_coeff();
     }
     void set_param(const std::string& key, const std::string& value) {
-        if (key == "hl" || key == "half_life") {
+        if (key == "hl" || key == "half_life" || key == "arg1") {
             decay_coeff = ema_hl2decay(std::stod(value));
             calc_cached_coeff();
         }
@@ -1933,6 +1933,115 @@ struct rolling_ema_hl_rb_range {
                 ++stats[i].m_valid_count;
                 stats[i].total_ += _row[i] * cached_coeff[idx];
                 stats[i].total_w += cached_coeff[idx];
+            }
+        }
+    }
+
+    template <typename TOut>
+    void final_result(TOut* output) {
+        for (int i = 0; i < m_column_size; ++i) {
+            output[i] = stats[i].calc();
+        }
+    }
+};
+
+struct rolling_ema_hl2_rb_range {
+    struct stat {
+        long double total_{0}, total_w{0};
+        int m_valid_count{0};
+        void clear() {
+            total_ = total_w = 0;
+            m_valid_count = 0;
+        }
+        double calc() const {
+            if (m_valid_count > 0)
+                return total_ / total_w;
+            else
+                return NAN;
+        }
+    };
+    int m_column_size;
+    int m_row_size{0};  // window size
+    int count{0};
+    double decay_coeff{0};
+    double remove_coeff{0};
+    std::vector<double> cached_coeff;
+    double decay_coeff2{0};
+    double remove_coeff2{0};
+    std::vector<double> cached_coeff2;
+    std::vector<stat> stats;
+
+    explicit rolling_ema_hl2_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
+
+    void set_ins_num(int ins_num) {
+        m_column_size = ins_num;
+        stats.resize(m_column_size);
+    }
+
+    void set_row_size(int row) { m_row_size = row; }
+    void set_param(const std::string& key, const std::string& value) {
+        if (key == "arg1") {
+            decay_coeff = ema_hl2decay(std::stod(value));
+            remove_coeff = std::pow(decay_coeff, m_row_size - 1);
+            cached_coeff.resize(m_row_size);
+            for (int i = 0; i < m_row_size; ++i) {
+                cached_coeff[i] = std::pow(decay_coeff, i);
+            }
+        } else if (key == "arg2") {
+            decay_coeff2 = ema_hl2decay(std::stod(value));
+            remove_coeff2 = std::pow(decay_coeff2, m_row_size - 1);
+            cached_coeff2.resize(m_row_size);
+            for (int i = 0; i < m_row_size; ++i) {
+                cached_coeff2[i] = std::pow(decay_coeff2, i);
+            }
+        }
+    }
+
+    template <typename T, typename TOut>
+    void operator()(const T* old_row, const T* new_row, TOut* output) {
+        ++count;
+        for (int i = 0; i < m_column_size; ++i) {
+            auto& st = stats[i];
+            if (old_row) {
+                delete_old(st, old_row[i]);
+            }
+            output[i] = add_new(st, new_row[i]);
+        }
+    }
+
+    template <typename T>
+    void delete_old(stat& st, T old_value) {
+        if (std::isfinite(old_value)) {
+            st.total_ -= old_value * remove_coeff;
+            st.total_w -= remove_coeff2;
+            --st.m_valid_count;
+        }
+    }
+
+    template <typename T>
+    double add_new(stat& st, T new_value) {
+        if (std::isfinite(new_value)) {
+            st.total_ = st.total_ * decay_coeff + new_value;
+            st.total_w = st.total_w * decay_coeff2 + 1.0;
+            ++st.m_valid_count;
+        } else {
+            st.total_ *= decay_coeff;
+            st.total_w *= decay_coeff2;
+        }
+        return st.calc();
+    }
+
+    void init() {
+        for (auto& stat : stats) stat.clear();
+    }
+
+    template <typename T, typename TOut>
+    void full_single(int idx, const T* _row, TOut* output) {
+        for (int i = 0; i < m_column_size; ++i) {
+            if (std::isfinite(_row[i])) {
+                ++stats[i].m_valid_count;
+                stats[i].total_ += _row[i] * cached_coeff[idx];
+                stats[i].total_w += cached_coeff2[idx];
             }
         }
     }

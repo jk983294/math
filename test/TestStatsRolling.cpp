@@ -762,6 +762,50 @@ TEST_CASE("ema_hl rolling nan", "[MathStatsRolling]") {
     test_ema_hl_by_window(datum, 6);
 }
 
+void test_ema_hl_pp_by_window(const vector<double>& x_, int window) {
+    rolling_data_container<> container(window, 2);
+    vector<double> row(1, 0);
+    rolling_ema_hl_rb_range rqrr(1);
+    rqrr.set_row_size(window);
+    rqrr.set_param("param1", "4");
+    rqrr.set_param("param2", "8");
+
+    rolling_ema_hl_rb_range nrerr(1);
+    nrerr.set_row_size(window);
+    nrerr.set_param("param1", "4");
+    nrerr.set_param("param2", "8");
+
+    double ret = 0;
+    for (double d : x_) {
+        row[0] = d;
+        container.push(row);
+        rqrr(container.get_old_row(), container.get_new_row(), row.data());
+
+        double result = row[0];
+
+        int real_window = window;
+        if (container.m_count < window) {
+            real_window = container.m_count;
+        }
+
+        nrerr.init();
+        for (int ts_idx = 0; ts_idx < real_window; ++ts_idx) {
+            nrerr.full_single(ts_idx, container.get_row_by_idx(ts_idx), row.data());
+        }
+        nrerr.final_result(row.data());
+        REQUIRE(FloatEqual(result, row[0]));
+    }
+}
+
+TEST_CASE("ema_hl_pp rolling nan", "[MathStatsRolling]") {
+    vector<double> datum = {1, 4, NAN, NAN, 3, 1, 6, -2, 4, NAN, 7, 2, -3, NAN, NAN, 5};
+
+    test_ema_hl_pp_by_window(datum, 3);
+    test_ema_hl_pp_by_window(datum, 4);
+    test_ema_hl_pp_by_window(datum, 5);
+    test_ema_hl_pp_by_window(datum, 6);
+}
+
 void test_ols_by_window(const vector<double>& x_, const vector<double>& y_, int window) {
     ols2_rolling rr(window);
     vector<double> _x, _y;
