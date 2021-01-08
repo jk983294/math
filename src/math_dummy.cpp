@@ -31,6 +31,31 @@ double dummy_ts_cross(const double* x_, const double* y, std::size_t i, std::siz
     }
 }
 
+double dummy_ts_argmax(const double* x, std::size_t i, std::size_t n) {
+    const std::size_t size = i + 1;
+    const std::size_t N = (n == 0) ? size : std::min(size, n);
+    int max_idx = -1;
+    double max_val = NAN;
+    for (std::size_t j = 0; j < N; j++) {
+        double curr_val = x[i - N + j + 1];
+        if (std::isfinite(curr_val) && (std::isnan(max_val) || max_val < curr_val)) {
+            max_val = curr_val;
+            max_idx = int(j);
+        }
+    }
+    if (N == 1) {
+        if (max_idx >= 0) {
+            return 1.;
+        } else
+            return NAN;
+    } else {
+        if (max_idx >= 0) {
+            return double(N - 1 - max_idx) / double(N - 1);
+        } else
+            return NAN;
+    }
+}
+
 double dummy_ts_backward_cpn(const double* x, std::size_t i, std::size_t n, int sign) {
     const std::size_t size = i + 1;
     const std::size_t N = (n == 0) ? size : std::min(size, n);

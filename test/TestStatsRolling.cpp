@@ -1372,3 +1372,31 @@ TEST_CASE("ts_acp rolling", "[MathStatsRolling]") {
     test_ts_acp_rolling(_data1, 4);
     test_ts_acp_rolling(_data1, 5);
 }
+
+void test_tsargmax_by_window(const vector<double>& _data1, int window) {
+    int lag = 1;
+    rolling_data_container<> container(window, 1);
+    vector<double> row(1, 0);
+    rolling_mq_percent_rb_range<double, std::less<double>> nrdrr(1);
+    nrdrr.set_row_size(window);
+
+    for (size_t i = 0; i < _data1.size(); ++i) {
+        row[0] = _data1[i];
+        container.push(row);
+        double _naive = dummy_ts_argmax(_data1.data(), i, window);
+        nrdrr(container.get_old_row(), container.get_new_row(), row.data());
+        if (!FloatEqual(row[0], _naive)) {
+            _naive = dummy_ts_argmax(_data1.data(), i, window);
+        }
+        REQUIRE(FloatEqual(row[0], _naive));
+    }
+}
+
+TEST_CASE("tsargmax rolling nan", "[MathStatsRolling]") {
+    vector<double> datum = {1, 4, NAN, NAN, 3, 1, 6, -2, 4, NAN, 7, 2, -3, NAN, NAN, 5};
+
+    test_tsargmax_by_window(datum, 3);
+    test_tsargmax_by_window(datum, 4);
+    test_tsargmax_by_window(datum, 5);
+    test_tsargmax_by_window(datum, 6);
+}

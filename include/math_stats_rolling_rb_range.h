@@ -1152,6 +1152,7 @@ public:
     };
     int capacity{0};
     int m_column_size;
+    int m_count{0};
     std::vector<stat> stats;
     std::vector<Cell> _data;
     TCmp cmp;
@@ -1171,6 +1172,7 @@ public:
     void set_param(const std::string& key, const std::string& value) {}
 
     void push(TData value, stat& st, Cell* start_cell) {
+        ++m_count;
         int oldest_seq = st.seq - capacity + 2;
         int ptr = st.front;
         for (; ptr != st.rear && start_cell[ptr].seq <= oldest_seq; ptr = (ptr + 1) % capacity)
@@ -1201,7 +1203,12 @@ public:
 
     double top_percent(stat& st, Cell* start_cell) {
         if (st.front == st.rear) return NAN;
-        return double(st.seq - start_cell[st.front].seq) / (capacity - 2);
+        if (m_count == 1) {
+            return 1.0;
+        } else if (m_count < capacity - 1) {
+            return double(st.seq - start_cell[st.front].seq) / (m_count - 1);
+        } else
+            return double(st.seq - start_cell[st.front].seq) / (capacity - 2);
     }
 
     TData top(stat& st, Cell* start_cell) {
