@@ -43,17 +43,8 @@ double dummy_ts_argmax(const double* x, std::size_t i, std::size_t n) {
             max_idx = int(j);
         }
     }
-    if (N == 1) {
-        if (max_idx >= 0) {
-            return 1.;
-        } else
-            return NAN;
-    } else {
-        if (max_idx >= 0) {
-            return double(N - 1 - max_idx) / double(N - 1);
-        } else
-            return NAN;
-    }
+    if (max_idx < 0) return NAN;
+    return N > 1 ? (1 - max_idx / (N - 1.0)) : 0;
 }
 
 double dummy_ts_backward_cpn(const double* x, std::size_t i, std::size_t n, int sign) {

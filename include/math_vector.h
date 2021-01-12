@@ -96,7 +96,7 @@ std::vector<T> slice(const std::vector<T>& data, int from = 0, int to = 0) {
     if (to_idx >= total) to_idx = total - 1;
     if (start_idx < 0 || start_idx >= total || to_idx < 0 || to_idx < start_idx) return {};
     std::vector<T> ret(static_cast<size_t>(to_idx - start_idx + 1));
-    memcpy(&ret[0], &data[start_idx], sizeof(T) * ret.size());
+    std::copy(data.begin() + start_idx, data.begin() + to_idx + 1, ret.begin());
     return ret;
 }
 

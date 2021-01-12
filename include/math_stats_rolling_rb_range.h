@@ -1204,7 +1204,7 @@ public:
     double top_percent(stat& st, Cell* start_cell) {
         if (st.front == st.rear) return NAN;
         if (m_count == 1) {
-            return 1.0;
+            return 0.0;
         } else if (m_count < capacity - 1) {
             return double(st.seq - start_cell[st.front].seq) / (m_count - 1);
         } else
