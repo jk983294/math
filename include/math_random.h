@@ -81,7 +81,7 @@ inline vector<vector<T>> generate_uniform_matrix(size_t m, size_t n, T from = 0,
 }
 
 template <typename T = double>
-inline vector<double> build_choice_vector(const vector<T>& weight) {
+inline vector<double> build_choice_vector(const vector<T> &weight) {
     vector<double> ret;
     double sum_ = std::accumulate(weight.begin(), weight.end(), 0.0);
     double accum = 0;
@@ -92,7 +92,7 @@ inline vector<double> build_choice_vector(const vector<T>& weight) {
     return ret;
 }
 
-inline int choice_with_accum_weight(const vector<double>& accum_weight, double prob) {
+inline int choice_with_accum_weight(const vector<double> &accum_weight, double prob) {
     auto itr = std::upper_bound(accum_weight.begin(), accum_weight.end(), prob);
     if (itr == accum_weight.end())
         return (int)accum_weight.size() - 1;
@@ -102,17 +102,20 @@ inline int choice_with_accum_weight(const vector<double>& accum_weight, double p
 
 struct MyRandom {
     MyRandom() : generator(std::random_device()()), urd(0., 1.0) {}
+
     MyRandom(int from, int to) : generator(std::random_device()()), uid(from, to) {}
 
     double random() { return urd(generator); }
+
     int random_int(int from, int to) {
         std::uniform_int_distribution<int> uid_(from, to);
         return uid_(generator);
     }
+
     int random_int() { return uid(generator); }
 
     template <typename T>
-    T random_from(const std::vector<T>& datum) {
+    T random_from(const std::vector<T> &datum) {
         if (datum.empty())
             return T();
         else if (datum.size() == 1)
@@ -124,7 +127,7 @@ struct MyRandom {
     }
 
     template <typename T>
-    T choice(const std::vector<T>& datum, const std::vector<double>& accum_weight) {
+    T choice(const std::vector<T> &datum, const std::vector<double> &accum_weight) {
         if (datum.empty())
             return T();
         else if (datum.size() == 1)
@@ -133,6 +136,17 @@ struct MyRandom {
             double prob = random();
             int idx = choice_with_accum_weight(accum_weight, prob);
             return datum[idx];
+        }
+    }
+
+    vector<int> choice_no_replace(int len, int n) {
+        std::vector<int> ret(len, 0);
+        std::iota(ret.begin(), ret.end(), 0);
+        if (n < len) {
+            std::shuffle(ret.begin(), ret.end(), generator);
+            return vector<int>(ret.begin(), ret.begin() + n);
+        } else {
+            return ret;
         }
     }
 
