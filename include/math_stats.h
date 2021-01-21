@@ -187,6 +187,35 @@ double corr(const std::vector<T> &x, const std::vector<T> &y) {
 }
 
 template <typename T = float>
+double acf(const T *x, int num, int shift) {
+    double cov_, std_x, std_y;
+    if (__cov(x, x + shift, num - shift, cov_, std_x, std_y) < 2) return NAN;
+    if (std_x < epsilon || std_y < epsilon) return NAN;
+    return cov_ / std_x / std_y;
+}
+
+template <typename T = float>
+double acf(const std::vector<T> &x, int shift) {
+    return acf(x.data(), (int)x.size(), shift);
+}
+
+template <typename T = float>
+int acf_half_life(const T *x, int max_life, int num, int shift_bulk = 1) {
+    int left = 0, right = max_life;
+    double right_acf = acf(x, num, shift_bulk * max_life);
+    if (right_acf >= 0.5) return max_life;
+    for (;;) {
+        int middle = (left + right) / 2;
+        if (middle == left || middle == right) return middle;
+        double middle_acf = acf(x, num, shift_bulk * middle);
+        if (middle_acf > 0.5)
+            left = middle;
+        else
+            right = middle;
+    }
+}
+
+template <typename T = float>
 double cov(const T *x, const T *y, size_t num) {
     double cov_, std_x, std_y;
     if (__cov(x, y, num, cov_, std_x, std_y) < 2) return NAN;

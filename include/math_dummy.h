@@ -20,6 +20,8 @@ double dummy_r2(const std::vector<double>& x1_, const std::vector<double>& x2_, 
 double dummy_r2_no_slope(const std::vector<double>& x_, const std::vector<double>& y_, double b, int window);
 double dummy_r2_no_slope(const std::vector<double>& x1_, const std::vector<double>& x2_, const std::vector<double>& y_,
                          double b1, double b2, int window);
+double dummy_skew(const double* data_, int num);
+double dummy_kurtosis(const double* data_, int num);
 double dummy_skew(const std::vector<double>& data_);
 double dummy_kurtosis(const std::vector<double>& data_);
 
