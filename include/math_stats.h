@@ -570,6 +570,71 @@ template <typename T = float>
 T ts_scale(const std::vector<T> &y) {
     return _ts_scale(&y[0], y.size());
 }
+
+template <typename T>
+double math_skew(const T *data_, int num) {
+    double mean_ = mean(data_, num);
+    double std_ = 0;
+    int valid_count = 0;
+    for (int i = 0; i < num; ++i) {
+        if (std::isfinite(data_[i])) {
+            ++valid_count;
+            std_ += std::pow((data_[i] - mean_), 2);
+        }
+    }
+    if (valid_count < 2) return NAN;
+    std_ = sqrt(std_ / valid_count);
+    if (std_ < 1e-7) return NAN;
+    double ret = 0;
+    for (int i = 0; i < num; ++i) {
+        if (std::isfinite(data_[i])) {
+            ret += std::pow((data_[i] - mean_) / std_, 3);
+        }
+    }
+    return ret / valid_count;
+}
+
+template <typename T>
+double math_kurtosis(const T *data_, int num) {
+    double mean_ = mean(data_, num);
+    double std_ = 0;
+    int valid_count = 0;
+    for (int i = 0; i < num; ++i) {
+        if (std::isfinite(data_[i])) {
+            ++valid_count;
+            std_ += std::pow((data_[i] - mean_), 2);
+        }
+    }
+    if (valid_count < 2) return NAN;
+    std_ = sqrt(std_ / valid_count);
+    if (std_ < 1e-7) return NAN;
+    double ret = 0;
+    for (int i = 0; i < num; ++i) {
+        if (std::isfinite(data_[i])) {
+            ret += std::pow((data_[i] - mean_) / std_, 4);
+        }
+    }
+    return ret / valid_count - 3.0;
+}
+
+template <typename T>
+double math_skew(const vector<T> &data_) {
+    return math_skew(data_.data(), data_.size());
+}
+
+template <typename T>
+double math_kurtosis(const std::vector<T> &data_) {
+    return math_kurtosis(data_.data(), data_.size());
+}
+
+template <typename T = double>
+int calc_na_count(const T *x, int num) {
+    int cnt = 0;
+    for (int i = 0; i < num; ++i) {
+        if (!std::isfinite(x[i])) cnt++;
+    }
+    return cnt;
+}
 }  // namespace ornate
 
 #endif

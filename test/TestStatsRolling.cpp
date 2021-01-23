@@ -259,7 +259,7 @@ void test_skew_by_window(const vector<double>& x_, int window) {
         container.push(row);
         rsrr(container.get_old_row(), container.get_new_row(), row.data());
 
-        double expected = dummy_skew(y);
+        double expected = math_skew(y);
         REQUIRE(FloatEqual(ret, expected));
         REQUIRE(FloatEqual(row[0], expected));
 
@@ -369,7 +369,7 @@ void test_kurtosis_by_window(const vector<double>& x_, int window) {
         container.push(row);
         rkrr(container.get_old_row(), container.get_new_row(), row.data());
 
-        double expected = dummy_kurtosis(y);
+        double expected = math_kurtosis(y);
 
         REQUIRE(FloatEqual(ret, expected));
         REQUIRE(FloatEqual(row[0], expected));
