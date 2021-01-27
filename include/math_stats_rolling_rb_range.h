@@ -1149,6 +1149,11 @@ public:
         int front = 0;
         int rear = 0;
         int seq = -1;
+        void clear() {
+            front = 0;
+            rear = 0;
+            seq = -1;
+        }
     };
     int capacity{0};
     int m_column_size;
@@ -1161,6 +1166,12 @@ public:
         stats.resize(m_column_size);
         cmp = TCmp();
     }
+
+    void init() {
+        for (auto& st : stats) st.clear();
+        m_count = 0;
+    }
+
     void set_ins_num(int ins_num) {
         m_column_size = ins_num;
         stats.resize(m_column_size);
@@ -1310,6 +1321,11 @@ public:
 
     explicit rolling_rank_base_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
 
+    void init() {
+        m_count = 0;
+        for (auto& st : stats) st.m_valid_count = 0;
+    }
+
     void set_ins_num(int ins_num) {
         m_column_size = ins_num;
         stats.resize(m_column_size);
@@ -1443,6 +1459,8 @@ struct rolling_rank_count_rb_range {
 
     explicit rolling_rank_count_rb_range(int column_size_) : m_column_size{column_size_} {}
 
+    void init() { m_count = 0; }
+
     void set_ins_num(int ins_num) { m_column_size = ins_num; }
 
     void set_row_size(int row) {
@@ -1497,6 +1515,8 @@ struct rolling_rank2_count_rb_range {
         window_size = row;
         m_container.resize(window_size * m_column_size);
     }
+
+    void init() { m_count = 0; }
 
     double calc(const T* x, T new_value) {
         if (std::isnan(new_value) || m_count < window_size) {

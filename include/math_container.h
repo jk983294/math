@@ -43,6 +43,11 @@ struct rolling_data_container {
         m_container.resize(window_size, std::vector<T>(m_column_size));
     }
 
+    void clear() {
+        m_head_index = -1;
+        m_count = 0;
+    }
+
     void set(int size, int m_column_size_) {
         window_size = size + 1;
         m_column_size = m_column_size_;
@@ -99,6 +104,11 @@ struct rolling_pointer_container {
 
     rolling_pointer_container(int size, int m_column_size_) : window_size{size + 1}, m_column_size{m_column_size_} {
         m_container.resize(window_size, nullptr);
+    }
+
+    void clear() {
+        m_head_index = -1;
+        m_count = 0;
     }
 
     void set(int size, int m_column_size_) {
