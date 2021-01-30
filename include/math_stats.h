@@ -635,6 +635,29 @@ int calc_na_count(const T *x, int num) {
     }
     return cnt;
 }
+
+template <typename T, typename T1>
+double calc_r_square(const T *y, const T1 *y_hat, int num) {
+    double mean_y = 0;
+    int valid_num = 0;
+    for (int i = 0; i < num; i++) {
+        if (!isfinite(y[i]) || !isfinite(y_hat[i])) continue;
+        mean_y += y[i];
+        valid_num++;
+    }
+
+    if (valid_num > 3) {
+        mean_y = mean_y / valid_num;
+        double ssreg = 0, sstot = 0;
+        for (int i = 0; i < num; i++) {
+            if (!isfinite(y[i]) || !isfinite(y_hat[i])) continue;
+            ssreg += std::pow((y[i] - y_hat[i]), 2);
+            sstot += std::pow((y[i] - mean_y), 2);
+        }
+        return 1. - (ssreg / (valid_num - 2)) / (sstot / (valid_num - 1));
+    } else
+        return NAN;
+}
 }  // namespace ornate
 
 #endif

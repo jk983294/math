@@ -362,8 +362,8 @@ void rank1(INOUT std::vector<T>& n) {
 }
 
 template <typename T>
-float mean(const T* data, int32_t n) {
-    T ret = 0;
+double mean(const T* data, int32_t n) {
+    double ret = 0;
     uint32_t count = 0;
     for (int32_t i = 0; i < n; i++) {
         if (isvalid(data[i])) {
@@ -381,7 +381,7 @@ float mean(const T* data, int32_t n) {
  * get mean. will consider nan, [start_idx, end_idx), -1 to use all
  */
 template <typename T>
-float mean(IN const std::vector<T>& n, int32_t start_idx = -1, int32_t end_idx = -1) {
+double mean(IN const std::vector<T>& n, int32_t start_idx = -1, int32_t end_idx = -1) {
     if (start_idx < 0) start_idx = 0;
     if (end_idx < 0) end_idx = static_cast<int32_t>(n.size());
     return mean(n.data() + start_idx, end_idx - start_idx);
@@ -391,10 +391,10 @@ float mean(IN const std::vector<T>& n, int32_t start_idx = -1, int32_t end_idx =
  * get sum. will consider nan.  [start_idx, end_idx), -1 to use all
  */
 template <typename T>
-float sum(IN const std::vector<T>& n, int32_t start_idx = -1, int32_t end_idx = -1) {
+double sum(IN const std::vector<T>& n, int32_t start_idx = -1, int32_t end_idx = -1) {
     if (start_idx < 0) start_idx = 0;
     if (end_idx < 0) end_idx = static_cast<int32_t>(n.size());
-    float ret = 0;
+    double ret = 0;
     for (int32_t i = start_idx; i < end_idx; i++) {
         if (isvalid(n[i])) ret += n[i];
     }
@@ -430,6 +430,65 @@ inline void power(INOUT std::vector<T>& n, T exp, bool rank_first) {
     }
     powerf(n, exp);
 }
+
+template <typename T>
+T v_max(const T* data, int32_t n) {
+    T ret = get_nan<T>();
+    for (int32_t i = 0; i < n; i++) {
+        if (!isvalid(ret) || (isvalid(data[i]) && ret < data[i])) {
+            ret = data[i];
+        }
+    }
+    return ret;
+}
+
+template <typename T>
+T v_max(IN const std::vector<T>& n, int32_t start_idx = -1, int32_t end_idx = -1) {
+    if (start_idx < 0) start_idx = 0;
+    if (end_idx < 0) end_idx = static_cast<int32_t>(n.size());
+    return v_max(n.data() + start_idx, end_idx - start_idx);
+}
+
+template <typename T>
+T v_min(const T* data, int32_t n) {
+    T ret = get_nan<T>();
+    for (int32_t i = 0; i < n; i++) {
+        if (!isvalid(ret) || (isvalid(data[i]) && ret > data[i])) {
+            ret = data[i];
+        }
+    }
+    return ret;
+}
+
+template <typename T>
+T v_min(IN const std::vector<T>& n, int32_t start_idx = -1, int32_t end_idx = -1) {
+    if (start_idx < 0) start_idx = 0;
+    if (end_idx < 0) end_idx = static_cast<int32_t>(n.size());
+    return v_min(n.data() + start_idx, end_idx - start_idx);
+}
+
+template <typename T>
+std::pair<T, T> v_min_max(const T* data, int32_t n) {
+    T min_ret = get_nan<T>();
+    T max_ret = get_nan<T>();
+    for (int32_t i = 0; i < n; i++) {
+        if (!isvalid(min_ret) || (isvalid(data[i]) && min_ret > data[i])) {
+            min_ret = data[i];
+        }
+        if (!isvalid(max_ret) || (isvalid(data[i]) && max_ret < data[i])) {
+            max_ret = data[i];
+        }
+    }
+    return {min_ret, max_ret};
+}
+
+template <typename T>
+std::pair<T, T> v_min_max(IN const std::vector<T>& n, int32_t start_idx = -1, int32_t end_idx = -1) {
+    if (start_idx < 0) start_idx = 0;
+    if (end_idx < 0) end_idx = static_cast<int32_t>(n.size());
+    return v_min_max(n.data() + start_idx, end_idx - start_idx);
+}
+
 }  // namespace ornate
 
 #endif
