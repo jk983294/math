@@ -654,7 +654,7 @@ double calc_r_square(const T *y, const T1 *y_hat, int num) {
             ssreg += std::pow((y[i] - y_hat[i]), 2);
             sstot += std::pow((y[i] - mean_y), 2);
         }
-        return 1. - (ssreg / (valid_num - 2)) / (sstot / (valid_num - 1));
+        return 1. - ssreg / sstot;
     } else
         return NAN;
 }

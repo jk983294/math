@@ -266,6 +266,7 @@ struct rolling_delay_rb_range {
 
     void set_row_size(int row) {}
     void set_param(const std::string& key, const std::string& value) {}
+    void init() {}
 };
 
 struct rolling_delta_rb_range {
@@ -288,6 +289,7 @@ struct rolling_delta_rb_range {
 
     void set_row_size(int row) {}
     void set_param(const std::string& key, const std::string& value) {}
+    void init() {}
 };
 
 struct rolling_pct_rb_range {
@@ -310,6 +312,7 @@ struct rolling_pct_rb_range {
 
     void set_row_size(int row) {}
     void set_param(const std::string& key, const std::string& value) {}
+    void init() {}
 };
 
 struct rolling_variance_rb_range {
