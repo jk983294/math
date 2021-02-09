@@ -489,6 +489,25 @@ std::pair<T, T> v_min_max(IN const std::vector<T>& n, int32_t start_idx = -1, in
     return v_min_max(n.data() + start_idx, end_idx - start_idx);
 }
 
+template <typename T>
+int replace_invalid(T* pData, int32_t n) {
+    int cnt = 0;
+    for (int32_t i = 0; i < n; i++) {
+        if (isvalid(pData[i])) {
+            pData[i] = 0;
+            ++cnt;
+        }
+    }
+    return cnt;
+}
+
+template <typename T>
+int replace_invalid(std::vector<T>& data, int32_t start_idx = -1, int32_t end_idx = -1) {
+    if (start_idx < 0) start_idx = 0;
+    if (end_idx < 0) end_idx = static_cast<int32_t>(data.size());
+    return replace_invalid(data.data() + start_idx, end_idx - start_idx);
+}
+
 }  // namespace ornate
 
 #endif

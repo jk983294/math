@@ -187,6 +187,46 @@ double corr(const std::vector<T> &x, const std::vector<T> &y) {
 }
 
 template <typename T = float>
+int __weighted_cov(const T *x, const T *y, const T *weight, size_t num, double &cov_, double &std_x, double &std_y) {
+    double sum_x = 0, sum_x2 = 0, sum_xy = 0, sum_y = 0, sum_y2 = 0, sum_weight = 0;
+    int count = 0;
+    for (size_t i = 0; i < num; ++i) {
+        if (!std::isfinite(x[i]) || !std::isfinite(y[i]) || !std::isfinite(weight[i])) continue;
+        ++count;
+        sum_weight += weight[i];
+        sum_x += x[i] * weight[i];
+        sum_y += y[i] * weight[i];
+        sum_x2 += x[i] * x[i] * weight[i];
+        sum_y2 += y[i] * y[i] * weight[i];
+        sum_xy += x[i] * y[i] * weight[i];
+    }
+    if (count < 2) return count;
+    double mean_x = sum_x / sum_weight;
+    double mean_y = sum_y / sum_weight;
+    cov_ = (sum_xy / sum_weight - mean_x * mean_y);
+    std_x = std::sqrt(sum_x2 / sum_weight - mean_x * mean_x);
+    std_y = std::sqrt(sum_y2 / sum_weight - mean_y * mean_y);
+    return count;
+}
+
+template <typename T = float>
+double weighted_corr(const T *x, const T *y, const T *weight, size_t num) {
+    double cov_, std_x, std_y;
+    if (weight == nullptr) {
+        if (__cov(x, y, num, cov_, std_x, std_y) < 2) return NAN;
+    } else {
+        if (__weighted_cov(x, y, weight, num, cov_, std_x, std_y) < 2) return NAN;
+    }
+    if (std_x < epsilon || std_y < epsilon) return NAN;
+    return cov_ / std_x / std_y;
+}
+
+template <typename T = float>
+double weighted_corr(const std::vector<T> &x, const std::vector<T> &y, const std::vector<T> &weight) {
+    return weighted_corr(&x[0], &y[0], &weight[0], x.size());
+}
+
+template <typename T = float>
 double acf(const T *x, int num, int shift) {
     double cov_, std_x, std_y;
     if (__cov(x, x + shift, num - shift, cov_, std_x, std_y) < 2) return NAN;
@@ -203,15 +243,19 @@ template <typename T = float>
 int acf_half_life(const T *x, int max_life, int num, int shift_bulk = 1) {
     int left = 0, right = max_life;
     double right_acf = acf(x, num, shift_bulk * max_life);
-    if (right_acf >= 0.5) return max_life;
+    if (std::isfinite(right_acf) && right_acf >= 0.5) return max_life;
     for (;;) {
         int middle = (left + right) / 2;
         if (middle == left || middle == right) return middle;
         double middle_acf = acf(x, num, shift_bulk * middle);
-        if (middle_acf > 0.5)
-            left = middle;
-        else
+        if (std::isfinite(right_acf)) {
+            if (middle_acf > 0.5)
+                left = middle;
+            else
+                right = middle;
+        } else {
             right = middle;
+        }
     }
 }
 
@@ -657,6 +701,26 @@ double calc_r_square(const T *y, const T1 *y_hat, int num) {
         return 1. - ssreg / sstot;
     } else
         return NAN;
+}
+
+template <typename T>
+double math_majority_sign_ratio(const T *data_, int num) {
+    int neg_cnt = 0, pos_cnt = 0;
+    for (int i = 0; i < num; ++i) {
+        if (isvalid(data_[i])) {
+            if (data_[i] > 0.)
+                ++pos_cnt;
+            else if (data_[i] < 0.)
+                ++neg_cnt;
+        }
+    }
+    if (neg_cnt + pos_cnt > 0) return std::max(neg_cnt, pos_cnt) / double(neg_cnt + pos_cnt);
+    return NAN;
+}
+
+template <typename T>
+double math_majority_sign_ratio(const vector<T> &data_) {
+    return math_majority_sign_ratio(data_.data(), data_.size());
 }
 }  // namespace ornate
 
