@@ -110,6 +110,67 @@ struct rolling_hl_once {
     std::pair<double, double> final() { return {high, low}; }
 };
 
+struct regression2_once {
+    long double sum_x{0}, sum_y{0}, sum_x2{0}, sum_xy{0};
+    int m_valid_count{0};
+    double a{NAN}, b{NAN}, mean_y, res_squared{0}, y_diff_squared{0};
+
+    explicit regression2_once() {}
+
+    void clear() {
+        a = b = NAN;
+        sum_x = sum_y = sum_x2 = sum_xy = 0;
+        m_valid_count = 0;
+    }
+
+    void calc_coef() {
+        a = b = NAN;
+        if (m_valid_count > 1) {
+            b = (m_valid_count * sum_xy - sum_x * sum_y) / (m_valid_count * sum_x2 - sum_x * sum_x);
+            a = (sum_y - b * sum_x) / m_valid_count;
+        }
+    }
+
+    double calc_fitted(double x) const { return a + b * x; }
+    double calc_residual(double x, double y) const { return y - calc_fitted(x); }
+    void r2_pre_calc() {
+        calc_coef();
+        res_squared = y_diff_squared = 0;
+        if (m_valid_count > 1) {
+            mean_y = sum_y / m_valid_count;
+        } else {
+            mean_y = NAN;
+        }
+    }
+    void r2_single(double x, double y) {
+        if (m_valid_count <= 1) return;
+        if (!std::isfinite(x) || !std::isfinite(y)) return;
+        double res = calc_residual(x, y);
+        res_squared += res * res;
+        double diff = y - mean_y;
+        y_diff_squared += diff * diff;
+    }
+    double get_r2() const {
+        if (m_valid_count > 1) {
+            return 1. - res_squared / y_diff_squared;
+        } else {
+            return NAN;
+        }
+    }
+
+    void operator()(const double y, const double x) {
+        if (std::isfinite(y) && std::isfinite(x)) {
+            sum_x += x;
+            sum_y += y;
+            sum_x2 += x * x;
+            sum_xy += x * y;
+            ++m_valid_count;
+        }
+    }
+
+    void init() { clear(); }
+};
+
 }  // namespace ornate
 
 #endif
