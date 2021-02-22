@@ -226,6 +226,64 @@ double weighted_corr(const std::vector<T> &x, const std::vector<T> &y, const std
     return weighted_corr(&x[0], &y[0], &weight[0], x.size());
 }
 
+template <typename T1 = float, typename T2 = float>
+int __sign_cov(const T1 *x, const T2 *y, size_t num, double &cov_, double &std_x, double &std_y) {
+    double sum_x = 0, sum_x2 = 0, sum_xy = 0, sum_y = 0, sum_y2 = 0;
+    int count = 0;
+    for (size_t i = 0; i < num; ++i) {
+        double v1 = x[i];
+        double v2 = y[i];
+        if (!std::isfinite(v1) || !std::isfinite(v2)) continue;
+
+        if (v1 > 0) {
+            v1 = 1;
+            if (v2 >= 0)
+                v2 = 1;
+            else
+                v2 = -1;
+        } else if (v1 < 0) {
+            v1 = -1.;
+            if (v2 <= 0)
+                v2 = -1;
+            else
+                v2 = 1;
+        } else {
+            if (v2 > 0) {
+                v1 = v2 = 1;
+            } else if (v2 < 0) {
+                v1 = v2 = -1;
+            } else
+                continue;
+        }
+        ++count;
+        sum_x += v1;
+        sum_y += v2;
+        sum_x2 += v1 * v1;
+        sum_y2 += v2 * v2;
+        sum_xy += v1 * v2;
+    }
+    if (count < 2) return count;
+    double mean_x = sum_x / count;
+    double mean_y = sum_y / count;
+    cov_ = (sum_xy - mean_x * mean_y * count) / (count - 1);
+    std_x = sqrtf((sum_x2 - mean_x * mean_x * count) / (count - 1));
+    std_y = sqrtf((sum_y2 - mean_y * mean_y * count) / (count - 1));
+    return count;
+}
+
+template <typename T1 = float, typename T2 = float>
+double sign_corr(const T1 *x, const T2 *y, size_t num) {
+    double cov_, std_x, std_y;
+    if (__sign_cov(x, y, num, cov_, std_x, std_y) < 2) return NAN;
+    if (std_x < epsilon || std_y < epsilon) return NAN;
+    return cov_ / std_x / std_y;
+}
+
+template <typename T1 = float, typename T2 = float>
+double sign_corr(const std::vector<T1> &x, const std::vector<T2> &y) {
+    return sign_corr(&x[0], &y[0], x.size());
+}
+
 template <typename T = float>
 double acf(const T *x, int num, int shift) {
     double cov_, std_x, std_y;
@@ -704,7 +762,7 @@ double calc_r_square(const T *y, const T1 *y_hat, int num) {
 }
 
 template <typename T>
-double math_majority_sign_ratio(const T *data_, int num) {
+std::pair<double, double> math_sign_ratio(const T *data_, int num) {
     int neg_cnt = 0, pos_cnt = 0;
     for (int i = 0; i < num; ++i) {
         if (isvalid(data_[i])) {
@@ -714,13 +772,41 @@ double math_majority_sign_ratio(const T *data_, int num) {
                 ++neg_cnt;
         }
     }
-    if (neg_cnt + pos_cnt > 0) return std::max(neg_cnt, pos_cnt) / double(neg_cnt + pos_cnt);
+
+    if (neg_cnt + pos_cnt > 0) {
+        double total_cnt = neg_cnt + pos_cnt;
+        return {neg_cnt / total_cnt, pos_cnt / total_cnt};
+    }
+    return {NAN, NAN};
+}
+
+template <typename T>
+std::pair<double, double> math_sign_ratio(const vector<T> &data_) {
+    return math_sign_ratio(data_.data(), data_.size());
+}
+
+template <typename T>
+double math_majority_sign_ratio(const T *data_, int num) {
+    double r1, r2;
+    std::tie(r1, r2) = math_sign_ratio(data_, num);
+    if (std::isfinite(r1)) return std::max(r1, r2);
     return NAN;
 }
 
 template <typename T>
 double math_majority_sign_ratio(const vector<T> &data_) {
     return math_majority_sign_ratio(data_.data(), data_.size());
+}
+
+template <typename T>
+double cap_within_sd(const T x, double mean_, double sd, double range = 3.0) {
+    if (!isvalid(x))
+        return mean_;
+    else if (x < mean_ - range * sd)
+        return mean_ - range * sd;
+    else if (x > mean_ + range * sd)
+        return mean_ + range * sd;
+    return x;
 }
 }  // namespace ornate
 

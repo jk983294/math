@@ -1,7 +1,8 @@
 #ifndef ORNATE_MATH_STATS_ONCE_H
 #define ORNATE_MATH_STATS_ONCE_H
 
-#include "math_utils.h"
+#include <math_stats.h>
+#include <math_utils.h>
 
 namespace ornate {
 struct rolling_mean_once {
@@ -170,6 +171,29 @@ struct regression2_once {
 
     void init() { clear(); }
 };
+
+template <typename T>
+std::vector<double> lr_fitted(const T* y_vec, const T* x_vec, int num) {
+    std::vector<double> pred(num, NAN);
+    ornate::regression2_once f;
+    double mean_ = ornate::mean(x_vec, num);
+    double sd_ = ornate::std(x_vec, num);
+    for (int i = 0; i < num; ++i) {
+        if (!ornate::isvalid(x_vec[i]) || !ornate::isvalid(y_vec[i])) {
+            continue;
+        }
+        f(y_vec[i], cap_within_sd(x_vec[i], mean_, sd_));
+    }
+
+    f.calc_coef();
+
+    for (int i = 0; i < num; ++i) {
+        if (ornate::isvalid(x_vec[i])) {
+            pred[i] = f.calc_fitted(x_vec[i]);
+        }
+    }
+    return pred;
+}
 
 }  // namespace ornate
 

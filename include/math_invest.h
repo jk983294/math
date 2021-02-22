@@ -24,7 +24,7 @@ inline bool is_valid_maturity(int n) { return (n > 0 && n < 9999); }
 inline bool is_same_maturity(int mat0, int mat1) { return (mat0 == mat1 && is_valid_maturity(mat0)); }
 
 template <typename T>
-float calc_ir(const std::vector<T> &pnl, int32_t start_di = -1, int32_t end_di = -1) {
+float calc_ir(const std::vector<T>& pnl, int32_t start_di = -1, int32_t end_di = -1) {
     if (pnl.empty()) return NAN;
     if (start_di >= end_di) return NAN;  // less than one day
     if (start_di < 0) start_di = 0;
@@ -48,6 +48,27 @@ float calc_ir(const std::vector<T> &pnl, int32_t start_di = -1, int32_t end_di =
     var /= days;
     if (var <= 0) return NAN;
     return mean / sqrtf(var);
+}
+
+template <typename T>
+inline double calc_accum_return(const std::vector<T> rets) {
+    double r = 1.0;
+    for (const auto& ret : rets) {
+        if (std::isfinite(ret)) {
+            r *= (1.0 + ret);
+        }
+    }
+    return r - 1.0;
+}
+
+/**
+ * 十年收益 20%, total_ret = 0.2, n = 10
+ */
+inline double calc_avg_return(double total_ret, int n) {
+    if (n <= 0)
+        return 0;
+    else
+        return std::pow(1.0 + total_ret, 1.0 / n) - 1.0;
 }
 
 }  // namespace ornate
