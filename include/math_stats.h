@@ -168,8 +168,8 @@ int __cov(const T *x, const T *y, size_t num, double &cov_, double &std_x, doubl
     double mean_x = sum_x / count;
     double mean_y = sum_y / count;
     cov_ = (sum_xy - mean_x * mean_y * count) / (count - 1);
-    std_x = sqrtf((sum_x2 - mean_x * mean_x * count) / (count - 1));
-    std_y = sqrtf((sum_y2 - mean_y * mean_y * count) / (count - 1));
+    std_x = std::sqrt((sum_x2 - mean_x * mean_x * count) / (count - 1));
+    std_y = std::sqrt((sum_y2 - mean_y * mean_y * count) / (count - 1));
     return count;
 }
 
@@ -266,8 +266,8 @@ int __sign_cov(const T1 *x, const T2 *y, size_t num, double &cov_, double &std_x
     double mean_x = sum_x / count;
     double mean_y = sum_y / count;
     cov_ = (sum_xy - mean_x * mean_y * count) / (count - 1);
-    std_x = sqrtf((sum_x2 - mean_x * mean_x * count) / (count - 1));
-    std_y = sqrtf((sum_y2 - mean_y * mean_y * count) / (count - 1));
+    std_x = std::sqrt((sum_x2 - mean_x * mean_x * count) / (count - 1));
+    std_y = std::sqrt((sum_y2 - mean_y * mean_y * count) / (count - 1));
     return count;
 }
 
@@ -348,7 +348,7 @@ T std(const T *data, int32_t n) {
             sum += (data[i] - mean_) * ((data[i] - mean_));
         }
     }
-    return sqrtf(sum / (count - 1));
+    return std::sqrt((double)sum / (count - 1));
 }
 
 template <typename T = float>
@@ -807,6 +807,57 @@ double cap_within_sd(const T x, double mean_, double sd, double range = 3.0) {
     else if (x > mean_ + range * sd)
         return mean_ + range * sd;
     return x;
+}
+
+struct skip_corr_stat {
+    double sum_x{0}, sum_y{0};
+    double sum_x2{0}, sum_y2{0}, sum_xy{0};
+    int count{0};
+
+    skip_corr_stat() = default;
+
+    void operator()(double x, double y) {
+        if (std::isfinite(x) && std::isfinite(y)) {
+            sum_x += x;
+            sum_y += y;
+            sum_x2 += x * x;
+            sum_y2 += y * y;
+            sum_xy += x * y;
+            ++count;
+        }
+    }
+
+    double get_corr() const {
+        if (count < 2) return NAN;
+        double mean_x = sum_x / count;
+        double mean_y = sum_y / count;
+        double cov_ = (sum_xy - mean_x * mean_y * count) / (count - 1);
+        double std_x = std::sqrt((sum_x2 - mean_x * mean_x * count) / (count - 1));
+        double std_y = std::sqrt((sum_y2 - mean_y * mean_y * count) / (count - 1));
+        if (std_x < epsilon || std_y < epsilon) return NAN;
+        return cov_ / std_x / std_y;
+    }
+};
+
+template <typename T = float>
+std::vector<double> skip_corr(const T *x, const T *y, int num, int skip) {
+    vector<double> ret(skip, NAN);
+    vector<skip_corr_stat> stats(skip);
+    int idx = 0;
+    for (int i = 0; i < num; ++i) {
+        (stats[idx++])(x[i], y[i]);
+        if (idx == skip)
+            idx = 0;
+    }
+    for (int i = 0; i < skip; ++i) {
+        ret[i] = stats[i].get_corr();
+    }
+    return ret;
+}
+
+template <typename T = float>
+std::vector<double> skip_corr(const std::vector<T> &x, const std::vector<T> &y, int skip) {
+    return skip_corr(x.data(), y.data(), x.size(), skip);
 }
 }  // namespace ornate
 
