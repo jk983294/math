@@ -846,8 +846,7 @@ std::vector<double> skip_corr(const T *x, const T *y, int num, int skip) {
     int idx = 0;
     for (int i = 0; i < num; ++i) {
         (stats[idx++])(x[i], y[i]);
-        if (idx == skip)
-            idx = 0;
+        if (idx == skip) idx = 0;
     }
     for (int i = 0; i < skip; ++i) {
         ret[i] = stats[i].get_corr();
@@ -858,6 +857,65 @@ std::vector<double> skip_corr(const T *x, const T *y, int num, int skip) {
 template <typename T = float>
 std::vector<double> skip_corr(const std::vector<T> &x, const std::vector<T> &y, int skip) {
     return skip_corr(x.data(), y.data(), x.size(), skip);
+}
+
+template <typename T>
+vector<vector<double>> calc_histogram_stats(vector<double> cuts, const vector<T> &y_hat, const vector<T> &y) {
+    vector<vector<double>> ret;
+    int cut_cnt = (int)cuts.size();
+    cuts.push_back(NAN);
+    vector<vector<double>> histogram_y(cut_cnt + 1);
+    vector<vector<double>> histogram_y_hat(cut_cnt + 1);
+    ret.resize(cut_cnt + 1);
+    for (size_t i = 0; i < y_hat.size(); ++i) {
+        if (!isvalid(y_hat[i]) or !isvalid(y[i])) continue;
+
+        int idx = std::lower_bound(cuts.begin(), cuts.end(), y_hat[i]) - cuts.begin() + 1;
+        if (idx == 1 && y_hat[i] < cuts.front())
+            idx = 0;
+        else if (idx == cut_cnt + 1)
+            idx = cut_cnt;
+        histogram_y[idx].push_back(y[i]);
+        histogram_y_hat[idx].push_back(y_hat[i]);
+    }
+
+    for (int i = 0; i < cut_cnt + 1; ++i) {
+        ret[i].push_back(cuts[i]);
+        ret[i].push_back(histogram_y[i].size());
+        ret[i].push_back(ornate::mean(histogram_y[i]));
+        ret[i].push_back(ornate::mean(histogram_y_hat[i]));
+        ret[i].push_back(ornate::corr(histogram_y[i], histogram_y_hat[i]));
+    }
+    return ret;
+}
+
+template <typename T>
+vector<vector<double>> split_histogram(vector<double> cuts, const vector<T> &y) {
+    vector<vector<double>> histograms;
+    int cut_cnt = (int)cuts.size();
+    cuts.push_back(NAN);
+    histograms.resize(cut_cnt + 1);
+    for (size_t i = 0; i < y.size(); ++i) {
+        if (!isvalid(y[i])) continue;
+
+        int idx = std::lower_bound(cuts.begin(), cuts.end(), y[i]) - cuts.begin() + 1;
+        if (idx == 1 && y[i] < cuts.front())
+            idx = 0;
+        else if (idx == cut_cnt + 1)
+            idx = cut_cnt;
+        histograms[idx].push_back(y[i]);
+    }
+    return histograms;
+}
+
+template <typename T>
+vector<int> calc_histogram_cnt(vector<double> cuts, const vector<T> &y) {
+    vector<vector<double>> histograms = split_histogram(cuts, y);
+    vector<int> cnts(histograms.size());
+    for (const auto &s : histograms) {
+        cnts.push_back((int)s.size());
+    }
+    return cnts;
 }
 }  // namespace ornate
 
