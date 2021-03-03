@@ -9,7 +9,7 @@
 
 namespace ornate {
 
-constexpr double epsilon = 1e-6;
+constexpr double epsilon = 1e-9;
 
 template <typename T>
 bool IsValidData(T value) {

@@ -144,4 +144,11 @@ TEST_CASE("math_stats", "[MathStats]") {
         //    REQUIRE(FloatEqual(ornate::rank_last(v.data(), 4, 0), 0.25));
         //    REQUIRE(FloatEqual(ornate::rank_last(v.data(), 4, 5), 0.25));
     }
+
+    SECTION("median") {
+        REQUIRE(FloatEqual(ornate::median(data), 3.5));
+        auto data_new = data;
+        data_new.push_back(7);
+        REQUIRE(FloatEqual(ornate::median(data_new), 4));
+    }
 }

@@ -226,6 +226,75 @@ double weighted_corr(const std::vector<T> &x, const std::vector<T> &y, const std
     return weighted_corr(&x[0], &y[0], &weight[0], x.size());
 }
 
+template <typename T = float>
+int __rcov(const T *x, const T *y, size_t num, double &cov_, double &std_x, double &std_y, int sign) {
+    double sum_x2 = 0, sum_xy = 0, sum_y2 = 0;
+    int count = 0;
+    for (size_t i = 0; i < num; ++i) {
+        if (!std::isfinite(x[i]) || !std::isfinite(y[i])) continue;
+        if (sign != 0 && x[i] * sign < 0) continue;
+        ++count;
+        sum_x2 += x[i] * x[i];
+        sum_y2 += y[i] * y[i];
+        sum_xy += x[i] * y[i];
+    }
+    if (count < 2) return count;
+    cov_ = sum_xy;
+    std_x = std::sqrt(sum_x2);
+    std_y = std::sqrt(sum_y2);
+    return count;
+}
+
+template <typename T = float>
+double rcor(const T *x, const T *y, int num, int sign = 0) {
+    double cov_, std_x, std_y;
+    if (__rcov(x, y, num, cov_, std_x, std_y, sign) < 2) return NAN;
+    if (std_x < epsilon || std_y < epsilon) return NAN;
+    return cov_ / std_x / std_y;
+}
+
+template <typename T = float>
+double rcor(const std::vector<T> &x, const std::vector<T> &y, int sign = 0) {
+    return rcor(&x[0], &y[0], x.size(), sign);
+}
+
+template <typename T = float>
+int __weighted_rcov(const T *x, const T *y, const T *weight, int num, double &cov_, double &std_x, double &std_y,
+                    int sign) {
+    double sum_x2 = 0, sum_xy = 0, sum_y2 = 0;
+    int count = 0;
+    for (int i = 0; i < num; ++i) {
+        if (!std::isfinite(x[i]) || !std::isfinite(y[i]) || !std::isfinite(weight[i]) || weight[i] <= 0) continue;
+        if (sign != 0 && x[i] * sign < 0) continue;
+        ++count;
+        sum_x2 += x[i] * x[i] * weight[i];
+        sum_y2 += y[i] * y[i] * weight[i];
+        sum_xy += x[i] * y[i] * weight[i];
+    }
+    if (count < 2) return count;
+    cov_ = sum_xy;
+    std_x = std::sqrt(sum_x2);
+    std_y = std::sqrt(sum_y2);
+    return count;
+}
+
+template <typename T = float>
+double weighted_rcor(const T *x, const T *y, const T *weight, int num, int sign = 0) {
+    double cov_, std_x, std_y;
+    if (weight == nullptr) {
+        if (__rcov(x, y, num, cov_, std_x, std_y, sign) < 2) return NAN;
+    } else {
+        if (__weighted_rcov(x, y, weight, num, cov_, std_x, std_y, sign) < 2) return NAN;
+    }
+    if (std_x < epsilon || std_y < epsilon) return NAN;
+    return cov_ / std_x / std_y;
+}
+
+template <typename T = float>
+double weighted_rcor(const std::vector<T> &x, const std::vector<T> &y, const std::vector<T> &weight, int sign = 0) {
+    return weighted_rcor(&x[0], &y[0], &weight[0], x.size(), sign);
+}
+
 template <typename T1 = float, typename T2 = float>
 int __sign_cov(const T1 *x, const T2 *y, size_t num, double &cov_, double &std_x, double &std_y) {
     double sum_x = 0, sum_x2 = 0, sum_xy = 0, sum_y = 0, sum_y2 = 0;
@@ -916,6 +985,36 @@ vector<int> calc_histogram_cnt(vector<double> cuts, const vector<T> &y) {
         cnts.push_back((int)s.size());
     }
     return cnts;
+}
+
+template <typename T>
+T median(const T *x, int num) {
+    std::vector<T> data;
+    data.reserve(num);
+    int valid_cnt = 0;
+    for (int i = 0; i < num; ++i) {
+        if (isvalid(x[i])) {
+            data.push_back(x[i]);
+            ++valid_cnt;
+        }
+    }
+    if (valid_cnt > 0) {
+        int n = valid_cnt / 2;
+        nth_element(data.begin(), data.begin() + n, data.end());
+        if (valid_cnt % 2 == 0) {
+            auto max_it = std::max_element(data.begin(), data.begin() + n);
+            return (*max_it + data[n]) / 2.0;
+        } else {
+            return data[n];
+        }
+    } else {
+        return get_nan<T>();
+    }
+}
+
+template <typename T>
+T median(const std::vector<T> &x) {
+    return median(x.data(), x.size());
 }
 }  // namespace ornate
 
