@@ -232,7 +232,7 @@ int __rcov(const T *x, const T *y, size_t num, double &cov_, double &std_x, doub
     int count = 0;
     for (size_t i = 0; i < num; ++i) {
         if (!std::isfinite(x[i]) || !std::isfinite(y[i])) continue;
-        if (sign != 0 && x[i] * sign < 0) continue;
+        if (sign != 0 && y[i] * sign < 0) continue;
         ++count;
         sum_x2 += x[i] * x[i];
         sum_y2 += y[i] * y[i];
@@ -265,7 +265,7 @@ int __weighted_rcov(const T *x, const T *y, const T *weight, int num, double &co
     int count = 0;
     for (int i = 0; i < num; ++i) {
         if (!std::isfinite(x[i]) || !std::isfinite(y[i]) || !std::isfinite(weight[i]) || weight[i] <= 0) continue;
-        if (sign != 0 && x[i] * sign < 0) continue;
+        if (sign != 0 && y[i] * sign < 0) continue;
         ++count;
         sum_x2 += x[i] * x[i] * weight[i];
         sum_y2 += y[i] * y[i] * weight[i];
@@ -962,7 +962,6 @@ template <typename T>
 vector<vector<double>> split_histogram(vector<double> cuts, const vector<T> &y) {
     vector<vector<double>> histograms;
     int cut_cnt = (int)cuts.size();
-    cuts.push_back(NAN);
     histograms.resize(cut_cnt + 1);
     for (size_t i = 0; i < y.size(); ++i) {
         if (!isvalid(y[i])) continue;
@@ -974,6 +973,26 @@ vector<vector<double>> split_histogram(vector<double> cuts, const vector<T> &y) 
             idx = cut_cnt;
         histograms[idx].push_back(y[i]);
     }
+    cuts.push_back(NAN);
+    return histograms;
+}
+
+template <typename TGroup, typename T>
+vector<vector<double>> split_histogram_by(vector<TGroup> cuts, const vector<TGroup> &group, const vector<T> &y) {
+    vector<vector<double>> histograms;
+    int cut_cnt = (int)cuts.size();
+    histograms.resize(cut_cnt + 1);
+    for (size_t i = 0; i < y.size(); ++i) {
+        if (!isvalid(y[i])) continue;
+
+        int idx = std::lower_bound(cuts.begin(), cuts.end(), group[i]) - cuts.begin() + 1;
+        if (idx == 1 && group[i] < cuts.front())
+            idx = 0;
+        else if (idx == cut_cnt + 1)
+            idx = cut_cnt;
+        histograms[idx].push_back(y[i]);
+    }
+    cuts.push_back(get_nan<TGroup>());
     return histograms;
 }
 

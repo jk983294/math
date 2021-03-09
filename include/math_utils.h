@@ -79,6 +79,14 @@ inline double ema_hl2decay(double hl) { return pow(0.5, 1.0 / hl); }
 
 inline bool is_same_sign(double val, int sign_) { return sign_ == 0 || sign_ * val > 0; }
 inline bool is_same_sign(double val, double sign_) { return sign_ * val > 0; }
+inline int get_sign(double val) {
+    if (!std::isfinite(val) || val == 0)
+        return 0;
+    else if (val > 0)
+        return 1;
+    else
+        return -1;
+}
 }  // namespace ornate
 
 #endif
