@@ -10,6 +10,7 @@
 namespace ornate {
 
 constexpr double epsilon = 1e-9;
+constexpr double lp_epsilon = 1e-6;
 
 template <typename T>
 bool IsValidData(T value) {
@@ -19,7 +20,7 @@ bool IsValidData(T value) {
 template <typename T1, typename T2>
 bool FloatEqual(T1 a, T2 b) {
     if (IsValidData(a) && IsValidData(b)) {
-        return std::fabs(a - b) < epsilon;
+        return std::abs(a - b) < lp_epsilon;
     } else if (std::isnan(a) && std::isnan(b)) {
         return true;
     } else if (!std::isfinite(a) && !std::isfinite(b)) {
