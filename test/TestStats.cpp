@@ -20,6 +20,10 @@ TEST_CASE("math_stats", "[MathStats]") {
         REQUIRE(ornate::mean(x) == 2);
     }
 
+    SECTION("sum_weighted") {
+        REQUIRE(ornate::sum_weighted(data, weight) == 21);
+    }
+
     SECTION("variance", "[MathStats]") {
         REQUIRE(variance(data.data(), data.size()) == 3.5);
         REQUIRE(variance_one_pass(data.data(), data.size()) == 3.5);

@@ -42,6 +42,29 @@ double mean_weighted(IN const std::vector<T> &n, IN const std::vector<T1> &n1, i
     return mean_weighted(n.data() + start_idx, n1.data() + start_idx, end_idx - start_idx);
 }
 
+template <typename T, typename T1>
+double sum_weighted(const T* data, const T1* weight, int32_t n) {
+    double sum = 0;
+    uint32_t count = 0;
+    for (int32_t i = 0; i < n; i++) {
+        if (isvalid(data[i]) && isvalid(weight[i])) {
+            sum += data[i] * weight[i];
+            count++;
+        }
+    }
+    if (count > 0)
+        return sum;
+    else
+        return NAN;
+}
+
+template <typename T, typename T1>
+double sum_weighted(const std::vector<T>& n, const std::vector<T1>& n1, int32_t start_idx = -1, int32_t end_idx = -1) {
+    if (start_idx < 0) start_idx = 0;
+    if (end_idx < 0) end_idx = static_cast<int32_t>(n.size());
+    return sum_weighted(n.data() + start_idx, n1.data() + start_idx, end_idx - start_idx);
+}
+
 template <int dof = 1, typename R = double, typename T>
 R variance_two_pass(const T *data, size_t n) {
     R sum1 = 0, sum2 = 0, sum3 = 0, mean = 0;
