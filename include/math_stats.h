@@ -43,7 +43,7 @@ double mean_weighted(IN const std::vector<T> &n, IN const std::vector<T1> &n1, i
 }
 
 template <typename T, typename T1>
-double sum_weighted(const T* data, const T1* weight, int32_t n) {
+double sum_weighted(const T *data, const T1 *weight, int32_t n) {
     double sum = 0;
     uint32_t count = 0;
     for (int32_t i = 0; i < n; i++) {
@@ -59,7 +59,7 @@ double sum_weighted(const T* data, const T1* weight, int32_t n) {
 }
 
 template <typename T, typename T1>
-double sum_weighted(const std::vector<T>& n, const std::vector<T1>& n1, int32_t start_idx = -1, int32_t end_idx = -1) {
+double sum_weighted(const std::vector<T> &n, const std::vector<T1> &n1, int32_t start_idx = -1, int32_t end_idx = -1) {
     if (start_idx < 0) start_idx = 0;
     if (end_idx < 0) end_idx = static_cast<int32_t>(n.size());
     return sum_weighted(n.data() + start_idx, n1.data() + start_idx, end_idx - start_idx);
@@ -854,7 +854,7 @@ double calc_r_square(const T *y, const T1 *y_hat, int num) {
 }
 
 template <typename T>
-std::pair<double, double> math_sign_ratio(const T *data_, int num) {
+std::pair<int, int> math_sign_count(const T *data_, int num) {
     int neg_cnt = 0, pos_cnt = 0;
     for (int i = 0; i < num; ++i) {
         if (isvalid(data_[i])) {
@@ -864,6 +864,13 @@ std::pair<double, double> math_sign_ratio(const T *data_, int num) {
                 ++neg_cnt;
         }
     }
+    return {neg_cnt, pos_cnt};
+}
+
+template <typename T>
+std::pair<double, double> math_sign_ratio(const T *data_, int num) {
+    int neg_cnt, pos_cnt;
+    std::tie(neg_cnt, pos_cnt) = math_sign_count(data_, num);
 
     if (neg_cnt + pos_cnt > 0) {
         double total_cnt = neg_cnt + pos_cnt;
@@ -1030,9 +1037,7 @@ vector<int> calc_histogram_cnt(vector<double> cuts, const vector<T> &y) {
 }
 
 template <typename T>
-T median(const T *x, int num) {
-    std::vector<T> data;
-    data.reserve(num);
+T median(const T *x, std::vector<T> &data, int num) {
     int valid_cnt = 0;
     for (int i = 0; i < num; ++i) {
         if (isvalid(x[i])) {
@@ -1052,6 +1057,13 @@ T median(const T *x, int num) {
     } else {
         return get_nan<T>();
     }
+}
+
+template <typename T>
+T median(const T *x, int num) {
+    std::vector<T> data;
+    data.reserve(num);
+    return median(x, data, num);
 }
 
 template <typename T>

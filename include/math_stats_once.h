@@ -87,6 +87,44 @@ struct rolling_sm_once {
     }
 };
 
+struct rolling_pcor_once {
+    double sumx{0}, sumy{0}, sumxy{0}, sum_x2{0}, sum_y2{0};
+    int m_valid_count{0};
+
+    rolling_pcor_once() = default;
+
+    void clear() {
+        sumx = sumy = sumxy = sum_x2 = sum_y2 = 0;
+        m_valid_count = 0;
+    }
+
+    void add_new(double data0, double data1) {
+        if (std::isfinite(data0) && std::isfinite(data1)) {
+            sumxy += data0 * data1;
+            sumx += data0;
+            sumy += data1;
+            sum_x2 += data0 * data0;
+            sum_y2 += data1 * data1;
+            ++m_valid_count;
+        }
+    }
+
+    double final() {
+        if (m_valid_count > 1) {
+            double mean_x = sumx / m_valid_count;
+            double mean_y = sumy / m_valid_count;
+            double cov = (sumxy - mean_x * mean_y * m_valid_count) / (m_valid_count - 1);
+            double var1 = (sum_x2 - mean_x * mean_x * m_valid_count) / (m_valid_count - 1);
+            double var2 = (sum_y2 - mean_y * mean_y * m_valid_count) / (m_valid_count - 1);
+            if (std::isfinite(var1) && std::isfinite(var2)) {
+                double numerator = sqrt(var1) * sqrt(var2);
+                if (numerator >= epsilon) return cov / numerator;
+            }
+        }
+        return NAN;
+    }
+};
+
 struct rolling_hl_once {
     double high{NAN}, low{NAN};
 

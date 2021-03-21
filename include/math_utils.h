@@ -18,9 +18,9 @@ bool IsValidData(T value) {
 }
 
 template <typename T1, typename T2>
-bool FloatEqual(T1 a, T2 b) {
+bool FloatEqual(T1 a, T2 b, double epsilon_ = lp_epsilon) {
     if (IsValidData(a) && IsValidData(b)) {
-        return std::abs(a - b) < lp_epsilon;
+        return std::abs(a - b) < epsilon_;
     } else if (std::isnan(a) && std::isnan(b)) {
         return true;
     } else if (!std::isfinite(a) && !std::isfinite(b)) {
