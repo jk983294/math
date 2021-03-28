@@ -13,6 +13,13 @@ bool is_valid_price(T p) {
     return (p > 1e-6 && p < 1e8 && std::isfinite(p));
 }
 
+inline double get_valid_price_field(double val) {
+    if (!ornate::is_valid_price(val))
+        return NAN;
+    else
+        return val;
+}
+
 inline float calc_return(float p, float p0) {
     float r = NAN;
     if (is_valid_price(p) && is_valid_price(p0)) r = p / p0 - 1;

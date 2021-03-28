@@ -70,7 +70,7 @@ struct rolling_sm_once {
     }
 
     void clear() {
-        total_sum = 0;
+        total_square_sum = total_sum = 0;
         cnt = 0;
     }
 
@@ -208,6 +208,69 @@ struct regression2_once {
     }
 
     void init() { clear(); }
+};
+
+struct rolling_all_once {
+    long double total_sum{0}, total_square_sum{0}, total_cube_sum{0};
+    double high{NAN}, low{NAN}, last{NAN};
+    int cnt{0};
+
+    void operator()(double x) {
+        if (std::isfinite(x)) {
+            last = x;
+            if (std::isnan(high)) {
+                high = x;
+                low = x;
+            } else if (x < low) {
+                low = x;
+            } else if (x > high) {
+                high = x;
+            }
+
+            total_sum += x;
+            total_square_sum += x * x;
+            total_cube_sum += x * x * x;
+            ++cnt;
+        }
+    }
+
+    void clear() {
+        high = NAN;
+        low = NAN;
+        last = NAN;
+        total_cube_sum = total_square_sum = total_sum = 0;
+        cnt = 0;
+    }
+
+    std::pair<double, double> get_high_low() { return {high, low}; }
+
+    std::pair<double, double> get_mean_sd() {
+        double mean = NAN, sd = NAN;
+        if (cnt > 0) {
+            mean = total_sum / cnt;
+        }
+        if (cnt > 1) {
+            double variance = (total_square_sum - mean * mean * cnt) / (cnt - 1);
+            sd = std::sqrt(variance);
+        }
+        return {mean, sd};
+    }
+
+    double get_skew() {
+        if (cnt >= 2) {
+            double mean = total_sum / cnt;
+            double mean2 = mean * mean;
+            double var = total_square_sum / cnt - mean2;
+            if (var <= 1e-14)
+                return NAN;
+            else {
+                double mean3 = mean * mean * mean;
+                double m3 = total_cube_sum / cnt - 3 * mean * total_square_sum / cnt + 2 * mean3;
+                return m3 / std::pow(var, 1.5);
+            }
+        } else
+            return NAN;
+    }
 };
 
 template <typename T>
