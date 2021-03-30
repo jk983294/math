@@ -212,7 +212,7 @@ struct regression2_once {
 
 struct rolling_all_once {
     long double total_sum{0}, total_square_sum{0}, total_cube_sum{0};
-    double high{NAN}, low{NAN}, last{NAN};
+    double high{NAN}, low{NAN}, last{NAN}, first{NAN};
     int cnt{0};
 
     void operator()(double x) {
@@ -231,6 +231,10 @@ struct rolling_all_once {
             total_square_sum += x * x;
             total_cube_sum += x * x * x;
             ++cnt;
+
+            if (cnt == 1) {
+                first = x;
+            }
         }
     }
 
@@ -254,6 +258,15 @@ struct rolling_all_once {
             sd = std::sqrt(variance);
         }
         return {mean, sd};
+    }
+
+    double get_rsd() {
+        double mean, sd;
+        std::tie(mean, sd) = get_mean_sd();
+        if (std::abs(mean) > 1e-9)
+            return sd / mean;
+        else
+            return NAN;
     }
 
     double get_skew() {
