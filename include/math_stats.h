@@ -1,6 +1,7 @@
 #ifndef ORNATE_MATH_STATS_H
 #define ORNATE_MATH_STATS_H
 
+#include <unordered_set>
 #include "math_stats_rolling.h"
 #include "math_utils.h"
 #include "math_vector.h"
@@ -1069,6 +1070,49 @@ T median(const T *x, int num) {
 template <typename T>
 T median(const std::vector<T> &x) {
     return median(x.data(), x.size());
+}
+
+template <typename T>
+std::tuple<double, double, double> lr_reduce_outlier(T *x, int num, double range = 3.0) {
+    int valid_cnt = 0;
+    double mean_ = NAN, sd_ = NAN, change_ratio = NAN;
+    for (int i = 0; i < num; ++i) {
+        if (std::isfinite(x[i])) ++valid_cnt;
+    }
+
+    if (valid_cnt > 0) {
+        std::unordered_set<int> changed_idx;
+
+        do {
+            mean_ = ornate::mean(x, num);
+            sd_ = ornate::std(x, num);
+
+            if (!std::isfinite(mean_) || !std::isfinite(sd_)) break;
+
+            for (int i = 0; i < num; ++i) {
+                if (std::isfinite(x[i])) {
+                    if (x[i] < mean_ - range * sd_) {
+                        x[i] = mean_ - range * sd_;
+                        changed_idx.insert(i);
+                    } else if (x[i] > mean_ + range * sd_) {
+                        x[i] = mean_ + range * sd_;
+                        changed_idx.insert(i);
+                    }
+                }
+            }
+
+            change_ratio = (double)changed_idx.size() / valid_cnt;
+            double sd1_ = ornate::std(x, num);
+            printf("%f,%f\n", sd_, sd1_);
+            if (!std::isfinite(sd1_) || sd_ / sd1_ < 1.3) break;
+        } while (true);
+    }
+    return {mean_, sd_, change_ratio};
+}
+
+template <typename T>
+std::tuple<double, double, double> lr_reduce_outlier(std::vector<T> &x, double range = 3.0) {
+    return lr_reduce_outlier(x.data(), x.size(), range);
 }
 }  // namespace ornate
 

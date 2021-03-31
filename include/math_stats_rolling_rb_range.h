@@ -2992,6 +2992,94 @@ struct rolling_ts_acp_rb_range {
     void set_param(const std::string& key, const std::string& value) {}
 };
 
+struct rolling_beta_rb_range {
+    struct stat {
+        long double sumxy{0}, sum_x2{0}, sum_x{0}, sum_y{0};
+        int m_valid_count{0};
+        void clear() {
+            sumxy = sum_x2 = sum_x = sum_y = 0;
+            m_valid_count = 0;
+        }
+        double calc() const {
+            if (m_valid_count > 0) {
+                long double d = m_valid_count * sum_x2 - sum_x * sum_y;
+                return d > 1e-16 ? (m_valid_count * sumxy - sum_x * sum_y) / d : NAN;
+            }
+            return NAN;
+        }
+    };
+    int m_column_size;
+    std::vector<stat> stats;
+
+    explicit rolling_beta_rb_range(int column_size_) : m_column_size{column_size_} { stats.resize(m_column_size); }
+
+    void set_ins_num(int ins_num) {
+        m_column_size = ins_num;
+        stats.resize(m_column_size);
+    }
+
+    template <typename T, typename TOut>
+    void operator()(const T* old_row0, const T* old_row1, const T* new_row0, const T* new_row1, TOut* output) {
+        for (int i = 0; i < m_column_size; ++i) {
+            auto& st = stats[i];
+            if (old_row0) {
+                delete_old(st, old_row0[i], old_row1[i]);
+            }
+            output[i] = add_new(st, new_row0[i], new_row1[i]);
+        }
+    }
+
+    template <typename T>
+    void delete_old(stat& st, T old_value0, T old_value1) {
+        if (std::isfinite(old_value0) && std::isfinite(old_value1)) {
+            st.sumxy -= old_value0 * old_value1;
+            st.sum_x2 -= old_value0 * old_value0;
+            st.sum_x -= old_value0;
+            st.sum_y -= old_value1;
+            --st.m_valid_count;
+        }
+    }
+
+    template <typename T>
+    double add_new(stat& st, T data0, T data1) {
+        if (std::isfinite(data0) && std::isfinite(data1)) {
+            st.sumxy += data0 * data1;
+            st.sum_x2 += data0 * data0;
+            st.sum_x += data0;
+            st.sum_y += data1;
+            ++st.m_valid_count;
+        }
+        return st.calc();
+    }
+
+    void init() {
+        for (auto& stat : stats) stat.clear();
+    }
+
+    template <typename T, typename TOut>
+    void full_single(int idx, const T* x_row, const T* y_row, TOut* output) {
+        for (int i = 0; i < m_column_size; ++i) {
+            if (std::isfinite(x_row[i]) && std::isfinite(y_row[i])) {
+                ++stats[i].m_valid_count;
+                stats[i].sumxy += x_row[i] * y_row[i];
+                stats[i].sum_x2 += x_row[i] * x_row[i];
+                stats[i].sum_x += x_row[i];
+                stats[i].sum_y += y_row[i];
+            }
+        }
+    }
+
+    template <typename TOut>
+    void final_result(TOut* output) {
+        for (int i = 0; i < m_column_size; ++i) {
+            output[i] = stats[i].calc();
+        }
+    }
+
+    void set_row_size(int row) {}
+    void set_param(const std::string& key, const std::string& value) {}
+};
+
 }  // namespace ornate
 
 #endif
