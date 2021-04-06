@@ -58,7 +58,7 @@ float calc_ir(const std::vector<T>& pnl, int32_t start_di = -1, int32_t end_di =
 }
 
 template <typename T>
-inline double calc_accum_return(const std::vector<T> rets) {
+inline double calc_accum_return(const std::vector<T>& rets) {
     double r = 1.0;
     for (const auto& ret : rets) {
         if (std::isfinite(ret)) {
@@ -76,6 +76,59 @@ inline double calc_avg_return(double total_ret, int n) {
         return 0;
     else
         return std::pow(1.0 + total_ret, 1.0 / n) - 1.0;
+}
+
+template <typename T>
+inline std::vector<double> calc_bar_return_series(const std::vector<T>& signals, const std::vector<T>& rets,
+                                                  int ins_num, bool is_signal_weighted, double open_t, double close_t) {
+    double r = 1.0;
+    int total = (int)signals.size();
+    std::vector<int> ii2status(ins_num, 0);
+    std::vector<double> ii2last_signal(ins_num, 0);
+    std::vector<double> ret_vals;
+    if (!is_signal_weighted) {
+        std::fill(ii2last_signal.begin(), ii2last_signal.end(), 1.0 / ins_num);
+    }
+    for (int offset = 0; offset < total - ins_num; offset += ins_num) {
+        double total_weight = 1;
+        if (is_signal_weighted) {
+            total_weight = 0;
+            for (int ii = 0; ii < ins_num; ++ii) {
+                if (isvalid(signals[offset + ii])) {
+                    total_weight += std::abs(signals[offset + ii]);
+                    ii2last_signal[ii] = signals[offset + ii];
+                } else {
+                    total_weight += std::abs(ii2last_signal[ii]);
+                }
+            }
+        }
+
+        if (total_weight > 1e-6) {
+            for (int ii = 0; ii < ins_num; ++ii) {
+                double ret = rets[offset + ins_num + ii];
+                if (!std::isfinite(ret)) ret = 0;
+                double sig = ii2last_signal[ii];
+
+                if (sig > open_t || (ii2status[ii] > 0 && sig > close_t)) {
+                    ii2status[ii] = 1;
+                    r += (std::abs(sig) / total_weight) * (1. + ret);
+                } else if (sig < -open_t || (ii2status[ii] < 0 && sig < -close_t)) {
+                    ii2status[ii] = -1;
+                    r += (std::abs(sig) / total_weight) * (1. - ret);
+                } else {
+                    ii2status[ii] = 0;
+                }
+            }
+        }
+        ret_vals.push_back(r);
+    }
+    return ret_vals;
+}
+
+template <typename T>
+inline std::vector<std::vector<double>> calc_return_series_by_ii(const std::vector<T>& signals,
+                                                                 const std::vector<T>& rets) {
+    return {};
 }
 
 }  // namespace ornate
