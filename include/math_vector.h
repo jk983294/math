@@ -508,6 +508,22 @@ int replace_invalid(std::vector<T>& data, int32_t start_idx = -1, int32_t end_id
     return replace_invalid(data.data() + start_idx, end_idx - start_idx);
 }
 
+template <typename T>
+std::vector<T> skip_extract_p(const T* pData, int skip, int n) {
+    std::vector<T> ret;
+    for (int32_t i = 0; i < n; i += skip) {
+        ret.push_back(pData[i]);
+    }
+    return ret;
+}
+
+template <typename T>
+std::vector<T> skip_extract(const std::vector<T>& data, int skip, int start_idx, int end_idx = -1) {
+    if (start_idx < 0) start_idx = 0;
+    if (end_idx < 0) end_idx = static_cast<int32_t>(data.size());
+    return skip_extract_p(data.data() + start_idx, skip, end_idx - start_idx);
+}
+
 }  // namespace ornate
 
 #endif

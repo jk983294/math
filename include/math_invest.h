@@ -5,6 +5,7 @@
 #include <limits>
 #include <vector>
 #include "math_type.h"
+#include "math_vector.h"
 
 namespace ornate {
 
@@ -78,57 +79,74 @@ inline double calc_avg_return(double total_ret, int n) {
         return std::pow(1.0 + total_ret, 1.0 / n) - 1.0;
 }
 
+/**
+ * @param signals
+ * @param rets 未来一根bar收益
+ * @param ins_num
+ * @param is_signal_weighted
+ * @param open_t open threshold
+ * @param close_t close threshold
+ * @return
+ */
 template <typename T>
-inline std::vector<double> calc_bar_return_series(const std::vector<T>& signals, const std::vector<T>& rets,
-                                                  int ins_num, bool is_signal_weighted, double open_t, double close_t) {
-    double r = 1.0;
+std::vector<double> calc_bar_return_series(const std::vector<T>& signals, const std::vector<T>& rets, int ins_num,
+                                           bool is_signal_weighted, double open_t, double close_t) {
+    double nav = 1.0;
     int total = (int)signals.size();
     std::vector<int> ii2status(ins_num, 0);
-    std::vector<double> ii2last_signal(ins_num, 0);
     std::vector<double> ret_vals;
-    if (!is_signal_weighted) {
-        std::fill(ii2last_signal.begin(), ii2last_signal.end(), 1.0 / ins_num);
-    }
-    for (int offset = 0; offset < total - ins_num; offset += ins_num) {
-        double total_weight = 1;
-        if (is_signal_weighted) {
-            total_weight = 0;
-            for (int ii = 0; ii < ins_num; ++ii) {
-                if (isvalid(signals[offset + ii])) {
-                    total_weight += std::abs(signals[offset + ii]);
-                    ii2last_signal[ii] = signals[offset + ii];
-                } else {
-                    total_weight += std::abs(ii2last_signal[ii]);
-                }
+    for (int offset = 0; offset < total; offset += ins_num) {
+        int valid_cnt = 0;
+        double total_weight = 0;
+        for (int ii = 0; ii < ins_num; ++ii) {
+            if (isvalid(signals[offset + ii])) {
+                total_weight += std::abs(signals[offset + ii]);
+                ++valid_cnt;
             }
         }
+        if (valid_cnt <= 0) continue;
+
+        if (!is_signal_weighted) total_weight = 1.0;
 
         if (total_weight > 1e-6) {
+            double tmp_nav = 0;
             for (int ii = 0; ii < ins_num; ++ii) {
-                double ret = rets[offset + ins_num + ii];
+                double ret = rets[offset + ii];
                 if (!std::isfinite(ret)) ret = 0;
-                double sig = ii2last_signal[ii];
+                double sig = signals[offset + ii];
+                if (!std::isfinite(sig)) sig = 0;
+                double weight = std::abs(sig) / total_weight;
+                if (!is_signal_weighted) weight = 1. / ins_num;
 
-                if (sig > open_t || (ii2status[ii] > 0 && sig > close_t)) {
+                if (sig > open_t || (ii2status[ii] > 0 && sig >= close_t)) {
                     ii2status[ii] = 1;
-                    r += (std::abs(sig) / total_weight) * (1. + ret);
-                } else if (sig < -open_t || (ii2status[ii] < 0 && sig < -close_t)) {
+                    tmp_nav += nav * weight * (1. + ret);
+                } else if (sig < -open_t || (ii2status[ii] < 0 && sig <= -close_t)) {
                     ii2status[ii] = -1;
-                    r += (std::abs(sig) / total_weight) * (1. - ret);
+                    tmp_nav += nav * weight * (1. - ret);
                 } else {
                     ii2status[ii] = 0;
+                    tmp_nav += nav * weight;
                 }
             }
+            nav = tmp_nav;
+            if (nav < 0) nav = 0;
         }
-        ret_vals.push_back(r);
+        ret_vals.push_back(nav);
     }
     return ret_vals;
 }
 
 template <typename T>
-inline std::vector<std::vector<double>> calc_return_series_by_ii(const std::vector<T>& signals,
-                                                                 const std::vector<T>& rets) {
-    return {};
+std::vector<std::vector<double>> calc_return_series_by_ii(const std::vector<T>& signals, const std::vector<T>& rets,
+                                                          int ins_num, double open_t, double close_t) {
+    std::vector<std::vector<double>> ret;
+    for (int ii = 0; ii < ins_num; ++ii) {
+        std::vector<T> ii_signal = ornate::skip_extract(signals, ins_num, ii);
+        std::vector<T> ii_ret = ornate::skip_extract(rets, ins_num, ii);
+        ret.push_back(calc_bar_return_series(ii_signal, ii_ret, 1, false, open_t, close_t));
+    }
+    return ret;
 }
 
 }  // namespace ornate
