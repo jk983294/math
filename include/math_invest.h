@@ -79,20 +79,10 @@ inline double calc_avg_return(double total_ret, int n) {
         return std::pow(1.0 + total_ret, 1.0 / n) - 1.0;
 }
 
-/**
- * @param signals
- * @param rets 未来一根bar收益
- * @param ins_num
- * @param is_signal_weighted
- * @param open_t open threshold
- * @param close_t close threshold
- * @return
- */
-template <typename T>
-std::vector<double> calc_bar_return_series(const std::vector<T>& signals, const std::vector<T>& rets, int ins_num,
+template <typename T, typename T1>
+std::vector<double> calc_bar_return_series(const T* signals, const T1* rets, int total, int ins_num,
                                            bool is_signal_weighted, double open_t, double close_t) {
     double nav = 1.0;
-    int total = (int)signals.size();
     std::vector<int> ii2status(ins_num, 0);
     std::vector<double> ret_vals;
     for (int offset = 0; offset < total; offset += ins_num) {
@@ -137,13 +127,29 @@ std::vector<double> calc_bar_return_series(const std::vector<T>& signals, const 
     return ret_vals;
 }
 
-template <typename T>
-std::vector<std::vector<double>> calc_return_series_by_ii(const std::vector<T>& signals, const std::vector<T>& rets,
+/**
+ * @param signals
+ * @param rets 未来一根bar收益
+ * @param ins_num
+ * @param is_signal_weighted
+ * @param open_t open threshold
+ * @param close_t close threshold
+ * @return
+ */
+template <typename T, typename T1>
+std::vector<double> calc_bar_return_series(const std::vector<T>& signals, const std::vector<T1>& rets, int ins_num,
+                                           bool is_signal_weighted, double open_t, double close_t) {
+    int total = (int)signals.size();
+    return calc_bar_return_series(signals.data(), rets.data(), total, ins_num, is_signal_weighted, open_t, close_t);
+}
+
+template <typename T, typename T1>
+std::vector<std::vector<double>> calc_return_series_by_ii(const std::vector<T>& signals, const std::vector<T1>& rets,
                                                           int ins_num, double open_t, double close_t) {
     std::vector<std::vector<double>> ret;
     for (int ii = 0; ii < ins_num; ++ii) {
         std::vector<T> ii_signal = ornate::skip_extract(signals, ins_num, ii);
-        std::vector<T> ii_ret = ornate::skip_extract(rets, ins_num, ii);
+        std::vector<T1> ii_ret = ornate::skip_extract(rets, ins_num, ii);
         ret.push_back(calc_bar_return_series(ii_signal, ii_ret, 1, false, open_t, close_t));
     }
     return ret;

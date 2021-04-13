@@ -287,7 +287,7 @@ struct rolling_all_once {
 };
 
 template <typename T>
-std::vector<double> lr_fitted(const T* y_vec, const T* x_vec, int num) {
+std::vector<double> lr_fitted(const T* y_vec, const T* x_vec, int num, bool is_cap = true) {
     std::vector<double> pred(num, NAN);
     ornate::regression2_once f;
     double mean_ = ornate::mean(x_vec, num);
@@ -296,7 +296,9 @@ std::vector<double> lr_fitted(const T* y_vec, const T* x_vec, int num) {
         if (!ornate::isvalid(x_vec[i]) || !ornate::isvalid(y_vec[i])) {
             continue;
         }
-        f(y_vec[i], cap_within_sd(x_vec[i], mean_, sd_));
+        double x_ = x_vec[i];
+        if (is_cap) x_ = cap_within_sd(x_vec[i], mean_, sd_);
+        f(y_vec[i], x_);
     }
 
     f.calc_coef();

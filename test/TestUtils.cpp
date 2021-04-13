@@ -1,7 +1,5 @@
 #include <math_utils.h>
-#include <iostream>
 #include "catch.hpp"
-#include "math_stats.h"
 
 using namespace std;
 using namespace ornate;
@@ -21,4 +19,12 @@ TEST_CASE("equal", "[MathStats]") {
     REQUIRE(FloatEqual(c, d));
     REQUIRE(FloatEqual(NAN, NAN));
     REQUIRE(FloatEqual(INFINITY, INFINITY));
+}
+
+TEST_CASE("div_down", "[MathStats]") {
+    REQUIRE(FloatEqual(div_down(1234, 0.023, 1), 0.001234));
+    REQUIRE(FloatEqual(div_down(2, 0.023, 1), 0.002000));
+    REQUIRE(FloatEqual(div_down(0.2, 0.023, 1), 0.000200));
+    REQUIRE(FloatEqual(div_down(0.02, 0.023, 1), 0.000200));
+    REQUIRE(FloatEqual(div_down(0.002, 0.023, 1), 0.00200));
 }

@@ -88,6 +88,24 @@ inline int get_sign(double val) {
     else
         return -1;
 }
+
+/**
+ * value div down to 0.1 * sd
+ * @param value should be abs value
+ * @param sd
+ * @param down
+ * @return
+ */
+inline double div_down(double value, double sd, int down = 1) {
+    value = std::abs(value);
+    if (value < std::pow(10., -down) * sd) return value;
+    int multiplier1 = (int)std::log10(sd);
+    if (multiplier1 <= 0) --multiplier1;
+    int multiplier2 = (int)std::log10(value);
+    int total_multiplier = multiplier2 - multiplier1 + down;
+    // printf("%d,%d,%d\n", multiplier1, multiplier2, total_multiplier);
+    return value / std::pow(10., total_multiplier);
+}
 }  // namespace ornate
 
 #endif

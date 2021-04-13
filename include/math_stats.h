@@ -1,6 +1,7 @@
 #ifndef ORNATE_MATH_STATS_H
 #define ORNATE_MATH_STATS_H
 
+#include <unordered_map>
 #include <unordered_set>
 #include "math_stats_rolling.h"
 #include "math_utils.h"
@@ -903,9 +904,9 @@ double cap_within_sd(const T x, double mean_, double sd, double range = 3.0) {
     if (!isvalid(x))
         return mean_;
     else if (x < mean_ - range * sd)
-        return mean_ - range * sd;
+        return mean_ - range * sd - div_down(x, sd);
     else if (x > mean_ + range * sd)
-        return mean_ + range * sd;
+        return mean_ + range * sd + div_down(x, sd);
     return x;
 }
 
@@ -1082,6 +1083,7 @@ std::tuple<double, double, double> lr_reduce_outlier(T *x, int num, double range
 
     if (valid_cnt > 0) {
         std::unordered_set<int> changed_idx;
+        std::unordered_map<int, double> idx2orig_value;
 
         do {
             mean_ = ornate::mean(x, num);
@@ -1089,22 +1091,46 @@ std::tuple<double, double, double> lr_reduce_outlier(T *x, int num, double range
 
             if (!std::isfinite(mean_) || !std::isfinite(sd_)) break;
 
+            std::vector<std::pair<int, T>> old_values;
+            int new_insert_cnt = 0;
             for (int i = 0; i < num; ++i) {
                 if (std::isfinite(x[i])) {
                     if (x[i] < mean_ - range * sd_) {
-                        x[i] = mean_ - range * sd_;
-                        changed_idx.insert(i);
+                        old_values.emplace_back(i, x[i]);
+                        double delta = div_down(x[i], sd_);
+                        if (changed_idx.find(i) == changed_idx.end()) {
+                            changed_idx.insert(i);
+                            idx2orig_value[i] = x[i];
+                            ++new_insert_cnt;
+                        } else {
+                            delta = div_down(idx2orig_value[i], sd_);
+                        }
+                        x[i] = mean_ - range * sd_ - delta;
                     } else if (x[i] > mean_ + range * sd_) {
-                        x[i] = mean_ + range * sd_;
-                        changed_idx.insert(i);
+                        old_values.emplace_back(i, x[i]);
+                        double delta = div_down(x[i], sd_);
+                        if (changed_idx.find(i) == changed_idx.end()) {
+                            changed_idx.insert(i);
+                            idx2orig_value[i] = x[i];
+                            ++new_insert_cnt;
+                        } else {
+                            delta = div_down(idx2orig_value[i], sd_);
+                        }
+                        x[i] = mean_ + range * sd_ + delta;
                     }
                 }
             }
 
             change_ratio = (double)changed_idx.size() / valid_cnt;
             double sd1_ = ornate::std(x, num);
-            printf("%f,%f\n", sd_, sd1_);
-            if (!std::isfinite(sd1_) || sd_ / sd1_ < 1.3) break;
+            // printf("%f,%f,%d\n", sd_, sd1_, new_insert_cnt);
+            if (!std::isfinite(sd1_) || sd_ / sd1_ < 1.3) {
+                for (auto &item : old_values) {
+                    x[item.first] = item.second;
+                }
+                change_ratio = ((double)changed_idx.size() - new_insert_cnt) / valid_cnt;
+                break;
+            }
         } while (true);
     }
     return {mean_, sd_, change_ratio};
