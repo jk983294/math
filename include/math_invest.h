@@ -155,6 +155,23 @@ std::vector<std::vector<double>> calc_return_series_by_ii(const std::vector<T>& 
     return ret;
 }
 
+template <typename T>
+double calc_max_dropdown_ratio(const T* signals, int len) {
+    double max_val = NAN, max_drop_ratio = NAN;
+    for (int i = 0; i < len; ++i) {
+        if (!std::isfinite(signals[i])) continue;
+        if (std::isnan(max_val) || signals[i] > max_val) max_val = signals[i];
+        double drop_ratio = 1. - signals[i] / max_val;
+        if (std::isnan(max_drop_ratio) || drop_ratio > max_drop_ratio) max_drop_ratio = drop_ratio;
+    }
+    return max_drop_ratio;
+}
+
+template <typename T>
+double calc_max_dropdown_ratio(const std::vector<T>& signals) {
+    return calc_max_dropdown_ratio(signals.data(), signals.size());
+}
+
 }  // namespace ornate
 
 #endif

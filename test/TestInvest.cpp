@@ -82,3 +82,13 @@ TEST_CASE("calc_return_series_by_ii 2 ins", "[calc_return_series_by_ii]") {
     REQUIRE(ornate::FloatEqual(nav5, nav[1][3]));
     REQUIRE(ornate::FloatEqual(nav6, nav[1][4]));
 }
+
+TEST_CASE("calc_max_dropdown", "[calc_max_dropdown]") {
+    std::vector<double> signals = {1, 1.2, NAN, NAN, 0.9, 0.99, 1.2, 1.2};
+    REQUIRE(ornate::FloatEqual(ornate::calc_max_dropdown_ratio(signals), 1 - (0.9 / 1.2)));
+    signals.push_back(0.6);
+    REQUIRE(ornate::FloatEqual(ornate::calc_max_dropdown_ratio(signals), 1 - (0.6 / 1.2)));
+    signals.push_back(1.3);
+    signals.push_back(0.65);
+    REQUIRE(ornate::FloatEqual(ornate::calc_max_dropdown_ratio(signals), 1 - (0.65 / 1.3)));
+}
