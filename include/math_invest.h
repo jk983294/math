@@ -81,16 +81,20 @@ inline double calc_avg_return(double total_ret, int n) {
 
 template <typename T, typename T1>
 std::vector<double> calc_bar_return_series(const T* signals, const T1* rets, int total, int ins_num,
-                                           bool is_signal_weighted, double open_t, double close_t) {
+                                           bool is_signal_weighted, double open_t, double close_t, int top_n = -1) {
     double nav = 1.0;
     std::vector<int> ii2status(ins_num, 0);
     std::vector<double> ret_vals;
     for (int offset = 0; offset < total; offset += ins_num) {
+        std::vector<T> sigs_(signals + offset, signals + offset + ins_num);
+        if (top_n > 0) {
+            ornate::keep_top(sigs_, top_n, (T)0, true);
+        }
         int valid_cnt = 0;
         double total_weight = 0;
         for (int ii = 0; ii < ins_num; ++ii) {
-            if (isvalid(signals[offset + ii])) {
-                total_weight += std::abs(signals[offset + ii]);
+            if (isvalid(sigs_[ii])) {
+                total_weight += std::abs(sigs_[ii]);
                 ++valid_cnt;
             }
         }
@@ -103,7 +107,7 @@ std::vector<double> calc_bar_return_series(const T* signals, const T1* rets, int
             for (int ii = 0; ii < ins_num; ++ii) {
                 double ret = rets[offset + ii];
                 if (!std::isfinite(ret)) ret = 0;
-                double sig = signals[offset + ii];
+                double sig = sigs_[ii];
                 if (!std::isfinite(sig)) sig = 0;
                 double weight = std::abs(sig) / total_weight;
                 if (!is_signal_weighted) weight = 1. / ins_num;
@@ -138,9 +142,10 @@ std::vector<double> calc_bar_return_series(const T* signals, const T1* rets, int
  */
 template <typename T, typename T1>
 std::vector<double> calc_bar_return_series(const std::vector<T>& signals, const std::vector<T1>& rets, int ins_num,
-                                           bool is_signal_weighted, double open_t, double close_t) {
+                                           bool is_signal_weighted, double open_t, double close_t, int top_n = -1) {
     int total = (int)signals.size();
-    return calc_bar_return_series(signals.data(), rets.data(), total, ins_num, is_signal_weighted, open_t, close_t);
+    return calc_bar_return_series(signals.data(), rets.data(), total, ins_num, is_signal_weighted, open_t, close_t,
+                                  top_n);
 }
 
 template <typename T, typename T1>

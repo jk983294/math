@@ -211,6 +211,41 @@ double corr(const std::vector<T> &x, const std::vector<T> &y) {
     return corr(&x[0], &y[0], x.size());
 }
 
+template <typename T = double>
+int __cov_sample(const T *x, const T *y, const std::vector<int> &idx, double &cov_, double &std_x, double &std_y) {
+    long double sum_x = 0, sum_x2 = 0, sum_xy = 0, sum_y = 0, sum_y2 = 0;
+    int count = 0;
+    for (int i : idx) {
+        if (!std::isfinite(x[i]) || !std::isfinite(y[i])) continue;
+        ++count;
+        sum_x += x[i];
+        sum_y += y[i];
+        sum_x2 += x[i] * x[i];
+        sum_y2 += y[i] * y[i];
+        sum_xy += x[i] * y[i];
+    }
+    if (count < 2) return count;
+    long double mean_x = sum_x / count;
+    long double mean_y = sum_y / count;
+    cov_ = (sum_xy - mean_x * mean_y * count) / (count - 1);
+    std_x = std::sqrt((sum_x2 - mean_x * mean_x * count) / (count - 1));
+    std_y = std::sqrt((sum_y2 - mean_y * mean_y * count) / (count - 1));
+    return count;
+}
+
+template <typename T = double>
+double corr_sample(const T *x, const T *y, const std::vector<int> &idx) {
+    double cov_, std_x, std_y;
+    if (__cov_sample(x, y, idx, cov_, std_x, std_y) < 2) return NAN;
+    if (std_x < 1e-9 || std_y < 1e-9) return NAN;
+    return cov_ / std_x / std_y;
+}
+
+template <typename T = float>
+double corr_sample(const std::vector<T> &x, const std::vector<T> &y, const std::vector<int> &idx) {
+    return corr_sample(&x[0], &y[0], idx);
+}
+
 template <typename T = float>
 int __weighted_cov(const T *x, const T *y, const T *weight, size_t num, double &cov_, double &std_x, double &std_y) {
     double sum_x = 0, sum_x2 = 0, sum_xy = 0, sum_y = 0, sum_y2 = 0, sum_weight = 0;

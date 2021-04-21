@@ -163,7 +163,7 @@ inline vector<TRet> vv_divide(const vector<T>& a, const vector<T1>& b) {
 template <typename T>
 std::vector<int> get_sorted_index(const std::vector<T>& data, bool ascending_order = true) {
     int n = static_cast<int>(data.size());
-    std::vector<detail::__SortHelper<T> > s(n);
+    std::vector<detail::__SortHelper<T>> s(n);
     for (int i = 0; i < n; i++) {
         s[i].data = &data[i];
         s[i].index = i;
@@ -182,7 +182,7 @@ std::vector<int> get_sorted_index(const std::vector<T>& data, bool ascending_ord
 template <typename T>
 std::vector<int> get_sorted_index_by_value(const std::vector<T>& data, bool ascending_order = true) {
     int n = static_cast<int>(data.size());
-    std::vector<detail::__SortHelperByValue<T> > s(n);
+    std::vector<detail::__SortHelperByValue<T>> s(n);
     for (int i = 0; i < n; i++) {
         s[i].data = data[i];
         s[i].index = i;
@@ -201,7 +201,7 @@ std::vector<int> get_sorted_index_by_value(const std::vector<T>& data, bool asce
 template <typename T>
 std::vector<int> get_sorted_rank(const std::vector<T>& data, bool ascending_order = true) {
     int n = static_cast<int>(data.size());
-    std::vector<detail::__SortHelper<T> > s(n);
+    std::vector<detail::__SortHelper<T>> s(n);
     for (int i = 0; i < n; i++) {
         s[i].data = &data[i];
         s[i].index = i;
@@ -321,7 +321,7 @@ void rank(INOUT std::vector<T>& n) {
 template <typename T>
 void rank1(INOUT std::vector<T>& n) {
     int size_ = static_cast<int>(n.size());
-    std::vector<detail::__SortHelperByValue<T> > s(size_);
+    std::vector<detail::__SortHelperByValue<T>> s(size_);
     int count = 0;
     for (int i = 0; i < size_; i++) {
         if (std::isfinite(n[i])) {
@@ -522,6 +522,31 @@ std::vector<T> skip_extract(const std::vector<T>& data, int skip, int start_idx,
     if (start_idx < 0) start_idx = 0;
     if (end_idx < 0) end_idx = static_cast<int32_t>(data.size());
     return skip_extract_p(data.data() + start_idx, skip, end_idx - start_idx);
+}
+
+template <typename T>
+void keep_top(T* pData, int len, int n, T default_val, bool is_abs) {
+    std::vector<std::pair<T, int>> sort_array;
+    for (int32_t i = 0; i < len; ++i) {
+        if (isvalid(pData[i])) {
+            if (is_abs)
+                sort_array.emplace_back(std::abs(pData[i]), i);
+            else
+                sort_array.emplace_back(pData[i], i);
+        }
+    }
+
+    if (n < (int)sort_array.size()) {
+        std::sort(sort_array.begin(), sort_array.end(), [](const auto& l, const auto& r) { return l.first > r.first; });
+        for (int i = n; i < (int)sort_array.size(); ++i) {
+            pData[sort_array[i].second] = default_val;
+        }
+    }
+}
+
+template <typename T>
+void keep_top(std::vector<T>& data, int top_n, T default_val, bool is_abs) {
+    return keep_top(data.data(), data.size(), top_n, default_val, is_abs);
 }
 
 }  // namespace ornate

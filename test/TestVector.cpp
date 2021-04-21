@@ -193,3 +193,13 @@ TEST_CASE("sum", "[MathVector]") {
     vector<float> x{3, 2, NAN, 1, NAN};
     REQUIRE(ornate::sum(x) == 6.0);
 }
+
+TEST_CASE("keep_top", "[MathVector]") {
+    vector<float> x{-3, 2, NAN, 1, NAN};
+    ornate::keep_top(x, 2, 0.f, true);
+    REQUIRE(x[0] == -3);
+    REQUIRE(x[1] == 2);
+    REQUIRE(std::isnan(x[2]));
+    REQUIRE(x[3] == 0);
+    REQUIRE(std::isnan(x[4]));
+}
