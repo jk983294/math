@@ -54,6 +54,46 @@ TEST_CASE("calc_bar_return_series 2 ins", "[calc_bar_return_series]") {
     REQUIRE(ornate::FloatEqual(nav1, nav[1]));
 }
 
+TEST_CASE("calc_bar_return_series 3 ins top 2", "[calc_bar_return_series]") {
+    std::vector<double> signals = {1, 2, 0.5, NAN, NAN, NAN, -1, 2, 0.5, -1, 2, 0.5};
+    std::vector<double> rets = {0.5, -0.5, -0.2, NAN, NAN, NAN, -0.5, 0.5, 0.2, 0, 0, 0};
+    int ins_num = 3;
+    int top_n = 2;
+    std::vector<double> nav = ornate::calc_bar_return_series(signals, rets, ins_num, false, 0, 0, top_n);
+    double nav0 = ((1 + rets[0]) + (1 + rets[1])) / top_n;
+    double nav1 = nav0 * ((1 - rets[6]) + (1 + rets[7])) / top_n;
+
+    REQUIRE(ornate::FloatEqual(nav0, nav[0]));
+    REQUIRE(ornate::FloatEqual(nav1, nav[1]));
+
+    nav = ornate::calc_bar_return_series(signals, rets, ins_num, true, 0, 0, top_n);
+    nav0 = 1.0 / 3. * (1 + rets[0]) + 2.0 / 3. * (1 + rets[1]);
+    nav1 = nav0 * ((1 - rets[6]) + 2 * (1 + rets[7])) / 3.;
+    REQUIRE(ornate::FloatEqual(nav0, nav[0]));
+    REQUIRE(ornate::FloatEqual(nav1, nav[1]));
+}
+
+TEST_CASE("calc_bar_return_series 3 ins top 2 sticky", "[calc_bar_return_series]") {
+    std::vector<double> signals = {1, 2, 0.5, -1, 0.25, 0.5};
+    std::vector<double> rets = {
+        0.5, -0.5, -0.2, -0.5, 0.5, 0.2,
+    };
+    int ins_num = 3;
+    int top_n = 2;
+    std::vector<double> nav = ornate::calc_bar_return_series(signals, rets, ins_num, false, 0, 0, top_n, true);
+    double nav0 = ((1 + rets[0]) + (1 + rets[1])) / top_n;
+    double nav1 = nav0 * ((1 - rets[3]) + (1 + rets[4])) / 2;
+
+    REQUIRE(ornate::FloatEqual(nav0, nav[0]));
+    REQUIRE(ornate::FloatEqual(nav1, nav[1]));
+
+    nav = ornate::calc_bar_return_series(signals, rets, ins_num, false, 0, 0, top_n, false);
+    nav0 = ((1 + rets[0]) + (1 + rets[1])) / top_n;
+    nav1 = nav0 * ((1 - rets[3]) + (1 + rets[5])) / 2.;
+    REQUIRE(ornate::FloatEqual(nav0, nav[0]));
+    REQUIRE(ornate::FloatEqual(nav1, nav[1]));
+}
+
 TEST_CASE("calc_return_series_by_ii 2 ins", "[calc_return_series_by_ii]") {
     std::vector<double> signals = {1, 1, 1, 1, NAN, NAN, NAN, NAN, -1, -1, 1, 1, -1, -1};
     std::vector<double> rets = {0.5, 0.5, -0.5, -0.5, NAN, NAN, NAN, NAN, -0.5, -0.5, 0.5, 0.5, 0, 0};

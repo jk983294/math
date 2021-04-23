@@ -79,16 +79,59 @@ inline double calc_avg_return(double total_ret, int n) {
         return std::pow(1.0 + total_ret, 1.0 / n) - 1.0;
 }
 
+/**
+ * ii2status 1=多头, -1=空头, 0=空仓
+ * sticky 可以通过设置 is_signal_weighted=false, open_t=close_t=0 来模拟
+ * @param rets 未来一根bar的收益
+ * @param total signals length
+ * @param is_signal_weighted
+ * @param open_t 多头开仓阈值, 空头开仓阈值=-open_t
+ * @param close_t 多头平仓阈值, 空头平仓阈值=-close_t
+ * @param top_n 每轮最大持有ins, -1表示没有限制
+ * @param sticky true表示上一轮如果没有到平仓线,则保留,直到平仓阈值触发, false表示每轮只按signal强度,不考虑上轮持仓
+ * @param cost 每笔的滑点佣金, 在每笔交易前收取
+ */
 template <typename T, typename T1>
 std::vector<double> calc_bar_return_series(const T* signals, const T1* rets, int total, int ins_num,
-                                           bool is_signal_weighted, double open_t, double close_t, int top_n = -1) {
+                                           bool is_signal_weighted, double open_t, double close_t, int top_n = -1,
+                                           bool sticky = true, double cost = 0) {
     double nav = 1.0;
     std::vector<int> ii2status(ins_num, 0);
     std::vector<double> ret_vals;
     for (int offset = 0; offset < total; offset += ins_num) {
         std::vector<T> sigs_(signals + offset, signals + offset + ins_num);
+        int real_n = top_n;
         if (top_n > 0) {
-            ornate::keep_top(sigs_, top_n, (T)0, true);
+            // real_n = ornate::keep_top(sigs_, top_n, (T)0, true);
+            int tmp_n = 0;
+            std::vector<std::pair<T, int>> sort_array;
+            for (int ii = 0; ii < ins_num; ++ii) {
+                if (isvalid(sigs_[ii])) {
+                    // 没被选中, 但是没到平仓阈值,继续保留
+                    if (sticky &&
+                        ((ii2status[ii] > 0 && sigs_[ii] > close_t) || (ii2status[ii] < 0 && sigs_[ii] < -close_t))) {
+                        ++tmp_n;
+                        continue;
+                    }
+                    sort_array.emplace_back(std::abs(sigs_[ii]), ii);
+                }
+            }
+
+            int needed = top_n - tmp_n;
+            if (needed < 0) {
+                printf("should not happen");
+                needed = 0;
+            }
+            if (needed < (int)sort_array.size()) {
+                std::sort(sort_array.begin(), sort_array.end(),
+                          [](const auto& l, const auto& r) { return l.first > r.first; });
+                for (int i = needed; i < (int)sort_array.size(); ++i) {
+                    sigs_[sort_array[i].second] = 0;
+                }
+                real_n = top_n;
+            } else {
+                real_n = tmp_n + (int)sort_array.size();
+            }
         }
         int valid_cnt = 0;
         double total_weight = 0;
@@ -104,23 +147,47 @@ std::vector<double> calc_bar_return_series(const T* signals, const T1* rets, int
 
         if (total_weight > 1e-6) {
             double tmp_nav = 0;
+            int selected_cnt = 0;
             for (int ii = 0; ii < ins_num; ++ii) {
                 double ret = rets[offset + ii];
                 if (!std::isfinite(ret)) ret = 0;
                 double sig = sigs_[ii];
                 if (!std::isfinite(sig)) sig = 0;
                 double weight = std::abs(sig) / total_weight;
-                if (!is_signal_weighted) weight = 1. / ins_num;
+                if (!is_signal_weighted) {
+                    if (real_n > 0)
+                        weight = 1. / real_n;
+                    else
+                        weight = 1. / ins_num;
+                }
 
-                if (sig > open_t || (ii2status[ii] > 0 && sig >= close_t)) {
+                if (sig > open_t || (sticky && ii2status[ii] > 0 && sig > close_t)) {
+                    double tmp_cost = 0;
+                    if (ii2status[ii] <= 0) tmp_cost = cost;  // 老仓位方向不同
                     ii2status[ii] = 1;
-                    tmp_nav += nav * weight * (1. + ret);
-                } else if (sig < -open_t || (ii2status[ii] < 0 && sig <= -close_t)) {
+                    tmp_nav += nav * weight * (1. + ret - tmp_cost);
+                    ++selected_cnt;
+                } else if (sig < -open_t || (sticky && ii2status[ii] < 0 && sig < -close_t)) {
+                    double tmp_cost = 0;
+                    if (ii2status[ii] >= 0) tmp_cost = cost;  // 老仓位方向不同
                     ii2status[ii] = -1;
-                    tmp_nav += nav * weight * (1. - ret);
+                    tmp_nav += nav * weight * (1. - ret - tmp_cost);
+                    ++selected_cnt;
                 } else {
                     ii2status[ii] = 0;
-                    tmp_nav += nav * weight;
+                    if (!is_signal_weighted && real_n > 0 && sig == 0)
+                        tmp_nav += 0;
+                    else {
+                        tmp_nav += nav * weight;
+                        ++selected_cnt;
+                    }
+                }
+            }
+            if (!is_signal_weighted && real_n > 0) {
+                if (selected_cnt < real_n) {
+                    tmp_nav += nav * (real_n - selected_cnt) / real_n;
+                } else if (selected_cnt > real_n) {
+                    printf("error, should not happen");
                 }
             }
             nav = tmp_nav;
@@ -142,10 +209,11 @@ std::vector<double> calc_bar_return_series(const T* signals, const T1* rets, int
  */
 template <typename T, typename T1>
 std::vector<double> calc_bar_return_series(const std::vector<T>& signals, const std::vector<T1>& rets, int ins_num,
-                                           bool is_signal_weighted, double open_t, double close_t, int top_n = -1) {
+                                           bool is_signal_weighted, double open_t, double close_t, int top_n = -1,
+                                           bool sticky = true, double cost = 0) {
     int total = (int)signals.size();
     return calc_bar_return_series(signals.data(), rets.data(), total, ins_num, is_signal_weighted, open_t, close_t,
-                                  top_n);
+                                  top_n, sticky, cost);
 }
 
 template <typename T, typename T1>

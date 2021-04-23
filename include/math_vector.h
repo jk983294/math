@@ -525,7 +525,7 @@ std::vector<T> skip_extract(const std::vector<T>& data, int skip, int start_idx,
 }
 
 template <typename T>
-void keep_top(T* pData, int len, int n, T default_val, bool is_abs) {
+int keep_top(T* pData, int len, int n, T default_val, bool is_abs) {
     std::vector<std::pair<T, int>> sort_array;
     for (int32_t i = 0; i < len; ++i) {
         if (isvalid(pData[i])) {
@@ -541,11 +541,14 @@ void keep_top(T* pData, int len, int n, T default_val, bool is_abs) {
         for (int i = n; i < (int)sort_array.size(); ++i) {
             pData[sort_array[i].second] = default_val;
         }
+        return n;
+    } else {
+        return sort_array.size();  // 不需要sort, 所有都选中
     }
 }
 
 template <typename T>
-void keep_top(std::vector<T>& data, int top_n, T default_val, bool is_abs) {
+int keep_top(std::vector<T>& data, int top_n, T default_val, bool is_abs) {
     return keep_top(data.data(), data.size(), top_n, default_val, is_abs);
 }
 
