@@ -229,19 +229,26 @@ std::vector<std::vector<double>> calc_return_series_by_ii(const std::vector<T>& 
 }
 
 template <typename T>
-double calc_max_dropdown_ratio(const T* signals, int len) {
-    double max_val = NAN, max_drop_ratio = NAN;
+std::pair<double, double> calc_max_dropdown_ratio(const T* signals, int len) {
+    double max_val = NAN, max_drop_ratio = NAN, time_ratio = NAN;
+    int max_idx = -1;
     for (int i = 0; i < len; ++i) {
         if (!std::isfinite(signals[i])) continue;
-        if (std::isnan(max_val) || signals[i] > max_val) max_val = signals[i];
+        if (std::isnan(max_val) || signals[i] > max_val) {
+            max_val = signals[i];
+            max_idx = i;
+        }
         double drop_ratio = 1. - signals[i] / max_val;
-        if (std::isnan(max_drop_ratio) || drop_ratio > max_drop_ratio) max_drop_ratio = drop_ratio;
+        if (std::isnan(max_drop_ratio) || drop_ratio > max_drop_ratio) {
+            max_drop_ratio = drop_ratio;
+            time_ratio = double(i - max_idx + 1) / len;
+        }
     }
-    return max_drop_ratio;
+    return {max_drop_ratio, time_ratio};
 }
 
 template <typename T>
-double calc_max_dropdown_ratio(const std::vector<T>& signals) {
+std::pair<double, double> calc_max_dropdown_ratio(const std::vector<T>& signals) {
     return calc_max_dropdown_ratio(signals.data(), signals.size());
 }
 
