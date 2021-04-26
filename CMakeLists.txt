@@ -11,8 +11,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/)
 
 
-# SET(CMAKE_CXX_FLAGS "-std=c++14 -O3 -Wall -Werror")
-SET(CMAKE_CXX_FLAGS "-std=c++14 -g -Wall -Werror")
+# SET(CMAKE_CXX_FLAGS "-std=c++17 -O3 -Wall -Werror")
+SET(CMAKE_CXX_FLAGS "-std=c++17 -g -Wall -Werror")
 
 message ("cxx Flags: " ${CMAKE_CXX_FLAGS})
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)

@@ -100,6 +100,30 @@ inline int choice_with_accum_weight(const vector<double> &accum_weight, double p
         return itr - accum_weight.begin();
 }
 
+// select k from n
+inline std::vector<int> reservoir_sampling(int n, int k) {
+    std::vector<int> reservoir(k);
+    std::iota(reservoir.begin(), reservoir.end(), 0);
+    if (k >= n) {
+        reservoir.erase(reservoir.begin() + n, reservoir.end());
+    } else {
+        mt19937 generator(std::random_device{}());
+        std::uniform_int_distribution<int> toReplace(0, static_cast<int>(k));
+        for (int i = k; i < n; i++) {
+            std::bernoulli_distribution whether2replace{static_cast<double>(k) / i};
+            if (whether2replace(generator)) reservoir[toReplace(generator)] = i;
+        }
+        std::sort(reservoir.begin(), reservoir.end());
+    }
+    return reservoir;
+}
+
+inline std::vector<int> sample_by_n(int total, int n) { return reservoir_sampling(total, n); }
+
+inline std::vector<int> sample_by_ratio(int total, double ratio) {
+    return reservoir_sampling(total, static_cast<int>(total * ratio));
+}
+
 struct MyRandom {
     MyRandom() : generator(std::random_device()()), urd(0., 1.0) {}
 

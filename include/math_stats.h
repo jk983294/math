@@ -247,6 +247,12 @@ double corr_sample(const std::vector<T> &x, const std::vector<T> &y, const std::
 }
 
 template <typename T = float>
+double corr_sample_by_ratio(const std::vector<T> &x, const std::vector<T> &y, double ratio) {
+    std::vector<int> idx = ornate::sample_by_ratio(x.size(), ratio);
+    return corr_sample(&x[0], &y[0], idx);
+}
+
+template <typename T = float>
 int __weighted_cov(const T *x, const T *y, const T *weight, size_t num, double &cov_, double &std_x, double &std_y) {
     double sum_x = 0, sum_x2 = 0, sum_xy = 0, sum_y = 0, sum_y2 = 0, sum_weight = 0;
     int count = 0;
