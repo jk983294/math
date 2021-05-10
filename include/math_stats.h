@@ -3,6 +3,7 @@
 
 #include <unordered_map>
 #include <unordered_set>
+#include "math_random.h"
 #include "math_stats_rolling.h"
 #include "math_utils.h"
 #include "math_vector.h"

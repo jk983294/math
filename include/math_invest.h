@@ -81,6 +81,80 @@ inline double calc_avg_return(double total_ret, int n) {
 
 /**
  * ii2status 1=多头, -1=空头, 0=空仓
+ * @param total signals length
+ * @param open_t 多头开仓阈值, 空头开仓阈值=-open_t
+ * @param close_t 多头平仓阈值, 空头平仓阈值=-close_t
+ * @param top_n 每轮最大持有ins, -1表示没有限制
+ * @param sticky true表示上一轮如果没有到平仓线,则保留,直到平仓阈值触发, false表示每轮只按signal强度,不考虑上轮持仓
+ */
+template <typename T>
+std::vector<int> calc_hold_tick(const T* signals, int total, int ins_num, double open_t, double close_t, int top_n = -1,
+                                bool sticky = true) {
+    std::vector<int> hold_ticks;
+    std::vector<int> ii2status(ins_num, 0);
+    for (int offset = 0; offset < total; offset += ins_num) {
+        std::vector<T> sigs_(signals + offset, signals + offset + ins_num);
+        if (top_n > 0) {
+            int tmp_n = 0;
+            std::vector<std::pair<T, int>> sort_array;
+            for (int ii = 0; ii < ins_num; ++ii) {
+                if (isvalid(sigs_[ii])) {
+                    // 没被选中, 但是没到平仓阈值,继续保留
+                    if (sticky &&
+                        ((ii2status[ii] > 0 && sigs_[ii] > close_t) || (ii2status[ii] < 0 && sigs_[ii] < -close_t))) {
+                        ++tmp_n;
+                        continue;
+                    }
+                    sort_array.emplace_back(std::abs(sigs_[ii]), ii);
+                }
+            }
+
+            int needed = top_n - tmp_n;
+            if (needed < 0) {
+                printf("should not happen");
+                needed = 0;
+            }
+            if (needed < (int)sort_array.size()) {
+                std::sort(sort_array.begin(), sort_array.end(),
+                          [](const auto& l, const auto& r) { return l.first > r.first; });
+                for (int i = needed; i < (int)sort_array.size(); ++i) {
+                    sigs_[sort_array[i].second] = 0;
+                }
+            }
+        }
+
+        for (int ii = 0; ii < ins_num; ++ii) {
+            double sig = sigs_[ii];
+            if (!std::isfinite(sig)) sig = 0;
+
+            if (sig > open_t || (sticky && ii2status[ii] > 0 && sig > close_t)) {
+                if (ii2status[ii] < 0) {  // 老仓位方向不同
+                    hold_ticks.push_back(-ii2status[ii]);
+                    ii2status[ii] = 0;
+                }
+                ii2status[ii] += 1;
+            } else if (sig < -open_t || (sticky && ii2status[ii] < 0 && sig < -close_t)) {
+                if (ii2status[ii] > 0) {  // 老仓位方向不同
+                    hold_ticks.push_back(ii2status[ii]);
+                    ii2status[ii] = 0;
+                }
+                ii2status[ii] -= 1;
+            } else if (ii2status[ii] != 0) {
+                hold_ticks.push_back(std::abs(ii2status[ii]));
+                ii2status[ii] = 0;
+            }
+        }
+    }
+    for (int ii = 0; ii < ins_num; ++ii) {
+        if (ii2status[ii] != 0) {
+            hold_ticks.push_back(std::abs(ii2status[ii]));
+        }
+    }
+    return hold_ticks;
+}
+
+/**
+ * ii2status 1=多头, -1=空头, 0=空仓
  * sticky 可以通过设置 is_signal_weighted=false, open_t=close_t=0 来模拟
  * @param rets 未来一根bar的收益
  * @param total signals length
