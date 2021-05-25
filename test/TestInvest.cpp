@@ -160,9 +160,7 @@ TEST_CASE("clear last n ticks", "[calc_bar_return_series]") {
     std::vector<double> rets = {0.5, -0.5, -0.5, 0.5, -0.5, 0.5, -0.5, 0.5, -0.5, 0};
     TickSimStat stat(signals.size(), 1);
     stat.set_ti_num(signals.size());
-    stat.set_night_ti_num(5);
-    stat.set_clear_last_n_tick(2);
-    stat.set_clear_night_last_n_tick(2);
+    stat.set_clear_ticks({3, 4, 8, 9});
     std::vector<double> nav = stat.calc_bar_return_series(signals.data(), rets.data());
     double nav0 = 1 * (1 + rets[0]);
     double nav1 = nav0 * (1 + rets[1]);

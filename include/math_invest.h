@@ -94,9 +94,11 @@ inline double calc_avg_return(double total_ret, int n) {
 struct TickSimStat {
     TickSimStat(int total, int ins_num) : m_total{total}, m_ins_num{ins_num} {
         ii2status.resize(m_ins_num, 0);
+        hold_ret.resize(m_ins_num, 0);
         sigs_.resize(m_ins_num, NAN);
         ret_vals.reserve(m_total / m_ins_num);
         hold_ticks.reserve(m_total);
+        m_rets.reserve(m_total);
     }
 
     template <typename T, typename T1>
@@ -105,11 +107,10 @@ struct TickSimStat {
         std::fill(ii2status.begin(), ii2status.end(), 0);
         ret_vals.clear();
         hold_ticks.clear();
+        m_rets.clear();
         for (int offset = 0, ti = 0; offset < m_total; offset += m_ins_num, ++ti) {
             if (m_ti_num > 0 && (ti + 1) % m_ti_num == 0) ti = 0;
-            bool clear_ = (m_ti_num > 0 && m_clear_last_n_tick > 0 && ti >= m_ti_num - m_clear_last_n_tick) ||
-                          (m_night_ti_num > 0 && m_clear_night_last_n_tick > 0 &&
-                           ti >= m_night_ti_num - m_clear_night_last_n_tick && ti < m_night_ti_num);
+            bool clear_ = m_ti_num > 0 && !m_clear_ticks.empty() && m_clear_ticks[ti];
             if (clear_) {
                 std::fill(sigs_.begin(), sigs_.end(), NAN);
             } else {
@@ -142,27 +143,24 @@ struct TickSimStat {
                         double tmp_cost = 0;
                         if (ii2status[ii] <= 0) tmp_cost = m_cost;  // 老仓位方向不同
                         if (ii2status[ii] < 0) {                    // 老仓位方向不同
-                            hold_ticks.push_back(-ii2status[ii]);
-                            ii2status[ii] = 0;
+                            record_ret_and_ticks(ii);
                         }
                         ii2status[ii] += 1;
+                        accum_ret(ii, ret);
                         tmp_nav += nav * weight * (1. + ret - tmp_cost);
                         ++selected_cnt;
                     } else if (sig < -m_open_t || (m_sticky && ii2status[ii] < 0 && sig < -m_close_t)) {
                         double tmp_cost = 0;
                         if (ii2status[ii] >= 0) tmp_cost = m_cost;  // 老仓位方向不同
                         if (ii2status[ii] > 0) {                    // 老仓位方向不同
-                            hold_ticks.push_back(ii2status[ii]);
-                            ii2status[ii] = 0;
+                            record_ret_and_ticks(ii);
                         }
                         ii2status[ii] -= 1;
+                        accum_ret(ii, ret);
                         tmp_nav += nav * weight * (1. - ret - tmp_cost);
                         ++selected_cnt;
                     } else {
-                        if (ii2status[ii] != 0) {
-                            hold_ticks.push_back(std::abs(ii2status[ii]));
-                        }
-                        ii2status[ii] = 0;
+                        record_ret_and_ticks(ii);
                         if (!m_is_signal_weighted && real_n > 0 && sig == 0)
                             tmp_nav += 0;
                         else {
@@ -197,18 +195,51 @@ struct TickSimStat {
     void set_open_t(double open_t) { m_open_t = open_t; }
     void set_close_t(double close_t) { m_close_t = close_t; }
     void set_cost(double cost) { m_cost = cost; }
+    void set_pre_close_ret_t(double pre_close_ret_t) { m_pre_close_ret_t = pre_close_ret_t; }
     void set_top_n(int top_n) { m_top_n = top_n; }
+    void set_pre_close_tick_t(int pre_close_tick_t) { m_pre_close_tick_t = pre_close_tick_t; }
     void set_sticky(bool sticky) { m_sticky = sticky; }
-    void set_ti_num(int ti_num) { m_ti_num = ti_num; }
-    void set_clear_last_n_tick(int clear_last_n_tick) { m_clear_last_n_tick = clear_last_n_tick; }
-    void set_night_ti_num(int night_ti_num) { m_night_ti_num = night_ti_num; }
-    void set_clear_night_last_n_tick(int clear_night_last_n_tick) {
-        m_clear_night_last_n_tick = clear_night_last_n_tick;
+    void set_ti_num(int ti_num) {
+        m_ti_num = ti_num;
+        if (m_ti_num > 0) m_clear_ticks.resize(m_ti_num, false);
     }
     const std::vector<int>& get_hold_ticks() { return hold_ticks; }
+    const std::vector<double>& get_rets() { return m_rets; }
     const std::vector<double>& get_navs() { return ret_vals; }
+    void set_clear_ticks(const std::vector<int>& ticks) {
+        if (m_ti_num > 0) {
+            m_clear_ticks.resize(m_ti_num);
+            std::fill(m_clear_ticks.begin(), m_clear_ticks.end(), false);
+            for (int ti : ticks) {
+                if (ti < 0 || ti >= m_ti_num) continue;
+                m_clear_ticks[ti] = true;
+            }
+        }
+    }
 
 private:
+    void accum_ret(int ii, double ret_) {
+        if (std::isfinite(ret_)) {
+            if (ii2status[ii] < 0) {
+                m_rets[ii] -= ret_;
+            } else if (ii2status[ii] > 0) {
+                m_rets[ii] += ret_;
+            }
+        }
+    }
+    void record_ret_and_ticks(int ii) {
+        if (ii2status[ii] == 0) {
+            return;
+        } else if (ii2status[ii] < 0) {
+            hold_ticks.push_back(-ii2status[ii]);
+            m_rets.push_back(hold_ret[ii]);
+        } else if (ii2status[ii] > 0) {
+            hold_ticks.push_back(ii2status[ii]);
+            m_rets.push_back(hold_ret[ii]);
+        }
+        ii2status[ii] = 0;
+        hold_ret[ii] = 0;
+    }
     int choose_top_n() {
         int tmp_n = 0;
         std::vector<std::pair<double, int>> sort_array;
@@ -217,8 +248,11 @@ private:
                 // 没被选中, 但是没到平仓阈值,继续保留
                 if (m_sticky &&
                     ((ii2status[ii] > 0 && sigs_[ii] > m_close_t) || (ii2status[ii] < 0 && sigs_[ii] < -m_close_t))) {
-                    ++tmp_n;
-                    continue;
+                    if (not((std::isfinite(m_pre_close_ret_t) && m_rets[ii] > m_pre_close_ret_t) ||
+                            (m_pre_close_tick_t > 0 && std::abs(ii2status[ii]) > m_pre_close_tick_t))) {
+                        ++tmp_n;
+                        continue;
+                    }
                 }
                 sort_array.emplace_back(std::abs(sigs_[ii]), ii);
             }
@@ -262,10 +296,7 @@ private:
 
     void clear_pos() {
         for (int ii = 0; ii < m_ins_num; ++ii) {
-            if (ii2status[ii] != 0) {
-                hold_ticks.push_back(std::abs(ii2status[ii]));
-                ii2status[ii] = 0;
-            }
+            record_ret_and_ticks(ii);
         }
     }
 
@@ -273,18 +304,19 @@ private:
     int m_total{0};
     int m_ins_num{0};
     int m_ti_num{-1};
-    int m_night_ti_num{-1};
-    int m_clear_last_n_tick{-1};
-    int m_clear_night_last_n_tick{-1};
     int m_top_n{-1};
+    int m_pre_close_tick_t{-1};
     bool m_is_signal_weighted{false};
     bool m_sticky{true};
     double m_open_t{0};
     double m_close_t{0};
     double m_cost{0};
+    double m_pre_close_ret_t{NAN};
     std::vector<int> ii2status, hold_ticks;
+    std::vector<bool> m_clear_ticks;
     std::vector<double> ret_vals;
     std::vector<double> sigs_;
+    std::vector<double> hold_ret, m_rets;
 };
 
 template <typename T, typename T1>
