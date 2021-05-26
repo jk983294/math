@@ -1,5 +1,6 @@
 #include <armadillo>
 #include <iostream>
+#include <stats.hpp>
 
 using namespace std;
 using namespace arma;
@@ -58,5 +59,10 @@ int main() {
     cout << "stderr:\n" << std_err << endl;
     cout << "tvalue:\n" << tvalue << endl;
     cout << "rsquared: " << r_squared << endl;
+
+    for (size_t i = 0; i < tvalue.size(); ++i) {
+        double p_value = 2 * (1 - stats::pt(std::abs(tvalue[i]), b.size() - tvalue.size()));
+        printf("i=%zu, p_value=%f\n", i, p_value);
+    }
     return 0;
 }
