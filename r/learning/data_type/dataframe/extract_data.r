@@ -8,6 +8,11 @@ df[1, ]  # by row
 df[, 2]  # by column
 df[["emp_name"]]  # by column
 df$emp_name  # by column
+
+all_names <- apply(df, 1, function(x) {
+  x[2]  # pure str array, df$emp_name is not pure str vec
+})
+
 df[c(TRUE, TRUE, FALSE, FALSE, FALSE), ]  # select by rows
 df[df$emp_id < 3, ]  # select by rows with predicate
 subset(df, emp_id < 3)  # same with subset
