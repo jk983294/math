@@ -90,6 +90,8 @@ inline double calc_avg_return(double total_ret, int n) {
  * @param top_n 每轮最大持有ins, -1表示没有限制
  * @param sticky true表示上一轮如果没有到平仓线,则保留,直到平仓阈值触发, false表示每轮只按signal强度,不考虑上轮持仓
  * @param cost 每笔的滑点佣金, 在每笔交易前收取
+ * @param pre_close_ret_t 提前close仓位的条件,如果收益大于该阈值
+ * @param pre_close_tick_t 提前close仓位的条件,如果持仓时间大于该阈值
  */
 struct TickSimStat {
     TickSimStat(int total, int ins_num) : m_total{total}, m_ins_num{ins_num} {
@@ -115,6 +117,10 @@ struct TickSimStat {
                 std::fill(sigs_.begin(), sigs_.end(), NAN);
             } else {
                 std::copy(signals + offset, signals + offset + m_ins_num, sigs_.begin());
+                if (m_is_neutral) {
+                    double mean_ = mean(sigs_);
+                    vs_minus_inplace(sigs_, mean_);
+                }
             }
             int real_n = m_top_n;
             if (m_top_n > 0) {
@@ -199,6 +205,10 @@ struct TickSimStat {
     void set_top_n(int top_n) { m_top_n = top_n; }
     void set_pre_close_tick_t(int pre_close_tick_t) { m_pre_close_tick_t = pre_close_tick_t; }
     void set_sticky(bool sticky) { m_sticky = sticky; }
+    void set_is_neutral(bool is_neutral) {
+        m_is_neutral = is_neutral;
+        if (m_is_neutral && m_top_n % 2 == 1) m_top_n -= 1;
+    }
     void set_ti_num(int ti_num) {
         m_ti_num = ti_num;
         if (m_ti_num > 0) m_clear_ticks.resize(m_ti_num, false);
@@ -241,6 +251,7 @@ private:
         hold_ret[ii] = 0;
     }
     int choose_top_n() {
+        if (m_is_neutral) return neutral_choose_top_n();
         int tmp_n = 0;
         std::vector<std::pair<double, int>> sort_array;
         for (int ii = 0; ii < m_ins_num; ++ii) {
@@ -273,6 +284,52 @@ private:
         } else {
             return tmp_n + (int)sort_array.size();
         }
+    }
+    int neutral_choose_top_n() {
+        int pos_n = 0, neg_n = 0;
+        std::vector<std::pair<double, int>> sort_array_pos;
+        std::vector<std::pair<double, int>> sort_array_neg;
+        for (int ii = 0; ii < m_ins_num; ++ii) {
+            if (isvalid(sigs_[ii])) {
+                // 没被选中, 但是没到平仓阈值,继续保留
+                if (m_sticky) {
+                    if (ii2status[ii] > 0 && sigs_[ii] > m_close_t) {
+                        ++pos_n;
+                    } else if (ii2status[ii] < 0 && sigs_[ii] < -m_close_t) {
+                        ++neg_n;
+                    } else if (sigs_[ii] > 0.) {
+                        sort_array_pos.emplace_back(std::abs(sigs_[ii]), ii);
+                    } else {
+                        sort_array_neg.emplace_back(std::abs(sigs_[ii]), ii);
+                    }
+                }
+            }
+        }
+
+        std::sort(sort_array_pos.begin(), sort_array_pos.end(),
+                  [](const auto& l, const auto& r) { return l.first > r.first; });
+        int pos_need = m_top_n / 2 - pos_n;
+        if (pos_need < (int)sort_array_pos.size()) {
+            for (int i = pos_need; i < (int)sort_array_pos.size(); ++i) {
+                sigs_[sort_array_pos[i].second] = NAN;  // 消除掉不需要 ii signal
+            }
+            pos_n += pos_need;
+        } else {
+            pos_n += (int)sort_array_pos.size();
+        }
+
+        std::sort(sort_array_neg.begin(), sort_array_neg.end(),
+                  [](const auto& l, const auto& r) { return l.first > r.first; });
+        int neg_need = m_top_n / 2 - pos_n;
+        if (neg_need < (int)sort_array_neg.size()) {
+            for (int i = neg_need; i < (int)sort_array_neg.size(); ++i) {
+                sigs_[sort_array_neg[i].second] = NAN;  // 消除掉不需要 ii signal
+            }
+            pos_n += neg_need;
+        } else {
+            pos_n += (int)sort_array_neg.size();
+        }
+        return pos_n + neg_n;
     }
 
     double calc_weight() {
@@ -308,6 +365,7 @@ private:
     int m_pre_close_tick_t{-1};
     bool m_is_signal_weighted{false};
     bool m_sticky{true};
+    bool m_is_neutral{false};
     double m_open_t{0};
     double m_close_t{0};
     double m_cost{0};
@@ -322,7 +380,7 @@ private:
 template <typename T, typename T1>
 std::vector<double> calc_bar_return_series(const T* signals, const T1* rets, int total, int ins_num,
                                            bool is_signal_weighted, double open_t, double close_t, int top_n = -1,
-                                           bool sticky = true, double cost = 0) {
+                                           bool sticky = true, double cost = 0, bool neutral = false) {
     TickSimStat stat(total, ins_num);
     stat.set_is_signal_weighted(is_signal_weighted);
     stat.set_open_t(open_t);
@@ -330,18 +388,20 @@ std::vector<double> calc_bar_return_series(const T* signals, const T1* rets, int
     stat.set_top_n(top_n);
     stat.set_sticky(sticky);
     stat.set_cost(cost);
+    stat.set_is_neutral(neutral);
     stat.calc_bar_return_series(signals, rets);
     return stat.get_navs();
 }
 
 template <typename T, typename T1>
 std::vector<int> calc_hold_tick(const T* signals, const T1* rets, int total, int ins_num, double open_t, double close_t,
-                                int top_n = -1, bool sticky = true) {
+                                int top_n = -1, bool sticky = true, bool neutral = false) {
     TickSimStat stat(total, ins_num);
     stat.set_open_t(open_t);
     stat.set_close_t(close_t);
     stat.set_top_n(top_n);
     stat.set_sticky(sticky);
+    stat.set_is_neutral(neutral);
     stat.calc_bar_return_series(signals, rets);
     return stat.get_hold_ticks();
 }
@@ -358,10 +418,10 @@ std::vector<int> calc_hold_tick(const T* signals, const T1* rets, int total, int
 template <typename T, typename T1>
 std::vector<double> calc_bar_return_series(const std::vector<T>& signals, const std::vector<T1>& rets, int ins_num,
                                            bool is_signal_weighted, double open_t, double close_t, int top_n = -1,
-                                           bool sticky = true, double cost = 0) {
+                                           bool sticky = true, double cost = 0, bool neutral = false) {
     int total = (int)signals.size();
     return calc_bar_return_series(signals.data(), rets.data(), total, ins_num, is_signal_weighted, open_t, close_t,
-                                  top_n, sticky, cost);
+                                  top_n, sticky, cost, neutral);
 }
 
 template <typename T, typename T1>

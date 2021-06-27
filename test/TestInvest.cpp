@@ -180,3 +180,23 @@ TEST_CASE("clear last n ticks", "[calc_bar_return_series]") {
     REQUIRE(ornate::FloatEqual(nav7, nav[8]));
     REQUIRE(ornate::FloatEqual(nav7, nav[9]));
 }
+
+TEST_CASE("calc_bar_return_series neutral 2 ins", "[calc_bar_return_series]") {
+    std::vector<double> signals = {1, 2, NAN, NAN, -1, -2, -1, 2};
+    std::vector<double> rets = {0.5, -0.5, NAN, NAN, -0.5, 0.5, 0, 0};
+    int ins_num = 2, top_n = 2;
+    std::vector<double> nav = ornate::calc_bar_return_series(signals, rets, ins_num, false, 0, 0, top_n, true, 0, true);
+    double nav0 = ((1 - rets[0]) + (1 + rets[1])) / top_n;
+    double nav1 = nav0 * ((1 + rets[4]) + (1 - rets[5])) / top_n;
+
+    REQUIRE(ornate::FloatEqual(nav0, nav[0]));
+    REQUIRE(ornate::FloatEqual(nav0, nav[1]));
+    REQUIRE(ornate::FloatEqual(nav1, nav[2]));
+    REQUIRE(ornate::FloatEqual(nav1, nav[3]));
+
+    nav = ornate::calc_bar_return_series(signals, rets, ins_num, true, 0, 0, top_n, true, 0, true);
+    REQUIRE(ornate::FloatEqual(nav0, nav[0]));
+    REQUIRE(ornate::FloatEqual(nav0, nav[1]));
+    REQUIRE(ornate::FloatEqual(nav1, nav[2]));
+    REQUIRE(ornate::FloatEqual(nav1, nav[3]));
+}
