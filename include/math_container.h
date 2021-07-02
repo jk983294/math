@@ -127,6 +127,16 @@ struct rolling_pointer_container {
         }
     }
 
+    const T *get_ld_old_row() {
+        if (m_count >= window_size) {
+            int old_index = m_head_index - window_size + 1;
+            if (old_index < 0) old_index += window_size;
+            return m_container[old_index];
+        } else {
+            return m_container[0];
+        }
+    }
+
     const T *get_new_row() { return m_container[m_head_index]; }
 
     /**

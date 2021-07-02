@@ -1186,7 +1186,6 @@ public:
     void set_param(const std::string& key, const std::string& value) {}
 
     void push(TData value, stat& st, Cell* start_cell) {
-        ++m_count;
         int oldest_seq = st.seq - capacity + 2;
         int ptr = st.front;
         for (; ptr != st.rear && start_cell[ptr].seq <= oldest_seq; ptr = (ptr + 1) % capacity)
@@ -1240,11 +1239,13 @@ struct rolling_mq_index_rb_range : public rolling_mq_rb_range<TData, TCmp> {
     using rolling_mq_rb_range<TData, TCmp>::capacity;
     using rolling_mq_rb_range<TData, TCmp>::push;
     using rolling_mq_rb_range<TData, TCmp>::top_index;
+    using rolling_mq_rb_range<TData, TCmp>::m_count;
 
     explicit rolling_mq_index_rb_range(int column_size_) : rolling_mq_rb_range<TData, TCmp>(column_size_) {}
 
     template <typename T, typename TOut>
     void operator()(const T* old_row, const T* new_row, TOut* output) {
+        ++m_count;
         for (int i = 0; i < m_column_size; ++i) {
             auto& st = stats[i];
             auto* start_cell = _data.data() + i * capacity;
@@ -1263,11 +1264,13 @@ struct rolling_mq_percent_rb_range : public rolling_mq_rb_range<TData, TCmp> {
     using rolling_mq_rb_range<TData, TCmp>::capacity;
     using rolling_mq_rb_range<TData, TCmp>::push;
     using rolling_mq_rb_range<TData, TCmp>::top_percent;
+    using rolling_mq_rb_range<TData, TCmp>::m_count;
 
     explicit rolling_mq_percent_rb_range(int column_size_) : rolling_mq_rb_range<TData, TCmp>(column_size_) {}
 
     template <typename T, typename TOut>
     void operator()(const T* old_row, const T* new_row, TOut* output) {
+        ++m_count;
         for (int i = 0; i < m_column_size; ++i) {
             auto& st = stats[i];
             auto* start_cell = _data.data() + i * capacity;
@@ -1286,11 +1289,13 @@ struct rolling_mq_value_rb_range : public rolling_mq_rb_range<TData, TCmp> {
     using rolling_mq_rb_range<TData, TCmp>::capacity;
     using rolling_mq_rb_range<TData, TCmp>::push;
     using rolling_mq_rb_range<TData, TCmp>::top;
+    using rolling_mq_rb_range<TData, TCmp>::m_count;
 
     explicit rolling_mq_value_rb_range(int column_size_) : rolling_mq_rb_range<TData, TCmp>(column_size_) {}
 
     template <typename T, typename TOut>
     void operator()(const T* old_row, const T* new_row, TOut* output) {
+        ++m_count;
         for (int i = 0; i < m_column_size; ++i) {
             auto& st = stats[i];
             auto* start_cell = _data.data() + i * capacity;
