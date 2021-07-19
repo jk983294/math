@@ -155,6 +155,145 @@ struct rolling_pointer_container {
         m_container[m_head_index] = data;
     }
 };
+
+template <typename T = double>
+struct rolling_data_container2 {
+    int m_size1{-1}, m_size2{-1};
+    int window_size{-1};
+    int m_column_size{-1};
+    int m_head_index{-1};
+    int m_count{0};
+    std::vector<std::vector<T>> m_container;
+
+    rolling_data_container2() = default;
+
+    rolling_data_container2(int size1, int size2, int column_size_) { set(size1, size2, column_size_); }
+
+    void clear() {
+        m_head_index = -1;
+        m_count = 0;
+    }
+
+    void set(int size1, int size2, int m_column_size_) {
+        m_size1 = size1;
+        m_size2 = size2;
+        window_size = std::max(size1, size2) + 1;
+        m_column_size = m_column_size_;
+        m_container.resize(window_size);
+        for (auto &c : m_container) c.resize(m_column_size);
+    }
+
+    const T *get_old_row0() {
+        if (m_count >= m_size1 + 1) {
+            int old_index = m_head_index - m_size1;
+            if (old_index < 0) old_index += window_size;
+            return m_container[old_index].data();
+        } else {
+            return nullptr;
+        }
+    }
+
+    const T *get_old_row1() {
+        if (m_count >= m_size2 + 1) {
+            int old_index = m_head_index - m_size2;
+            if (old_index < 0) old_index += window_size;
+            return m_container[old_index].data();
+        } else {
+            return nullptr;
+        }
+    }
+
+    const T *get_new_row() { return m_container[m_head_index].data(); }
+
+    /**
+     * @param idx [0, ts_window)
+     */
+    const T *get_row_by_idx(int idx) {
+        idx = m_head_index - idx;
+        if (idx < 0) idx += window_size;
+        return m_container[idx].data();
+    }
+
+    template <typename U>
+    void push(const std::vector<U> &data) {
+        ++m_count;
+        ++m_head_index;
+        if (m_head_index == window_size) m_head_index = 0;
+        detail::_data_copy2vector(data.data(), m_container[m_head_index], m_column_size);
+    }
+
+    std::vector<T> &get_push_row() {
+        ++m_count;
+        ++m_head_index;
+        if (m_head_index == window_size) m_head_index = 0;
+        return m_container[m_head_index];
+    }
+};
+
+template <typename T>
+struct rolling_pointer_container2 {
+    int m_size1{-1}, m_size2{-1};
+    int window_size{-1};
+    int m_column_size{-1};
+    int m_head_index{-1};
+    int m_count{0};
+    std::vector<const T *> m_container;
+
+    rolling_pointer_container2() = default;
+
+    rolling_pointer_container2(int size1, int size2, int column_size_) { set(size1, size2, column_size_); }
+
+    void clear() {
+        m_head_index = -1;
+        m_count = 0;
+    }
+
+    void set(int size1, int size2, int m_column_size_) {
+        m_size1 = size1;
+        m_size2 = size2;
+        window_size = std::max(size1, size2) + 1;
+        m_column_size = m_column_size_;
+        m_container.resize(window_size, nullptr);
+    }
+
+    const T *get_old_row0() {
+        if (m_count >= m_size1 + 1) {
+            int old_index = m_head_index - m_size1;
+            if (old_index < 0) old_index += window_size;
+            return m_container[old_index];
+        } else {
+            return nullptr;
+        }
+    }
+
+    const T *get_old_row1() {
+        if (m_count >= m_size2 + 1) {
+            int old_index = m_head_index - m_size2;
+            if (old_index < 0) old_index += window_size;
+            return m_container[old_index];
+        } else {
+            return nullptr;
+        }
+    }
+
+    const T *get_new_row() { return m_container[m_head_index]; }
+
+    /**
+     * @param idx [0, ts_window)
+     */
+    const T *get_row_by_idx(int idx) {
+        idx = m_head_index - idx;
+        if (idx < 0) idx += window_size;
+        return m_container[idx];
+    }
+
+    void push(const T *data) {
+        ++m_count;
+        ++m_head_index;
+        if (m_head_index == window_size) m_head_index = 0;
+        m_container[m_head_index] = data;
+    }
+};
 }  // namespace ornate
 
 #endif
