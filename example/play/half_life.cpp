@@ -38,7 +38,9 @@ int main() {
     for (int i = 0; i < window; ++i) {
         double pcor = ornate::corr(fwd_sum_ret.data(), fwd_sum_ret.data() + i * ins_num, (n - i) * ins_num);
         double acf = ornate::acf(fwd_sum_ret.data(), fwd_sum_ret.size(), i * ins_num);
-        printf("shift=%d, %f %f, pcor=%f, acf=%f\n", i, fwd_sum_ret[0], fwd_sum_ret[i * ins_num], pcor, acf);
+        double s_acf = ornate::skip_acf(fwd_sum_ret.data(), fwd_sum_ret.size(), ins_num, i * ins_num);
+        printf("shift=%d, %f %f, pcor=%f, acf=%f, s_acf=%f\n", i, fwd_sum_ret[0], fwd_sum_ret[i * ins_num], pcor, acf,
+               s_acf);
     }
     printf("half life=%d", ornate::acf_half_life(fwd_sum_ret.data(), 59, fwd_sum_ret.size(), ins_num));
     return 0;

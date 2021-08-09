@@ -1182,6 +1182,17 @@ template <typename T>
 std::tuple<double, double, double> lr_reduce_outlier(std::vector<T> &x, double range = 3.0) {
     return lr_reduce_outlier(x.data(), x.size(), range);
 }
+
+template <typename T = float>
+double skip_acf(const T *x, int num, int ins_num, int shift) {
+    std::vector<double> acfs = skip_corr(x, x + shift, num - shift, ins_num);
+    return mean(acfs);
+}
+
+template <typename T = float>
+double skip_acf(const std::vector<T> &x, int ins_num, int shift) {
+    return skip_acf(x.data(), (int)x.size(), ins_num, shift);
+}
 }  // namespace ornate
 
 #endif
