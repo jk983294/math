@@ -58,6 +58,12 @@ struct rolling_mean_rb_range {
         for (auto& stat : stats) stat.clear();
     }
 
+    double warm_up() {
+        double ret = 0.;
+        for (auto& stat : stats) ret += stat.m_valid_count;
+        return ret / int(stats.size() + 1);
+    }
+
     template <typename T, typename TOut>
     void full_single(int idx, const T* _row, TOut* output) {
         for (int i = 0; i < m_column_size; ++i) {
@@ -136,6 +142,12 @@ struct rolling_sum_rb_range {
 
     void init() {
         for (auto& stat : stats) stat.clear();
+    }
+
+    double warm_up() {
+        double ret = 0.;
+        for (auto& stat : stats) ret += stat.m_valid_count;
+        return ret / int(stats.size() + 1);
     }
 
     template <typename T, typename TOut>
@@ -227,6 +239,12 @@ struct rolling_prod_rb_range {
         for (auto& stat : stats) stat.clear();
     }
 
+    double warm_up() {
+        double ret = 0.;
+        for (auto& stat : stats) ret += stat.m_valid_count;
+        return ret / int(stats.size() + 1);
+    }
+
     template <typename T, typename TOut>
     void full_single(int idx, const T* _row, TOut* output) {
         for (int i = 0; i < m_column_size; ++i) {
@@ -267,6 +285,7 @@ struct rolling_delay_rb_range {
     void set_row_size(int row) {}
     void set_param(const std::string& key, const std::string& value) {}
     void init() {}
+    double warm_up() { return 0.; }
 };
 
 struct rolling_delta_rb_range {
@@ -290,6 +309,7 @@ struct rolling_delta_rb_range {
     void set_row_size(int row) {}
     void set_param(const std::string& key, const std::string& value) {}
     void init() {}
+    double warm_up() { return 0.; }
 };
 
 struct rolling_pct_rb_range {
@@ -313,6 +333,7 @@ struct rolling_pct_rb_range {
     void set_row_size(int row) {}
     void set_param(const std::string& key, const std::string& value) {}
     void init() {}
+    double warm_up() { return 0.; }
 };
 
 struct rolling_variance_rb_range {
@@ -380,6 +401,12 @@ struct rolling_variance_rb_range {
 
     void init() {
         for (auto& stat : stats) stat.clear();
+    }
+
+    double warm_up() {
+        double ret = 0.;
+        for (auto& stat : stats) ret += stat.m_valid_count;
+        return ret / int(stats.size() + 1);
     }
 
     template <typename T, typename TOut>
@@ -474,6 +501,12 @@ struct rolling_std_rb_range {
         for (auto& stat : stats) stat.clear();
     }
 
+    double warm_up() {
+        double ret = 0.;
+        for (auto& stat : stats) ret += stat.m_valid_count;
+        return ret / int(stats.size() + 1);
+    }
+
     template <typename T, typename TOut>
     void full_single(int idx, const T* _row, TOut* output) {
         for (int i = 0; i < m_column_size; ++i) {
@@ -566,6 +599,12 @@ struct rolling_zscore_rb_range {
         for (auto& stat : stats) stat.clear();
     }
 
+    double warm_up() {
+        double ret = 0.;
+        for (auto& stat : stats) ret += stat.m_valid_count;
+        return ret / int(stats.size() + 1);
+    }
+
     template <typename T, typename TOut>
     void full_single(int idx, const T* _row, TOut* output) {
         for (int i = 0; i < m_column_size; ++i) {
@@ -640,6 +679,12 @@ struct rolling_score_rb_range {
 
     void init() {
         for (auto& stat : stats) stat.clear();
+    }
+
+    double warm_up() {
+        double ret = 0.;
+        for (auto& stat : stats) ret += stat.m_valid_count;
+        return ret / int(stats.size() + 1);
     }
 
     template <typename T, typename TOut>
@@ -727,6 +772,12 @@ struct rolling_cov_rb_range {
 
     void init() {
         for (auto& stat : stats) stat.clear();
+    }
+
+    double warm_up() {
+        double ret = 0.;
+        for (auto& stat : stats) ret += stat.m_valid_count;
+        return ret / int(stats.size() + 1);
     }
 
     template <typename T, typename TOut>
@@ -819,6 +870,12 @@ struct rolling_corr_rb_range {
 
     void init() {
         for (auto& stat : stats) stat.clear();
+    }
+
+    double warm_up() {
+        double ret = 0.;
+        for (auto& stat : stats) ret += stat.m_valid_count;
+        return ret / int(stats.size() + 1);
     }
 
     template <typename T, typename TOut>
@@ -920,6 +977,12 @@ struct rolling_skew_rb_range {
         for (auto& stat : stats) stat.clear();
     }
 
+    double warm_up() {
+        double ret = 0.;
+        for (auto& stat : stats) ret += stat.m_valid_count;
+        return ret / int(stats.size() + 1);
+    }
+
     template <typename T, typename TOut>
     void full_single(int idx, const T* _row, TOut* output) {
         for (int i = 0; i < m_column_size; ++i) {
@@ -1014,6 +1077,12 @@ struct rolling_kurtosis_rb_range {
 
     void init() {
         for (auto& stat : stats) stat.clear();
+    }
+
+    double warm_up() {
+        double ret = 0.;
+        for (auto& stat : stats) ret += stat.m_valid_count;
+        return ret / int(stats.size() + 1);
     }
 
     template <typename T, typename TOut>
@@ -1117,6 +1186,12 @@ struct rolling_decay_rb_range {
         for (auto& stat : stats) stat.clear();
     }
 
+    double warm_up() {
+        double ret = 0.;
+        for (auto& stat : stats) ret += stat.m_valid_count;
+        return ret / int(stats.size() + 1);
+    }
+
     template <typename T, typename TOut>
     void full_single(int idx, int window, const T* _row, TOut* output) {
         ++count;
@@ -1173,6 +1248,13 @@ public:
     void init() {
         for (auto& st : stats) st.clear();
         m_count = 0;
+    }
+
+    double warm_up() {
+        double ret = 0.;
+        for (auto& stat : stats) ret += stat.seq;
+        for (auto& d : _data) ret += d.data;
+        return ret / int(stats.size() + _data.size() + 1);
     }
 
     void set_ins_num(int ins_num) {
@@ -1334,6 +1416,12 @@ public:
         for (auto& st : stats) st.m_valid_count = 0;
     }
 
+    double warm_up() {
+        double ret = 0.;
+        for (auto& stat : stats) ret += stat.m_valid_count;
+        return ret / int(stats.size() + 1);
+    }
+
     void set_ins_num(int ins_num) {
         m_column_size = ins_num;
         stats.resize(m_column_size);
@@ -1468,6 +1556,11 @@ struct rolling_rank_count_rb_range {
     explicit rolling_rank_count_rb_range(int column_size_) : m_column_size{column_size_} {}
 
     void init() { m_count = 0; }
+    double warm_up() {
+        long double ret = 0.;
+        for (auto& stat : m_container) ret += stat;
+        return ret / (m_container.size() + m_count + 1);
+    }
 
     void set_ins_num(int ins_num) { m_column_size = ins_num; }
 
@@ -1525,6 +1618,11 @@ struct rolling_rank2_count_rb_range {
     }
 
     void init() { m_count = 0; }
+    double warm_up() {
+        long double ret = 0.;
+        for (auto& stat : m_container) ret += stat;
+        return ret / (m_container.size() + m_count + window_size + 1);
+    }
 
     double calc(const T* x, T new_value) {
         if (std::isnan(new_value) || m_count < window_size) {
@@ -1689,6 +1787,11 @@ struct rolling_regression2_rb_range {
 
     void init() {
         for (auto& stat : stats) stat.clear();
+    }
+    double warm_up() {
+        double ret = 0.;
+        for (auto& stat : stats) ret += stat.m_valid_count;
+        return ret / int(stats.size() + 1);
     }
 
     template <typename T>
@@ -1860,6 +1963,11 @@ struct rolling_regression3_rb_range {
     void init() {
         for (auto& stat : stats) stat.clear();
     }
+    double warm_up() {
+        double ret = 0.;
+        for (auto& stat : stats) ret += stat.m_valid_count;
+        return ret / int(stats.size() + 1);
+    }
 
     template <typename T>
     void full_single(int idx, const T* new_y, const T* new_x1, const T* new_x2) {
@@ -1959,6 +2067,11 @@ struct rolling_ema_hl_rb_range {
 
     void init() {
         for (auto& stat : stats) stat.clear();
+    }
+    double warm_up() {
+        double ret = 0.;
+        for (auto& stat : stats) ret += stat.m_valid_count;
+        return ret / int(stats.size() + 1);
     }
 
     template <typename T, typename TOut>
@@ -2068,6 +2181,11 @@ struct rolling_ema_hl2_rb_range {
 
     void init() {
         for (auto& stat : stats) stat.clear();
+    }
+    double warm_up() {
+        double ret = 0.;
+        for (auto& stat : stats) ret += stat.m_valid_count;
+        return ret / int(stats.size() + 1);
     }
 
     template <typename T, typename TOut>
@@ -2211,6 +2329,11 @@ struct rolling_ols2_rb_range {
 
     void init() {
         for (auto& stat : stats) stat.clear();
+    }
+    double warm_up() {
+        double ret = 0.;
+        for (auto& stat : stats) ret += stat.m_valid_count;
+        return ret / int(stats.size() + 1);
     }
 
     template <typename T>
@@ -2356,6 +2479,11 @@ struct rolling_ols3_rb_range {
     void init() {
         for (auto& stat : stats) stat.clear();
     }
+    double warm_up() {
+        double ret = 0.;
+        for (auto& stat : stats) ret += stat.m_valid_count;
+        return ret / int(stats.size() + 1);
+    }
 
     template <typename T>
     void full_single(int idx, const T* new_y, const T* new_x1, const T* new_x2) {
@@ -2413,6 +2541,11 @@ struct slope_no_intercept_rb_range {
 
     void init() {
         for (auto& stat : stats) stat.clear();
+    }
+    double warm_up() {
+        double ret = 0.;
+        for (auto& stat : stats) ret += stat.m_valid_count;
+        return ret / int(stats.size() + 1);
     }
 
     template <typename T, typename TOut>
@@ -2484,6 +2617,11 @@ struct slope_rb_range {
 
     void init() {
         for (auto& stat : stats) stat.clear();
+    }
+    double warm_up() {
+        double ret = 0.;
+        for (auto& stat : stats) ret += stat.m_valid_count;
+        return ret / int(stats.size() + 1);
     }
 
     template <typename T, typename TOut>
@@ -2572,6 +2710,11 @@ struct rolling_sharpe_rb_range {
     void init() {
         for (auto& stat : stats) stat.clear();
     }
+    double warm_up() {
+        double ret = 0.;
+        for (auto& stat : stats) ret += stat.m_valid_count;
+        return ret / int(stats.size() + 1);
+    }
 
     template <typename T, typename TOut>
     void full_single(int idx, const T* _row, TOut* output) {
@@ -2654,6 +2797,11 @@ struct rolling_scale_rb_range {
 
     void init() {
         for (auto& stat : stats) stat.clear();
+    }
+    double warm_up() {
+        double ret = 0.;
+        for (auto& stat : stats) ret += stat.m_valid_count;
+        return ret / (stats.size() + 1);
     }
 
     template <typename T, typename TOut>
@@ -2739,6 +2887,11 @@ struct rolling_rsharpe_rb_range {  // reverse sharpe = sd / mean
     void init() {
         for (auto& stat : stats) stat.clear();
     }
+    double warm_up() {
+        double ret = 0.;
+        for (auto& stat : stats) ret += stat.m_valid_count;
+        return ret / int(stats.size() + 1);
+    }
 
     template <typename T, typename TOut>
     void full_single(int idx, const T* _row, TOut* output) {
@@ -2823,6 +2976,11 @@ struct rolling_dcor_rb_range {
     void init() {
         for (auto& stat : stats) stat.clear();
     }
+    double warm_up() {
+        double ret = 0.;
+        for (auto& stat : stats) ret += stat.m_valid_count;
+        return ret / int(stats.size() + 1);
+    }
 
     template <typename T, typename TOut>
     void full_single(int idx, const T* x_row, const T* y_row, TOut* output) {
@@ -2879,6 +3037,7 @@ struct ts_cross_rb_range {
 
     void set_row_size(int row) {}
     void set_param(const std::string& key, const std::string& value) {}
+    double warm_up() { return 0.; }
 };
 
 /**
@@ -2914,6 +3073,11 @@ struct rolling_backward_cpn_rb_range {
 
     void init() {
         for (auto& stat : stats) stat.clear();
+    }
+    double warm_up() {
+        double ret = 0.;
+        for (auto& stat : stats) ret += stat.m_count;
+        return ret / int(stats.size() + 1);
     }
 
     template <typename T, typename TOut>
@@ -2972,6 +3136,11 @@ struct rolling_ts_acp_rb_range {
 
     void init() {
         for (auto& stat : stats) stat.clear();
+    }
+    double warm_up() {
+        double ret = 0.;
+        for (auto& stat : stats) ret += stat.m_count;
+        return ret / int(stats.size() + 1);
     }
 
     template <typename T>

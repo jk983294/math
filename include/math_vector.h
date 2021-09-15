@@ -362,7 +362,7 @@ void rank1(INOUT std::vector<T>& n) {
 }
 
 template <typename T>
-double mean(const T* data, int32_t n) {
+inline double mean(const T* data, int32_t n) {
     double ret = 0;
     uint32_t count = 0;
     for (int32_t i = 0; i < n; i++) {
@@ -377,11 +377,43 @@ double mean(const T* data, int32_t n) {
         return NAN;
 }
 
+template <>
+inline double mean(const bool* data, int32_t n) {
+    double ret = 0;
+    uint32_t count = 0;
+    for (int32_t i = 0; i < n; i++) {
+        if (isvalid(data[i])) {
+            ret += data[i];
+            count++;
+        }
+    }
+    if (count > 0)
+        return ret / count;
+    else
+        return NAN;
+}
+
+inline double mean(const std::vector<bool>& data, int32_t start_idx = -1, int32_t end_idx = -1) {
+    end_idx = static_cast<int32_t>(data.size());
+    double ret = 0;
+    uint32_t count = 0;
+    for (int32_t i = 0; i < end_idx; i++) {
+        if (data[i]) {
+            ret += 1;
+            count++;
+        }
+    }
+    if (count > 0)
+        return ret / count;
+    else
+        return NAN;
+}
+
 /**
  * get mean. will consider nan, [start_idx, end_idx), -1 to use all
  */
 template <typename T>
-double mean(IN const std::vector<T>& n, int32_t start_idx = -1, int32_t end_idx = -1) {
+inline double mean(IN const std::vector<T>& n, int32_t start_idx = -1, int32_t end_idx = -1) {
     if (start_idx < 0) start_idx = 0;
     if (end_idx < 0) end_idx = static_cast<int32_t>(n.size());
     return mean(n.data() + start_idx, end_idx - start_idx);

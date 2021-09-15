@@ -467,8 +467,8 @@ double cov(const std::vector<T> &x, const std::vector<T> &y) {
 }
 
 template <typename T = float>
-T std(const T *data, int32_t n) {
-    T sum = 0;
+double std(const T *data, int32_t n) {
+    double sum = 0;
     int32_t count = 0;
     for (int32_t i = 0; i < n; i++) {
         if (std::isfinite(data[i])) {
@@ -477,7 +477,7 @@ T std(const T *data, int32_t n) {
         }
     }
     if (count == 0) return NAN;
-    T mean_ = sum / count;
+    double mean_ = sum / count;
     sum = 0;
     for (int32_t i = 0; i < n; i++) {
         if (std::isfinite(data[i])) {
@@ -488,7 +488,7 @@ T std(const T *data, int32_t n) {
 }
 
 template <typename T = float>
-T std(const std::vector<T> &data, int32_t start_idx = -1, int32_t end_idx = -1) {
+double std(const std::vector<T> &data, int32_t start_idx = -1, int32_t end_idx = -1) {
     if (start_idx < 0) start_idx = 0;
     if (end_idx < 0) end_idx = static_cast<int32_t>(data.size());
     return std(&data[start_idx], end_idx - start_idx);

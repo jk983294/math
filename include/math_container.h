@@ -2,6 +2,7 @@
 #define ORNATE_MATH_CONTAINER_H
 
 #include "math_utils.h"
+#include <math_vector.h>
 
 namespace ornate {
 
@@ -40,7 +41,7 @@ struct rolling_data_container {
     rolling_data_container() = default;
 
     rolling_data_container(int size, int m_column_size_) : window_size{size + 1}, m_column_size{m_column_size_} {
-        m_container.resize(window_size, std::vector<T>(m_column_size));
+        m_container.resize(window_size, std::vector<T>(m_column_size, T()));
     }
 
     void clear() {
@@ -51,21 +52,24 @@ struct rolling_data_container {
     void set(int size, int m_column_size_) {
         window_size = size + 1;
         m_column_size = m_column_size_;
-        m_container.resize(window_size);
-        for (auto &c : m_container) c.resize(m_column_size);
+        m_container.resize(window_size, std::vector<T>(m_column_size, T()));
     }
 
     const T *get_old_row() {
-        if (m_count >= window_size) {
-            int old_index = m_head_index - window_size + 1;
-            if (old_index < 0) old_index += window_size;
-            return m_container[old_index].data();
-        } else {
-            return nullptr;
-        }
+        return get_old_row_(m_count, m_head_index);
+    }
+    const T* get_next_old_row() {
+        int next_idx = m_head_index + 1;
+        if (next_idx == window_size) next_idx = 0;
+        return get_old_row_(m_count + 1, next_idx);
     }
 
     const T *get_new_row() { return m_container[m_head_index].data(); }
+    const T* get_next_new_row() {
+        int next_idx = m_head_index + 1;
+        if (next_idx == window_size) next_idx = 0;
+        return m_container[next_idx].data();
+    }
 
     /**
      * @param idx [0, ts_window)
@@ -89,6 +93,32 @@ struct rolling_data_container {
         ++m_head_index;
         if (m_head_index == window_size) m_head_index = 0;
         return m_container[m_head_index];
+    }
+
+    double warm_up(bool all=false) {
+        double ret = 0.;
+        if (!all) {
+            auto* ptr = get_next_old_row();
+            if (ptr) ret += mean(ptr, m_column_size);
+            auto* ptr1 = get_next_new_row();
+            if (ptr1) ret += mean(ptr1, m_column_size);
+        } else {
+            for (const auto& d : m_container) {
+                ret += mean(d);
+            }
+        }
+        return ret;
+    }
+
+private:
+    const T* get_old_row_(int count, int next_idx) {
+        if (count >= window_size) {
+            int old_index = next_idx - window_size + 1;
+            if (old_index < 0) old_index += window_size;
+            return m_container[old_index].data();
+        } else {
+            return nullptr;
+        }
     }
 };
 
@@ -118,13 +148,13 @@ struct rolling_pointer_container {
     }
 
     const T *get_old_row() {
-        if (m_count >= window_size) {
-            int old_index = m_head_index - window_size + 1;
-            if (old_index < 0) old_index += window_size;
-            return m_container[old_index];
-        } else {
-            return nullptr;
-        }
+        return get_old_row_(m_count, m_head_index);
+    }
+
+    const T* get_next_old_row() {
+        int next_idx = m_head_index + 1;
+        if (next_idx == window_size) next_idx = 0;
+        return get_old_row_(m_count + 1, m_head_index);
     }
 
     const T *get_ld_old_row() {
@@ -138,6 +168,11 @@ struct rolling_pointer_container {
     }
 
     const T *get_new_row() { return m_container[m_head_index]; }
+    const T* get_next_new_row() {
+        int next_idx = m_head_index + 1;
+        if (next_idx == window_size) next_idx = 0;
+        return m_container[next_idx];
+    }
 
     /**
      * @param idx [0, ts_window)
@@ -153,6 +188,32 @@ struct rolling_pointer_container {
         ++m_head_index;
         if (m_head_index == window_size) m_head_index = 0;
         m_container[m_head_index] = data;
+    }
+
+    double warm_up(bool all=false) {
+        double ret = 0.;
+        if (!all) {
+            auto* ptr = get_next_old_row();
+            if (ptr) ret += mean(ptr, m_column_size);
+            auto* ptr1 = get_next_new_row();
+            if (ptr1) ret += mean(ptr1, m_column_size);
+        } else {
+            for (const auto& d : m_container) {
+                if (d) ret += mean(d, m_column_size);
+            }
+        }
+        return ret;
+    }
+
+private:
+    const T* get_old_row_(int count, int next_idx) {
+        if (count >= window_size) {
+            int old_index = next_idx - window_size + 1;
+            if (old_index < 0) old_index += window_size;
+            return m_container[old_index];
+        } else {
+            return nullptr;
+        }
     }
 };
 
@@ -180,30 +241,34 @@ struct rolling_data_container2 {
         window_size = std::max(size1, size2) + 1;
         m_column_size = m_column_size_;
         m_container.resize(window_size);
-        for (auto &c : m_container) c.resize(m_column_size);
+        for (auto& c : m_container) c.resize(m_column_size, T());
     }
 
     const T *get_old_row0() {
-        if (m_count >= m_size1 + 1) {
-            int old_index = m_head_index - m_size1;
-            if (old_index < 0) old_index += window_size;
-            return m_container[old_index].data();
-        } else {
-            return nullptr;
-        }
+        return get_old_row_(m_count, m_head_index, m_size1);
     }
 
     const T *get_old_row1() {
-        if (m_count >= m_size2 + 1) {
-            int old_index = m_head_index - m_size2;
-            if (old_index < 0) old_index += window_size;
-            return m_container[old_index].data();
-        } else {
-            return nullptr;
-        }
+        return get_old_row_(m_count, m_head_index, m_size2);
+    }
+
+    const T* get_next_old_row0() {
+        int next_idx = m_head_index + 1;
+        if (next_idx == window_size) next_idx = 0;
+        return get_old_row_(m_count + 1, next_idx, m_size1);
+    }
+    const T* get_next_old_row1() {
+        int next_idx = m_head_index + 1;
+        if (next_idx == window_size) next_idx = 0;
+        return get_old_row_(m_count + 1, next_idx, m_size2);
     }
 
     const T *get_new_row() { return m_container[m_head_index].data(); }
+    const T* get_next_new_row() {
+        int next_idx = m_head_index + 1;
+        if (next_idx == window_size) next_idx = 0;
+        return m_container[next_idx].data();
+    }
 
     /**
      * @param idx [0, ts_window)
@@ -227,6 +292,28 @@ struct rolling_data_container2 {
         ++m_head_index;
         if (m_head_index == window_size) m_head_index = 0;
         return m_container[m_head_index];
+    }
+
+    double warm_up() {
+        double ret = 0.;
+        auto* ptr = get_next_old_row0();
+        if (ptr) ret += mean(ptr, m_column_size);
+        auto* ptr1 = get_next_new_row();
+        if (ptr1) ret += mean(ptr1, m_column_size);
+        auto* ptr2 = get_next_old_row1();
+        if (ptr2) ret += mean(ptr2, m_column_size);
+        return ret;
+    }
+
+private:
+    const T* get_old_row_(int count, int next_idx, int size) {
+        if (count >= size + 1) {
+            int old_index = next_idx - size;
+            if (old_index < 0) old_index += window_size;
+            return m_container[old_index].data();
+        } else {
+            return nullptr;
+        }
     }
 };
 
@@ -257,26 +344,30 @@ struct rolling_pointer_container2 {
     }
 
     const T *get_old_row0() {
-        if (m_count >= m_size1 + 1) {
-            int old_index = m_head_index - m_size1;
-            if (old_index < 0) old_index += window_size;
-            return m_container[old_index];
-        } else {
-            return nullptr;
-        }
+        return get_old_row_(m_count, m_head_index, m_size1);
     }
 
     const T *get_old_row1() {
-        if (m_count >= m_size2 + 1) {
-            int old_index = m_head_index - m_size2;
-            if (old_index < 0) old_index += window_size;
-            return m_container[old_index];
-        } else {
-            return nullptr;
-        }
+        return get_old_row_(m_count, m_head_index, m_size2);
+    }
+
+    const T* get_next_old_row0() {
+        int next_idx = m_head_index + 1;
+        if (next_idx == window_size) next_idx = 0;
+        return get_old_row_(m_count + 1, next_idx, m_size1);
+    }
+    const T* get_next_old_row1() {
+        int next_idx = m_head_index + 1;
+        if (next_idx == window_size) next_idx = 0;
+        return get_old_row_(m_count + 1, next_idx, m_size2);
     }
 
     const T *get_new_row() { return m_container[m_head_index]; }
+    const T* get_next_new_row() {
+        int next_idx = m_head_index + 1;
+        if (next_idx == window_size) next_idx = 0;
+        return m_container[next_idx];
+    }
 
     /**
      * @param idx [0, ts_window)
@@ -292,6 +383,28 @@ struct rolling_pointer_container2 {
         ++m_head_index;
         if (m_head_index == window_size) m_head_index = 0;
         m_container[m_head_index] = data;
+    }
+
+    double warm_up() {
+        double ret = 0.;
+        auto* ptr = get_next_old_row0();
+        if (ptr) ret += mean(ptr, m_column_size);
+        auto* ptr1 = get_next_new_row();
+        if (ptr1) ret += mean(ptr1, m_column_size);
+        auto* ptr2 = get_next_old_row1();
+        if (ptr2) ret += mean(ptr2, m_column_size);
+        return ret;
+    }
+
+private:
+    const T* get_old_row_(int count, int next_idx, int size) {
+        if (count >= size + 1) {
+            int old_index = next_idx - size;
+            if (old_index < 0) old_index += window_size;
+            return m_container[old_index];
+        } else {
+            return nullptr;
+        }
     }
 };
 }  // namespace ornate
