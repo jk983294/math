@@ -66,7 +66,7 @@ struct variance_rolling {
                     m_data.pop_front();
                 }
             }
-            if (count < 2)
+            if (count <= 2)
                 variance = NAN;
             else
                 variance = SSE / (count - dof);
@@ -106,8 +106,8 @@ struct variance_rolling {
                 m_data.pop_front();
             }
         }
-        if (count < 2) variance = NAN;
-        variance = SSE / (count - dof);
+        if (count <= 2) variance = NAN;
+        else variance = SSE / (count - dof);
         return variance;
     }
 };
@@ -172,7 +172,7 @@ struct covariance_rolling {
                     m_dataB.pop_front();
                 }
             }
-            if (count < 2)
+            if (count <= 2)
                 covariance = NAN;
             else
                 covariance = CM / (count - dof);
@@ -225,7 +225,7 @@ struct covariance_rolling {
                 m_dataB.pop_front();
             }
         }
-        if (count < 2)
+        if (count <= 2)
             covariance = NAN;
         else
             covariance = CM / (count - dof);
@@ -356,7 +356,7 @@ struct regression2_rolling {
             sum_xy += x * y;
             ++m_valid_count;
         }
-        if (m_valid_count > 1) {
+        if (m_valid_count > 2) {
             b = (m_valid_count * sum_xy - sum_x * sum_y) / (m_valid_count * sum_x2 - sum_x * sum_x);
             a = (sum_y - b * sum_x) / m_valid_count;
         } else {
@@ -396,7 +396,7 @@ struct ols2_rolling {
             sum_xy += y * x;
             ++m_valid_count;
         }
-        if (m_valid_count > 0) {
+        if (m_valid_count > 2) {
             b = sum_xy / sum_x2;
         } else {
             b = NAN;
@@ -429,7 +429,7 @@ struct slope_no_intercept_rolling {
                 ++m_valid_count;
             }
         }
-        if (m_valid_count > 0)
+        if (m_valid_count > 2)
             return sum_xy / sum_x2;
         else
             return NAN;
@@ -464,7 +464,7 @@ struct slope_rolling {
                 ++m_valid_count;
             }
         }
-        if (m_valid_count > 0) {
+        if (m_valid_count > 2) {
             long double cov_xy = sum_xy * m_valid_count - sum_x * sum_y;
             long double var_x = sum_x2 * m_valid_count - sum_x * sum_x;
             return var_x > 0 ? cov_xy / var_x : NAN;

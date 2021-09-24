@@ -377,6 +377,22 @@ inline double mean(const T* data, int32_t n) {
         return NAN;
 }
 
+template <typename T>
+inline double stable_mean(const T* data, int32_t n) {
+    double ret = 0;
+    uint32_t count = 0;
+    for (int32_t i = 0; i < n; i++) {
+        if (isvalid(data[i])) {
+            count++;
+            ret += (data[i] - ret) / count;
+        }
+    }
+    if (count > 0)
+        return ret;
+    else
+        return NAN;
+}
+
 template <>
 inline double mean(const bool* data, int32_t n) {
     double ret = 0;

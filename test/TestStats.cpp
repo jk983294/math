@@ -14,6 +14,7 @@ TEST_CASE("math_stats", "[MathStats]") {
 
     SECTION("mean") {
         REQUIRE(ornate::mean(data.data(), data.size()) == 3.5);
+        REQUIRE(ornate::stable_mean(data.data(), data.size()) == 3.5);
         REQUIRE(ornate::mean_weighted(data, weight) == 3.5);
 
         vector<float> x{3, 2, NAN, 1, NAN};

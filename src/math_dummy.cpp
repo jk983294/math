@@ -98,7 +98,7 @@ double dummy_dcor(const std::vector<double>& x_, const std::vector<double>& y_) 
         ayy += y[i] * y[i];
         axy += x[i] * y[i];
     }
-    if (nv < 1) {
+    if (nv < 3) {
         return NAN;
     } else {
         long double d = axx * ayy;

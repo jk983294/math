@@ -85,7 +85,7 @@ struct rolling_variance_rb : public rolling_rb_base<double> {
             ++m_valid_count;
         }
 
-        if (m_valid_count > 1) {
+        if (m_valid_count > 2) {
             mean = total_sum / m_valid_count;
             variance = (total_square_sum - mean * mean * m_valid_count) / (m_valid_count - 1);
         } else {
@@ -144,7 +144,7 @@ struct rolling_cov_rb {
             ++m_valid_count;
         }
 
-        if (m_valid_count > 1) {
+        if (m_valid_count > 2) {
             double mean_x = sumx / m_valid_count;
             double mean_y = sumy / m_valid_count;
             covariance = (sumxy - mean_x * mean_y * m_valid_count) / (m_valid_count - 1);
@@ -208,7 +208,7 @@ struct rolling_corr_rb {
             ++m_valid_count;
         }
 
-        if (m_valid_count > 1) {
+        if (m_valid_count > 2) {
             double mean_x = sumx / m_valid_count;
             double mean_y = sumy / m_valid_count;
             double cov = (sumxy - mean_x * mean_y * m_valid_count) / (m_valid_count - 1);
@@ -265,7 +265,7 @@ struct rolling_skew_rb : public rolling_rb_base<double> {
             ++m_valid_count;
         }
 
-        if (m_valid_count >= 2) {
+        if (m_valid_count > 2) {
             double mean = total_x1 / m_valid_count;
             double mean2 = mean * mean;
             double var = total_x2 / m_valid_count - mean2;
@@ -319,7 +319,7 @@ struct rolling_kurtosis_rb : public rolling_rb_base<double> {
             ++m_valid_count;
         }
 
-        if (m_valid_count >= 2) {
+        if (m_valid_count > 2) {
             double mean = total_x1 / m_valid_count;
             double mean2 = mean * mean;
             double var = total_x2 / m_valid_count - mean2;
@@ -552,7 +552,7 @@ struct rolling_regression2_rb {
             ++m_valid_count;
         }
 
-        if (m_valid_count > 1) {
+        if (m_valid_count > 2) {
             b = (m_valid_count * sum_xy - sum_x * sum_y) / (m_valid_count * sum_x2 - sum_x * sum_x);
             a = (sum_y - b * sum_x) / m_valid_count;
         } else {
@@ -727,7 +727,7 @@ struct rolling_ols2_rb {
             ++m_valid_count;
         }
 
-        if (m_valid_count > 0) {
+        if (m_valid_count > 2) {
             b = sum_xy / sum_x2;
         } else {
             b = NAN;

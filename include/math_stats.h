@@ -190,7 +190,7 @@ int __cov(const T *x, const T *y, size_t num, double &cov_, double &std_x, doubl
         sum_y2 += y[i] * y[i];
         sum_xy += x[i] * y[i];
     }
-    if (count < 2) return count;
+    if (count <= 2) return count;
     double mean_x = sum_x / count;
     double mean_y = sum_y / count;
     cov_ = (sum_xy - mean_x * mean_y * count) / (count - 1);
@@ -456,7 +456,7 @@ int acf_half_life(const T *x, int max_life, int num, int shift_bulk = 1) {
 template <typename T = float>
 double cov(const T *x, const T *y, size_t num) {
     double cov_, std_x, std_y;
-    if (__cov(x, y, num, cov_, std_x, std_y) < 2) return NAN;
+    if (__cov(x, y, num, cov_, std_x, std_y) <= 2) return NAN;
     if (std_x < epsilon || std_y < epsilon) return NAN;
     return cov_;
 }
@@ -476,7 +476,7 @@ double std(const T *data, int32_t n) {
             ++count;
         }
     }
-    if (count == 0) return NAN;
+    if (count <= 2) return NAN;
     double mean_ = sum / count;
     sum = 0;
     for (int32_t i = 0; i < n; i++) {
@@ -505,7 +505,7 @@ bool _regression(const T *y, const T *x, size_t num, OUT T *a, OUT T *b, OUT T *
         nx[valid_num] = x[i];
         valid_num++;
     }
-    if (valid_num < 2) {
+    if (valid_num <= 2) {
         *a = NAN;
         *b = NAN;
         return false;
@@ -596,7 +596,7 @@ T _ols(const T *y, const T *x, size_t num) {
         sum_x2 += x[i] * x[i];
         valid_num++;
     }
-    if (valid_num < 1) {
+    if (valid_num < 3) {
         return NAN;
     }
     return sum_xy / sum_x2;
@@ -727,7 +727,7 @@ T _slope_no_intercept(const T *y, size_t num) {
         sum_x2 += i * i;
         valid_num++;
     }
-    if (valid_num < 1) {
+    if (valid_num < 3) {
         return NAN;
     }
     return sum_xy / sum_x2;
@@ -750,7 +750,7 @@ T _ts_slope(const T *y, size_t num) {
         sum_y += y[i];
         valid_num++;
     }
-    if (valid_num > 0) {
+    if (valid_num > 2) {
         long double cov_xy = sum_xy * valid_num - sum_x * sum_y;
         long double var_x = sum_x2 * valid_num - sum_x * sum_x;
         return var_x > 0 ? cov_xy / var_x : NAN;
@@ -774,7 +774,7 @@ T _ts_sharpe(const T *y, size_t num) {
         valid_num++;
     }
 
-    if (valid_num <= 1) return NAN;
+    if (valid_num <= 2) return NAN;
     long double mean = sum_y / valid_num;
     long double sd = sqrt((sum_y2 - mean * mean * valid_num) / (valid_num - 1.0));
     return sd > 0 ? mean / sd : NAN;
@@ -820,7 +820,7 @@ double math_skew(const T *data_, int num) {
             std_ += std::pow((data_[i] - mean_), 2);
         }
     }
-    if (valid_count < 2) return NAN;
+    if (valid_count <= 2) return NAN;
     std_ = sqrt(std_ / valid_count);
     if (std_ < 1e-7) return NAN;
     double ret = 0;
@@ -843,7 +843,7 @@ double math_kurtosis(const T *data_, int num) {
             std_ += std::pow((data_[i] - mean_), 2);
         }
     }
-    if (valid_count < 2) return NAN;
+    if (valid_count <= 2) return NAN;
     std_ = sqrt(std_ / valid_count);
     if (std_ < 1e-7) return NAN;
     double ret = 0;

@@ -347,7 +347,7 @@ struct rolling_variance_rb_range {
             m_valid_count = 0;
         }
         double calc(bool demean_) const {
-            if (m_valid_count > 1) {
+            if (m_valid_count > 2) {
                 if (demean_) {
                     double mean = total_sum / m_valid_count;
                     return (total_square_sum - mean * mean * m_valid_count) / (m_valid_count - 1);
@@ -445,7 +445,7 @@ struct rolling_std_rb_range {
             m_valid_count = 0;
         }
         double calc(bool demean_) const {
-            if (m_valid_count > 1) {
+            if (m_valid_count > 2) {
                 if (demean_) {
                     double var = (total_square_sum - total_sum * total_sum / (m_valid_count)) / (m_valid_count - 1);
                     return std::sqrt(var);
@@ -543,7 +543,7 @@ struct rolling_zscore_rb_range {
             m_valid_count = 0;
         }
         double calc(double latest_val) const {
-            if (std::isfinite(latest_val)) {
+            if (m_valid_count > 2 && std::isfinite(latest_val)) {
                 double mean = total_sum / m_valid_count;
                 double stddev = std::sqrt((total_square_sum - mean * mean * m_valid_count) / (m_valid_count - 1));
                 return (latest_val - mean) / stddev;
@@ -583,7 +583,7 @@ struct rolling_zscore_rb_range {
 
     template <typename T>
     double add_new(stat& st, T new_value) {
-        if (std::isfinite(new_value)) {
+        if (st.m_valid_count > 1 && std::isfinite(new_value)) {
             st.total_sum += new_value;
             st.total_square_sum += new_value * new_value;
             ++st.m_valid_count;
@@ -720,7 +720,7 @@ struct rolling_cov_rb_range {
             m_valid_count = 0;
         }
         double calc() const {
-            if (m_valid_count > 1) {
+            if (m_valid_count > 2) {
                 double mean_x = sumx / m_valid_count;
                 double mean_y = sumy / m_valid_count;
                 return (sumxy - mean_x * mean_y * m_valid_count) / (m_valid_count - 1);
@@ -812,12 +812,12 @@ struct rolling_corr_rb_range {
             m_valid_count = 0;
         }
         double calc() const {
-            if (m_valid_count > 0) {
+            if (m_valid_count > 2) {
                 double cov = (sumxy / m_valid_count - sumx * sumy / (m_valid_count * m_valid_count));
                 double var1 = (sum_x2 / m_valid_count - sumx * sumx / (m_valid_count * m_valid_count));
                 double var2 = (sum_y2 / m_valid_count - sumy * sumy / (m_valid_count * m_valid_count));
-                double numerator = sqrt(var1 * var2);
-                if (numerator > 0) return cov / numerator;
+                double denominator = sqrt(var1 * var2);
+                if (denominator > 0) return cov / denominator;
             }
             return NAN;
         }
@@ -912,7 +912,7 @@ struct rolling_skew_rb_range {
             m_valid_count = 0;
         }
         double calc() const {
-            if (m_valid_count >= 2) {
+            if (m_valid_count > 2) {
                 // long double mx = total_x1 / m_valid_count;
                 // long double d = pow(total_x2 - m_valid_count * mx * mx, 1.5);
                 // if(d > 0)
@@ -1015,7 +1015,7 @@ struct rolling_kurtosis_rb_range {
             m_valid_count = 0;
         }
         double calc() const {
-            if (m_valid_count >= 2) {
+            if (m_valid_count > 2) {
                 double mean = total_x1 / m_valid_count;
                 double mean2 = mean * mean;
                 double var = total_x2 / m_valid_count - mean2;
@@ -1664,7 +1664,7 @@ struct rolling_regression2_rb_range {
         }
         void calc_coef() {
             a = b = NAN;
-            if (m_valid_count > 1) {
+            if (m_valid_count > 2) {
                 b = (m_valid_count * sum_xy - sum_x * sum_y) / (m_valid_count * sum_x2 - sum_x * sum_x);
                 a = (sum_y - b * sum_x) / m_valid_count;
             }
@@ -1674,14 +1674,14 @@ struct rolling_regression2_rb_range {
         void r2_pre_calc() {
             calc_coef();
             res_squared = y_diff_squared = 0;
-            if (m_valid_count > 1) {
+            if (m_valid_count > 2) {
                 mean_y = sum_y / m_valid_count;
             } else {
                 mean_y = NAN;
             }
         }
         void r2_single(double x, double y) {
-            if (m_valid_count <= 1) return;
+            if (m_valid_count <= 2) return;
             if (!std::isfinite(x) || !std::isfinite(y)) return;
             double res = calc_residual(x, y);
             res_squared += res * res;
@@ -1689,7 +1689,7 @@ struct rolling_regression2_rb_range {
             y_diff_squared += diff * diff;
         }
         double get_r2() const {
-            if (m_valid_count > 1) {
+            if (m_valid_count > 2) {
                 return 1. - res_squared / y_diff_squared;
             } else {
                 return NAN;
@@ -2220,7 +2220,7 @@ struct rolling_ols2_rb_range {
 
         void calc_coef() {
             b = NAN;
-            if (m_valid_count > 0) {
+            if (m_valid_count > 2) {
                 b = sum_xy / sum_x2;
             }
         }
@@ -2231,14 +2231,14 @@ struct rolling_ols2_rb_range {
             res_squared = sum_y2 = 0;
         }
         void r2_single(double x, double y) {
-            if (m_valid_count < 1) return;
+            if (m_valid_count < 3) return;
             if (!std::isfinite(x) || !std::isfinite(y)) return;
             double res = calc_residual(x, y);
             res_squared += res * res;
             sum_y2 += y * y;
         }
         double get_r2() const {
-            if (m_valid_count > 0) {
+            if (m_valid_count > 2) {
                 return 1. - res_squared / sum_y2;
             } else {
                 return NAN;
@@ -2510,7 +2510,7 @@ struct slope_no_intercept_rb_range {
             m_valid_count = 0;
         }
         double calc() const {
-            if (m_valid_count > 0) {
+            if (m_valid_count > 2) {
                 return sum_xy / sum_x2;
             }
             return NAN;
@@ -2584,7 +2584,7 @@ struct slope_rb_range {
             m_valid_count = 0;
         }
         double calc() const {
-            if (m_valid_count > 0) {
+            if (m_valid_count > 2) {
                 long double cov_xy = sum_xy * m_valid_count - sum_x * sum_y;
                 long double var_x = sum_x2 * m_valid_count - sum_x * sum_x;
                 return var_x > 0 ? cov_xy / var_x : NAN;
@@ -2661,7 +2661,7 @@ struct rolling_sharpe_rb_range {
             m_valid_count = 0;
         }
         double calc() const {
-            if (m_valid_count <= 1) return NAN;
+            if (m_valid_count <= 2) return NAN;
             long double mean = total_sum / m_valid_count;
             long double sd = sqrt((total_square_sum - mean * mean * m_valid_count) / (m_valid_count - 1.0));
             return sd > 1e-16 ? mean / sd : NAN;
@@ -2838,7 +2838,7 @@ struct rolling_rsharpe_rb_range {  // reverse sharpe = sd / mean
             m_valid_count = 0;
         }
         double calc() const {
-            if (m_valid_count <= 1) return NAN;
+            if (m_valid_count <= 2) return NAN;
             double mean = total_sum / m_valid_count;
             double sd = sqrt((total_square_sum - mean * mean * m_valid_count) / (m_valid_count - 1.0));
             return sd > 0 ? sd / mean : NAN;
@@ -2924,7 +2924,7 @@ struct rolling_dcor_rb_range {
             m_valid_count = 0;
         }
         double calc() const {
-            if (m_valid_count > 0) {
+            if (m_valid_count > 2) {
                 long double d = sum_x2 * sum_y2;
                 return d > 1e-16 ? sumxy / std::sqrt(d) : NAN;
             }
@@ -3175,7 +3175,7 @@ struct rolling_beta_rb_range {
             m_valid_count = 0;
         }
         double calc() const {
-            if (m_valid_count > 0) {
+            if (m_valid_count > 2) {
                 long double d = m_valid_count * sum_x2 - sum_x * sum_y;
                 return d > 1e-16 ? (m_valid_count * sumxy - sum_x * sum_y) / d : NAN;
             }
