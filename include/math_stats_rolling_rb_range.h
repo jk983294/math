@@ -583,10 +583,11 @@ struct rolling_zscore_rb_range {
 
     template <typename T>
     double add_new(stat& st, T new_value) {
-        if (st.m_valid_count > 1 && std::isfinite(new_value)) {
+        if (std::isfinite(new_value)) {
             st.total_sum += new_value;
             st.total_square_sum += new_value * new_value;
             ++st.m_valid_count;
+            if (st.m_valid_count <= 2) return NAN;
             double mean = st.total_sum / st.m_valid_count;
             double stddev = std::sqrt((st.total_square_sum - mean * mean * st.m_valid_count) / (st.m_valid_count - 1));
             return (new_value - mean) / stddev;
