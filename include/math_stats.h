@@ -668,6 +668,12 @@ T quantile(std::vector<T> &data, double q) {
 }
 
 template <typename T = float>
+T quantile_const(const std::vector<T> &data, double q) {
+    std::vector<T> data_(data);
+    return quantile(data_, q);
+}
+
+template <typename T = float>
 double normal_ema(const std::vector<T> &data, int num) {
     double alpha = 2.0f / static_cast<double>(1 + num);
     double ret = data.front();
