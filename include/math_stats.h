@@ -685,9 +685,9 @@ double normal_ema(const std::vector<T> &data, int num) {
 
 template <typename T = float>
 double ema_decay(const T *data, int n, int i, double decay) {
-    if (i < n - 1) return NAN;
+    int N = (n == 0) ? i + 1 : std::min(i + 1, n);
     double v = 0, w = 0;
-    for (int ii = 0; ii < n; ++ii) {
+    for (int ii = 0; ii < N; ++ii) {
         if (std::isfinite(data[i - ii])) {
             v += data[i - ii] * pow(decay, ii);
             w += pow(decay, ii);
@@ -709,6 +709,12 @@ double ema_decay(const std::vector<T> &data, int n, int i, double decay) {
     } else {
         return ema_decay(data.data(), n, i, decay);
     }
+}
+
+template <typename T = float>
+double ema_decay(const std::vector<T> &data, int window, double decay) {
+    if (data.empty()) return NAN;
+    return ema_decay(data.data(), window, data.size() - 1, decay);
 }
 
 template <typename T = float>

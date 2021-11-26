@@ -50,6 +50,19 @@ inline double round_up(double value, int decimal_places) {
     return static_cast<double>(std::lround(value * multiplier + .5)) / multiplier;
 }
 
+/**
+ * Roundup(1.3456, 0.01) -> 1.35
+ */
+inline double RoundUpBase(double d, double base) {
+    double left = d / base;
+    return ceil(left) * base;
+}
+
+inline double RoundDownBase(double d, double base) {
+    double left = d / base;
+    return floor(left) * base;
+}
+
 inline uint32_t NextPowerOf2(uint32_t n) {
     if (n && !(n & (n - 1))) return n;
 
@@ -105,6 +118,28 @@ inline double div_down(double value, double sd, int down = 1) {
     int total_multiplier = multiplier2 - multiplier1 + down;
     // printf("%d,%d,%d\n", multiplier1, multiplier2, total_multiplier);
     return value / std::pow(10., total_multiplier);
+}
+
+template <class T>
+T max_all(T lhs, T rhs) {
+    return std::max<T>(lhs, rhs);
+}
+
+template <class T, class... T_list>
+T max_all(T lhs, T_list... cols) {
+    const T pmax = max_all(cols...);
+    return max_all(lhs, pmax);
+}
+
+template <class T>
+T min_all(T lhs, T rhs) {
+    return std::min<T>(lhs, rhs);
+}
+
+template <class T, class... T_list>
+T min_all(T lhs, T_list... cols) {
+    const T pmin = min_all(cols...);
+    return min_all(lhs, pmin);
 }
 }  // namespace ornate
 
