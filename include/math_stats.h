@@ -201,7 +201,7 @@ int __cov(const T *x, const T *y, size_t num, double &cov_, double &std_x, doubl
 
 template <typename T = float>
 double corr(const T *x, const T *y, size_t num) {
-    double cov_, std_x, std_y;
+    double cov_ = NAN, std_x = NAN, std_y = NAN;
     if (__cov(x, y, num, cov_, std_x, std_y) < 2) return NAN;
     if (std_x < epsilon || std_y < epsilon) return NAN;
     return cov_ / std_x / std_y;
