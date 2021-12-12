@@ -422,6 +422,7 @@ double sign_corr(const std::vector<T1> &x, const std::vector<T2> &y) {
 
 template <typename T = float>
 double acf(const T *x, int num, int shift) {
+    if (num < shift) return NAN;
     double cov_ = NAN, std_x = NAN, std_y = NAN;
     if (__cov(x, x + shift, num - shift, cov_, std_x, std_y) < 2) return NAN;
     if (std_x < epsilon || std_y < epsilon) return NAN;
