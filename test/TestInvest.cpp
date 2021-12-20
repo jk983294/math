@@ -200,3 +200,62 @@ TEST_CASE("calc_bar_return_series neutral 2 ins", "[calc_bar_return_series]") {
     REQUIRE(ornate::FloatEqual(nav1, nav[2]));
     REQUIRE(ornate::FloatEqual(nav1, nav[3]));
 }
+
+TEST_CASE("hft_calc_bar_return_series_vec 0", "[hft_calc_bar_return_series_vec]") {
+    std::vector<double> signals = {1, 1, NAN, NAN, -1, 1, -1};
+    std::vector<double> rets = {0.5, -0.5, NAN, NAN, -0.5, 0.5, 0};
+    std::vector<double> nav = ornate::hft_calc_bar_return_series_vec(signals, rets, 0, 0);
+    REQUIRE(nav.size() == 7);
+    REQUIRE(nav == std::vector<double>({1, 1.5, 0.75, 0.75, 0.75, 0.75 * 1.5, 0.75 * 1.5 * 1.5}));
+}
+
+TEST_CASE("hft_calc_bar_return_series_vec 1", "[hft_calc_bar_return_series_vec]") {
+    std::vector<double> signals = {1, 1, -1, 1, -1};
+    std::vector<double> rets = {0.5, -0.5, -0.5, 0.5, 0};
+    double cost = 0.1;
+    std::vector<double> nav = ornate::hft_calc_bar_return_series_vec(signals, rets, 0, 0, cost);
+    REQUIRE(nav.size() == 5);
+    double nav1 = 1. * (1. + 0.5 - cost);
+    double nav2 = 1. * ((1. + 0.5) * (1. - 0.5) - cost);
+    double nav3 = nav2 * (1. + 0.5 - cost);
+    double nav4 = nav3 * (1. + 0.5 - cost);
+    REQUIRE(nav == std::vector<double>({1, nav1, nav2, nav3, nav4}));
+}
+
+TEST_CASE("hft_calc_bar_return_series_vec stop_ratio", "[hft_calc_bar_return_series_vec]") {
+    std::vector<double> signals = {1, 1, 1, 1, -1};
+    std::vector<double> rets = {-0.1, -0.1, -0.2, 0.5, 0};
+    double cost = 0.;
+    double stop_ratio = 0.3;
+    std::vector<double> nav = ornate::hft_calc_bar_return_series_vec(signals, rets, 0, 0, cost, stop_ratio);
+    double nav1 = 1. * (1. - 0.1 - cost);
+    double nav2 = 1. * ((1. - 0.1) * (1. - 0.1) - cost);
+    double nav3 = 1. * ((1. - 0.1) * (1. - 0.1) * (1. - 0.2) - cost);
+    REQUIRE(nav == std::vector<double>({1, nav1, nav2, nav3, nav3}));
+}
+
+TEST_CASE("hft_calc_bar_return_series_vec stop_profit", "[hft_calc_bar_return_series_vec]") {
+    std::vector<double> signals = {1, 1, 1, 1, -1, 1};
+    std::vector<double> rets = {0.1, 0.1, 0.2, 0.5, 0.1, 0};
+    double cost = 0.;
+    double stop_profit = 0.3;
+    std::vector<double> nav = ornate::hft_calc_bar_return_series_vec(signals, rets, 0, 0, cost, 0, stop_profit);
+    double nav1 = 1. * (1. + 0.1 - cost);
+    double nav2 = 1. * ((1. + 0.1) * (1. + 0.1) - cost);
+    double nav3 = 1. * ((1. + 0.1) * (1. + 0.1) * (1. + 0.2) - cost);
+    double nav4 = nav3 * (1. - 0.1 - cost);
+    REQUIRE(nav == std::vector<double>({1, nav1, nav2, nav3, nav3, nav4}));
+}
+
+TEST_CASE("hft_calc_bar_return_series_vec stop_tick", "[hft_calc_bar_return_series_vec]") {
+    std::vector<double> signals = {1, 1, 1, 1, -1, 1};
+    std::vector<double> rets = {0.1, 0.1, 0.2, 0.5, 0.1, 0};
+    double cost = 0.;
+    int stop_tick = 3;
+    std::vector<double> nav = ornate::hft_calc_bar_return_series_vec(signals, rets, 0, 0, cost, 0, 0, stop_tick);
+    double nav1 = 1. * (1. + 0.1 - cost);
+    double nav2 = 1. * ((1. + 0.1) * (1. + 0.1) - cost);
+    double nav3 = 1. * ((1. + 0.1) * (1. + 0.1) * (1. + 0.2) - cost);
+    double nav4 = nav3 * (1. - 0.1 - cost);
+    REQUIRE(nav == std::vector<double>({1, nav1, nav2, nav3, nav3, nav4}));
+}

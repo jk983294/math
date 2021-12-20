@@ -460,6 +460,190 @@ std::pair<double, double> calc_max_dropdown_ratio(const std::vector<T>& signals)
     return calc_max_dropdown_ratio(signals.data(), signals.size());
 }
 
+/**
+ * m_status 1=多头, -1=空头, 0=空仓
+ * @param rets 未来一根bar的收益
+ * @param open_t 多头开仓阈值, 空头开仓阈值=-open_t
+ * @param close_t 多头平仓阈值, 空头平仓阈值=-close_t
+ * @param cost 每笔的滑点佣金, 在每笔交易前收取
+ * @param m_profit_ratio 提前close仓位的条件,如果收益大于该阈值
+ * @param m_stop_ratio 提前close仓位的条件,如果 loss > 该阈值
+ * @param m_stop_tick 提前close仓位的条件,如果持仓时间大于该阈值
+ */
+struct TickSimStatSingle {
+    TickSimStatSingle() = default;
+    TickSimStatSingle(double open_t, double close_t, double cost, double stop_ratio, double profit_ratio, int stop_tick)
+        : m_open_t{open_t},
+          m_close_t{close_t},
+          m_cost{cost},
+          m_stop_ratio{stop_ratio},
+          m_profit_ratio{profit_ratio},
+          m_stop_tick{stop_tick} {}
+
+    std::vector<double> calc_navs(const std::vector<double>& signals, const std::vector<double>& rets,
+                                  double init_nav = 1.0) {
+        return calc_bar_return_series(signals.data(), rets.data(), signals.size(), init_nav);
+    }
+
+    template <typename T, typename T1>
+    std::vector<double> calc_bar_return_series(const T* signals, const T1* rets, int len, double init_nav = 1.0) {
+        clear(len);
+        m_nav = init_nav;
+        double curr_nav = m_nav;
+        accum_ret = max_ret = min_ret = 0.0;
+        m_status = 0;
+        m_pre_stop_dir = 0;
+        for (int i = 0; i < len; ++i) {
+            double next_ret1 = (std::isfinite(rets[i]) ? rets[i] : 0.);
+            int curr_dir = get_signal(signals[i]);
+
+            if (has_pos(m_status)) {
+                if (has_long_pos(m_status)) {
+                    curr_nav = m_nav * (1.0 + accum_ret - m_cost);
+                } else if (has_short_pos(m_status)) {
+                    curr_nav = m_nav * (1.0 - accum_ret - m_cost);
+                }
+
+                if (is_opposite_sig(m_status, curr_dir)) {
+                    clear_pos();
+                    open_pos(curr_dir, next_ret1);
+                } else {  // check drop ratio
+                    if (is_stop_win() || is_stop_loss() || is_stop_time()) {
+                        m_pre_stop_dir = m_status;
+                        clear_pos();
+                    } else if (m_status == 0) {
+                        clear_pos();
+                    } else {
+                        m_status += curr_dir;
+                        accum_ret = (1.0 + accum_ret) * (1.0 + next_ret1) - 1.0;
+                        max_ret = std::max(max_ret, accum_ret);
+                        min_ret = std::min(min_ret, accum_ret);
+                    }
+                }
+            } else if ((is_long_signal(curr_dir) && !is_long_signal(m_pre_stop_dir)) ||
+                       (is_short_signal(curr_dir) && !is_short_signal(m_pre_stop_dir))) {
+                open_pos(curr_dir, next_ret1);
+            }
+            m_navs[i] = curr_nav;
+        }
+
+        clear_pos();
+        return m_navs;
+    }
+
+    void set_open_t(double open_t) { m_open_t = open_t; }
+    void set_close_t(double close_t) { m_close_t = close_t; }
+    void set_cost(double cost) { m_cost = cost; }
+    void set_stop_ratio(double stop_ratio) { m_stop_ratio = stop_ratio; }
+    void set_profit_ratio(double profit_ratio) { m_profit_ratio = profit_ratio; }
+    void set_stop_tick(int stop_tick) { m_stop_tick = stop_tick; }
+    const std::vector<int>& get_hold_ticks() { return m_hold_ticks; }
+    const std::vector<double>& get_navs() { return m_navs; }
+
+private:
+    void clear(int len) {
+        m_navs.clear();
+        m_navs.resize(len, 0);
+        m_hold_ticks.clear();
+        m_hold_ticks.reserve(len);
+    }
+
+    static bool has_long_pos(int pos) { return pos > 0; }
+    static bool has_short_pos(int pos) { return pos < 0; }
+    static bool has_pos(int pos) { return has_long_pos(pos) || has_short_pos(pos); }
+    static bool is_long_signal(int pos) { return pos > 0; }
+    static bool is_short_signal(int pos) { return pos < 0; }
+    int get_signal(double sig) const {
+        if (!std::isfinite(sig)) {  // if NAN signal, return last signal
+            if (m_status > 0)
+                return 1;
+            else if (sig < 0)
+                return -1;
+            return 0;
+        } else {
+            if (sig > m_open_t || (m_status > 0 && sig > m_close_t))
+                return 1;
+            else if (sig < -m_open_t || (m_status < 0 && sig < -m_close_t))
+                return -1;
+            return 0;
+        }
+    }
+    static bool is_opposite_sig(int old_sig, int sig) { return old_sig * sig < 0; }
+    bool is_stop_win() const {
+        if (std::isfinite(m_profit_ratio) && m_profit_ratio > 1e-6) {
+            if (has_long_pos(m_status) && accum_ret > m_profit_ratio) {
+                return true;
+            } else if (has_short_pos(m_status) && -accum_ret < -m_profit_ratio) {
+                return true;
+            }
+        }
+        return false;
+    }
+    bool is_stop_loss() const {
+        if (std::isfinite(m_stop_ratio) && m_stop_ratio > 1e-6) {
+            if (has_long_pos(m_status)) {
+                return max_ret - accum_ret > m_stop_ratio;
+            } else if (has_short_pos(m_status)) {
+                return accum_ret - min_ret > m_stop_ratio;
+            }
+        }
+        return false;
+    }
+
+    bool is_stop_time() const { return m_stop_tick > 0 && std::abs(m_status) >= m_stop_tick; }
+
+    void clear_pos() {
+        if (has_long_pos(m_status)) {
+            m_nav *= (1.0 + accum_ret - m_cost);
+            m_hold_ticks.push_back(m_status);
+        } else if (has_short_pos(m_status)) {
+            m_nav *= (1.0 - accum_ret - m_cost);
+            m_hold_ticks.push_back(-m_status);
+        }
+        m_status = 0;
+        accum_ret = max_ret = min_ret = 0.0;
+    }
+
+    void open_pos(int curr_pos, double curr_ret) {
+        m_status = curr_pos;
+        m_pre_stop_dir = 0;
+        accum_ret = curr_ret;
+        max_ret = std::max(curr_ret, 0.);
+        min_ret = std::min(curr_ret, 0.);
+    }
+
+private:
+    double m_open_t{0};
+    double m_close_t{0};
+    double m_cost{0};
+    double m_stop_ratio{NAN};
+    double m_profit_ratio{NAN};
+    double accum_ret = 0, max_ret = 0, min_ret = 0;
+    double m_nav{0};
+    int m_stop_tick{-1};
+    int m_status{0};
+    int m_pre_stop_dir{0};  // if stop, then succeeding same dir signal will be ignored
+    std::vector<int> m_hold_ticks;
+    std::vector<double> m_navs;
+};
+
+template <typename T, typename T1>
+std::vector<double> hft_calc_bar_return_series(const T* signals, const T1* rets, int len, double open_t, double close_t,
+                                               double cost = 0, double stop_ratio = NAN, double profit_ratio = NAN,
+                                               int stop_tick = -1) {
+    TickSimStatSingle stat(open_t, close_t, cost, stop_ratio, profit_ratio, stop_tick);
+    return stat.calc_bar_return_series(signals, rets, len);
+}
+
+template <typename T, typename T1>
+std::vector<double> hft_calc_bar_return_series_vec(const std::vector<T>& signals, const std::vector<T1>& rets,
+                                                   double open_t, double close_t, double cost = 0,
+                                                   double stop_ratio = NAN, double profit_ratio = NAN,
+                                                   int stop_tick = -1) {
+    return hft_calc_bar_return_series(signals.data(), rets.data(), signals.size(), open_t, close_t, cost, stop_ratio,
+                                      profit_ratio, stop_tick);
+}
+
 }  // namespace ornate
 
 #endif
