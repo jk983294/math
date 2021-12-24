@@ -125,6 +125,38 @@ struct rolling_pcor_once {
     }
 };
 
+struct rolling_rcor_once {
+    double sumxy{0}, sum_x2{0}, sum_y2{0};
+    int m_valid_count{0};
+
+    rolling_rcor_once() = default;
+
+    void clear() {
+        sumxy = sum_x2 = sum_y2 = 0;
+        m_valid_count = 0;
+    }
+
+    void add_new(double data0, double data1) {
+        if (std::isfinite(data0) && std::isfinite(data1)) {
+            sumxy += data0 * data1;
+            sum_x2 += data0 * data0;
+            sum_y2 += data1 * data1;
+            ++m_valid_count;
+        }
+    }
+
+    double final() {
+        if (m_valid_count > 2) {
+            double cov = sumxy;
+            double std_x = std::sqrt(sum_x2);
+            double std_y = std::sqrt(sum_y2);
+            double numerator = std_x * std_y;
+            if (numerator >= epsilon) return cov / numerator;
+        }
+        return NAN;
+    }
+};
+
 struct rolling_hl_once {
     double high{NAN}, low{NAN};
 

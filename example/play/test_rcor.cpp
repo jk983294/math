@@ -5,6 +5,8 @@
 using namespace ornate;
 using namespace std;
 
+static void demean_test();
+
 int main() {
     //    std::seed_seq seed{42};
     //    default_random_engine generator{seed};
@@ -46,5 +48,32 @@ int main() {
     printf("%f,%f,%f\n", opposite_signal[0], opposite_signal[1], opposite_signal[2]);
     printf("opposite_signal %f,%f,%f,%f\n", ornate::rcor(ret, opposite_signal), ornate::rcor(ret, opposite_signal, 1),
            ornate::rcor(ret, opposite_signal, -1), ornate::corr(ret, opposite_signal));
+
+    demean_test();
     return 0;
+}
+
+/**
+ * pcor can handle linear drift, it demean automatically
+ * rcor needs signal has good shape, can not drift, it doesn't demean
+ */
+void demean_test() {
+    random_device rd;
+    mt19937 generator(rd());
+    std::normal_distribution<double> nd(0., 0.01);
+    std::normal_distribution<double> nd1(0., 0.004);
+
+    int n = 100;
+    int ins_num = 1;
+    vector<double> ret(n * ins_num, 0);
+    vector<double> signal(n * ins_num, 0);
+    vector<double> signal1(n * ins_num, 0);
+    for (int i = 0; i < n * ins_num; ++i) {
+        ret[i] = nd(generator);
+        signal1[i] = ret[i] + nd1(generator);
+        signal[i] = signal1[i] + 1.1;
+    }
+
+    printf("signal_minus_median %f,%f,%f,%f\n", ornate::rcor(ret, signal), ornate::rcor(ret, signal1),
+           ornate::corr(ret, signal), ornate::corr(ret, signal1));
 }
