@@ -123,6 +123,17 @@ struct rolling_pcor_once {
         }
         return NAN;
     }
+
+    double final_rcor() {
+        if (m_valid_count > 2) {
+            double cov = sumxy;
+            double std_x = std::sqrt(sum_x2);
+            double std_y = std::sqrt(sum_y2);
+            double numerator = std_x * std_y;
+            if (numerator >= epsilon) return cov / numerator;
+        }
+        return NAN;
+    }
 };
 
 struct rolling_rcor_once {
