@@ -29,6 +29,31 @@ struct rolling_mean_once {
     }
 };
 
+struct rolling_sign_once {
+    size_t pos_cnt{0}, neg_cnt{0}, nan_cnt{0};
+
+    void operator()(double x) {
+        if (std::isfinite(x)) {
+            if (x > 0)
+                pos_cnt++;
+            else if (x < 0)
+                neg_cnt++;
+        } else {
+            nan_cnt++;
+        }
+    }
+
+    void clear() { pos_cnt = neg_cnt = nan_cnt = 0; }
+
+    double final() {
+        size_t total = pos_cnt + neg_cnt;
+        if (total > 0)
+            return static_cast<double>(neg_cnt) / total;
+        else
+            return NAN;
+    }
+};
+
 struct rolling_sd_once {
     double total_sum{0}, total_square_sum{0};
     int cnt{0};

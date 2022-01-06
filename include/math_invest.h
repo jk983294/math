@@ -644,6 +644,12 @@ std::vector<double> hft_calc_bar_return_series_vec(const std::vector<T>& signals
                                       profit_ratio, stop_tick);
 }
 
+inline bool sign_ratio_out_range(double neg_ratio, double sign_threshold) {
+    return std::isfinite(sign_threshold) &&
+           (std::isnan(neg_ratio) || neg_ratio < std::min(sign_threshold, 1.0 - sign_threshold) ||
+            neg_ratio > std::max(sign_threshold, 1.0 - sign_threshold));
+}
+
 }  // namespace ornate
 
 #endif

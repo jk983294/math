@@ -68,12 +68,15 @@ void demean_test() {
     vector<double> ret(n * ins_num, 0);
     vector<double> signal(n * ins_num, 0);
     vector<double> signal1(n * ins_num, 0);
+    vector<double> signal2(n * ins_num, 0);
     for (int i = 0; i < n * ins_num; ++i) {
         ret[i] = nd(generator);
         signal1[i] = ret[i] + nd1(generator);
         signal[i] = signal1[i] + 1.1;
+        signal2[i] = signal1[i] * 100;  // enlarge
     }
 
-    printf("signal_minus_median %f,%f,%f,%f\n", ornate::rcor(ret, signal), ornate::rcor(ret, signal1),
-           ornate::corr(ret, signal), ornate::corr(ret, signal1));
+    printf("signal_minus_median %f,%f,%f,%f,%f,%f\n", ornate::rcor(ret, signal), ornate::rcor(ret, signal1),
+           ornate::rcor(ret, signal2), ornate::corr(ret, signal), ornate::corr(ret, signal1),
+           ornate::corr(ret, signal2));
 }
