@@ -3,6 +3,7 @@
 
 #include <math_stats.h>
 #include <math_utils.h>
+#include <list>
 
 namespace ornate {
 struct rolling_mean_once {
@@ -378,6 +379,101 @@ std::vector<double> lr_fitted(const T* y_vec, const T* x_vec, int num, bool is_c
     }
     return pred;
 }
+
+class QuantileOnce {  // Greenwald Khanna algorithm
+public:
+    struct Tuple {
+        Tuple(double v, long g, int delta) : v(v), g(g), delta(delta), r_min(v), r_max(v) {}
+        double v;
+        long g;        // g(i) = r_min(v(i)) - r_min(v(i-1))
+        int delta;     // delta(i) = r_max(v(i)) - r_min(v(i))
+        double r_min;  // lower and upper bound on the rank of v among the observations seen so far
+        double r_max;
+    };
+
+    QuantileOnce(double epsilon_) : m_epsilon(epsilon_), m_one_divide_2e(1. / (2 * epsilon_)) {}
+
+    void insert(double value) {
+        if (!std::isfinite(value)) return;
+
+        if (m_n > 0 && m_n % m_one_divide_2e == 0) {
+            compress();
+        }
+
+        auto it = find_insert_iterator(value);
+        m_tuples.insert(it, Tuple(value, 1, compute_delta(it)));
+
+        m_n++;
+    }
+
+    double query(double quantile) const {
+        long rank = m_n * quantile;
+        long r_min = 0;
+        const long range = m_epsilon * m_n;
+
+        for (const auto& m_tuple : m_tuples) {
+            r_min += m_tuple.g;
+            if (rank - r_min <= range && r_min + m_tuple.delta - rank <= range) {
+                return m_tuple.v;
+            }
+        }
+        return NAN;
+    }
+
+    long n() const { return m_n; }
+
+private:
+    using TIter = std::list<Tuple>::iterator;
+
+    void compress() {
+        if (m_tuples.size() < 2) return;
+        long two_eps_n = std::floor(2 * m_epsilon * m_n);
+
+        auto it = m_tuples.begin();
+        while (true) {
+            auto next_it = std::next(it);
+            if (next_it == m_tuples.end()) break;
+
+            if (it->g + next_it->g + next_it->delta < two_eps_n) {
+                next_it->g += it->g;
+
+                if (next_it->r_min > it->r_min) {
+                    next_it->r_min = it->r_min;
+                }
+                if (next_it->r_max < it->r_max) {
+                    next_it->r_max = it->r_max;
+                }
+                auto it_rm = it;
+                it++;
+                m_tuples.erase(it_rm);
+            } else {
+                it++;
+            }
+        }
+    }
+
+    TIter find_insert_iterator(double value) {
+        for (auto it = m_tuples.begin(); it != m_tuples.end(); it++) {
+            if (it->v >= value) {
+                return it;
+            }
+        }
+        return m_tuples.end();
+    }
+
+    int compute_delta(const TIter& it) {
+        int delta = 0;
+        if (it != m_tuples.begin() && it != m_tuples.end() && m_n > m_one_divide_2e) {
+            delta = std::floor(2 * m_epsilon * m_n) - 1;
+        }
+        return delta;
+    }
+
+    std::list<Tuple> m_tuples;
+    double m_epsilon;
+    int m_one_divide_2e;
+    long m_n{0};  // total count of data
+};
 
 }  // namespace ornate
 
