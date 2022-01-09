@@ -31,21 +31,30 @@ struct rolling_mean_once {
 };
 
 struct rolling_sign_once {
-    size_t pos_cnt{0}, neg_cnt{0}, nan_cnt{0};
+    size_t pos_cnt{0}, neg_cnt{0}, nan_cnt{0}, zero_cnt{0};
 
     void operator()(double x) {
         if (std::isfinite(x)) {
-            if (x > 0)
+            if (x > 1e-9)
                 pos_cnt++;
-            else if (x < 0)
+            else if (x < -1e-9)
                 neg_cnt++;
+            else
+                zero_cnt++;
         } else {
             nan_cnt++;
         }
     }
 
-    void clear() { pos_cnt = neg_cnt = nan_cnt = 0; }
+    void clear() { pos_cnt = neg_cnt = nan_cnt = zero_cnt = 0; }
 
+    double final_zero_total() {
+        size_t total = pos_cnt + neg_cnt + zero_cnt;
+        if (total > 0)
+            return static_cast<double>(neg_cnt) / total;
+        else
+            return NAN;
+    }
     double final() {
         size_t total = pos_cnt + neg_cnt;
         if (total > 0)
@@ -383,15 +392,16 @@ std::vector<double> lr_fitted(const T* y_vec, const T* x_vec, int num, bool is_c
 class QuantileOnce {  // Greenwald Khanna algorithm
 public:
     struct Tuple {
-        Tuple(double v, long g, int delta) : v(v), g(g), delta(delta), r_min(v), r_max(v) {}
+        Tuple(double v, int64_t g, int delta) : v(v), g(g), delta(delta), r_min(v), r_max(v) {}
         double v;
-        long g;        // g(i) = r_min(v(i)) - r_min(v(i-1))
+        int64_t g;     // g(i) = r_min(v(i)) - r_min(v(i-1))
         int delta;     // delta(i) = r_max(v(i)) - r_min(v(i))
         double r_min;  // lower and upper bound on the rank of v among the observations seen so far
         double r_max;
     };
 
-    QuantileOnce(double epsilon_) : m_epsilon(epsilon_), m_one_divide_2e(1. / (2 * epsilon_)) {}
+    QuantileOnce(double epsilon_) { set_epsilon(epsilon_); }
+    QuantileOnce() = default;
 
     void insert(double value) {
         if (!std::isfinite(value)) return;
@@ -407,9 +417,9 @@ public:
     }
 
     double query(double quantile) const {
-        long rank = m_n * quantile;
-        long r_min = 0;
-        const long range = m_epsilon * m_n;
+        int64_t rank = m_n * quantile;
+        int64_t r_min = 0;
+        const int64_t range = m_epsilon * m_n;
 
         for (const auto& m_tuple : m_tuples) {
             r_min += m_tuple.g;
@@ -420,14 +430,22 @@ public:
         return NAN;
     }
 
-    long n() const { return m_n; }
+    void set_epsilon(double epsilon_) {
+        m_epsilon = epsilon_;
+        m_one_divide_2e = (1. / (2 * epsilon_));
+    }
+    int64_t n() const { return m_n; }
+    void clear() {
+        m_tuples.clear();
+        m_n = 0;
+    }
 
 private:
     using TIter = std::list<Tuple>::iterator;
 
     void compress() {
         if (m_tuples.size() < 2) return;
-        long two_eps_n = std::floor(2 * m_epsilon * m_n);
+        int64_t two_eps_n = std::floor(2 * m_epsilon * m_n);
 
         auto it = m_tuples.begin();
         while (true) {
@@ -471,8 +489,8 @@ private:
 
     std::list<Tuple> m_tuples;
     double m_epsilon;
-    int m_one_divide_2e;
-    long m_n{0};  // total count of data
+    int64_t m_one_divide_2e;
+    int64_t m_n{0};  // total count of data
 };
 
 }  // namespace ornate
