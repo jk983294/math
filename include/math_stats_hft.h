@@ -1,6 +1,7 @@
 #ifndef ORNATE_MATH_STATS_HFT_H
 #define ORNATE_MATH_STATS_HFT_H
 
+#include <math_stats_once.h>
 #include <unordered_map>
 #include <unordered_set>
 #include "math_random.h"
@@ -22,20 +23,12 @@ std::pair<size_t, size_t> hft_calc_na_count(const std::vector<std::vector<T>>& d
 }
 
 template <typename T>
-std::pair<double, double> hft_math_sign_ratio(const std::vector<std::vector<T>>& data_) {
-    size_t neg_cnt_cum = 0, pos_cnt_cum = 0;
+std::tuple<double, double, double> hft_math_sign_ratio(const std::vector<std::vector<T>>& data_) {
+    rolling_sign_once rso;
     for (const auto& i : data_) {
-        int neg_cnt, pos_cnt;
-        std::tie(neg_cnt, pos_cnt) = math_sign_count(i.data(), i.size());
-        neg_cnt_cum += neg_cnt;
-        pos_cnt_cum += pos_cnt;
+        for (auto& d : i) rso(d);
     }
-
-    if (neg_cnt_cum + pos_cnt_cum > 0) {
-        double total_cnt = neg_cnt_cum + pos_cnt_cum;
-        return {neg_cnt_cum / total_cnt, pos_cnt_cum / total_cnt};
-    }
-    return {NAN, NAN};
+    return {rso.neg_ratio(), rso.full_neg_ratio(), rso.zero_ratio()};
 }
 
 template <typename T>

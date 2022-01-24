@@ -48,17 +48,24 @@ struct rolling_sign_once {
 
     void clear() { pos_cnt = neg_cnt = nan_cnt = zero_cnt = 0; }
 
-    double final_zero_total() {
+    double full_neg_ratio() {
         size_t total = pos_cnt + neg_cnt + zero_cnt;
         if (total > 0)
             return static_cast<double>(neg_cnt) / total;
         else
             return NAN;
     }
-    double final() {
+    double neg_ratio() {
         size_t total = pos_cnt + neg_cnt;
         if (total > 0)
             return static_cast<double>(neg_cnt) / total;
+        else
+            return NAN;
+    }
+    double zero_ratio() {
+        size_t total = pos_cnt + neg_cnt + zero_cnt;
+        if (total > 0)
+            return static_cast<double>(zero_cnt) / total;
         else
             return NAN;
     }
