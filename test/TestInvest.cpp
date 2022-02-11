@@ -259,3 +259,46 @@ TEST_CASE("hft_calc_bar_return_series_vec stop_tick", "[hft_calc_bar_return_seri
     double nav4 = nav3 * (1. - 0.1 - cost);
     REQUIRE(nav == std::vector<double>({1, nav1, nav2, nav3, nav3, nav4}));
 }
+
+TEST_CASE("TickRTStat stop_ratio", "[TickRTStat]") {
+    std::vector<double> signals = {1, 1, 1, 1, -1};
+    std::vector<double> rets = {-0.1, -0.1, -0.2, 0.5, 0};
+    std::vector<double> close = {10, 10 * 0.9, 10 * 0.9 * 0.9, 10 * 0.9 * 0.9 * 0.8, 10 * 0.9 * 0.9 * 0.8 * 0.5};
+
+    TickRTStat stat;
+    stat.m_stop_ratio = 0.3;
+    std::vector<int> pos;
+    for (size_t i = 0; i < signals.size(); ++i) {
+        pos.push_back(stat.process(signals[i], close[i]));
+    }
+    REQUIRE(pos == std::vector<int>({1, 1, 1, 0, -1}));
+}
+
+TEST_CASE("TickRTStat stop_profit", "[TickRTStat]") {
+    std::vector<double> signals = {1, 1, 1, 1, -1, 1};
+    std::vector<double> rets = {0.1, 0.1, 0.2, 0.5, 0.1, 0};
+    std::vector<double> close = {
+        10, 10 * 1.1, 10 * 1.1 * 1.1, 10 * 1.1 * 1.1 * 1.2, 10 * 1.1 * 1.1 * 1.2 * 0.5, 10 * 1.1 * 1.1 * 1.2 * 0.9};
+    TickRTStat stat;
+    stat.m_profit_ratio = 0.3;
+    std::vector<int> pos;
+    for (size_t i = 0; i < signals.size(); ++i) {
+        pos.push_back(stat.process(signals[i], close[i]));
+    }
+    REQUIRE(pos == std::vector<int>({1, 1, 1, 0, -1, 1}));
+}
+
+TEST_CASE("TickRTStat stop_tick", "[TickRTStat]") {
+    std::vector<double> signals = {1, 1, 1, 1, -1, 1};
+    std::vector<double> rets = {0.1, 0.1, 0.2, 0.5, 0.1, 0};
+    std::vector<double> close = {
+        10, 10 * 1.1, 10 * 1.1 * 1.1, 10 * 1.1 * 1.1 * 1.2, 10 * 1.1 * 1.1 * 1.2 * 0.5, 10 * 1.1 * 1.1 * 1.2 * 0.9};
+
+    TickRTStat stat;
+    stat.m_stop_tick = 3;
+    std::vector<int> pos;
+    for (size_t i = 0; i < signals.size(); ++i) {
+        pos.push_back(stat.process(signals[i], close[i]));
+    }
+    REQUIRE(pos == std::vector<int>({1, 1, 1, 0, -1, 1}));
+}
