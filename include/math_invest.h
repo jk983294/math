@@ -539,7 +539,8 @@ struct TickRTStat : public TickStatBase {
                 if (is_stop_win() || is_stop_loss() || is_stop_time()) {
                     m_pre_stop_dir = m_status;
                     clear_pos();
-                } else if (m_status == 0) {
+                } else if (curr_dir == 0) {
+                    m_pre_stop_dir = 0;
                     clear_pos();
                 } else {
                     m_status += curr_dir;
@@ -609,7 +610,8 @@ struct TickSimStatSingle : public TickStatBase {
                     if (is_stop_win() || is_stop_loss() || is_stop_time()) {
                         m_pre_stop_dir = m_status;
                         clear_pos();
-                    } else if (m_status == 0) {
+                    } else if (curr_dir == 0) {
+                        m_pre_stop_dir = 0;
                         clear_pos();
                     } else {
                         m_status += curr_dir;
