@@ -3255,6 +3255,210 @@ struct rolling_beta_rb_range {
     void set_param(const std::string& key, const std::string& value) {}
 };
 
+struct CondMean {
+    double res = 0;
+    int n = 0;
+    void operator()(bool c, double val) {
+        if (c && std::isfinite(val)) {
+            res += val;
+            ++n;
+        }
+    }
+    double calc(double fill) { return n > 0 ? res / n : fill; }
+};
+
+struct CondSd {
+    double sx = 0, sxx = 0;
+    int n = 0;
+    void operator()(bool c, double val) {
+        if (c && std::isfinite(val)) {
+            sx += val;
+            sxx += val * val;
+            ++n;
+        }
+    }
+    double calc(double fill) { return n >= 2 ? sqrt((sxx / n - sx * sx / (n * n)) * n / (n - 1)) : fill; }
+};
+
+struct CondMax {
+    double res = std::numeric_limits<double>::min();
+    int n = 0;
+    void operator()(bool c, double val) {
+        if (c && val > res) {
+            res = val;
+            ++n;
+        }
+    }
+    double calc(double fill) { return n > 0 ? res : fill; }
+};
+
+struct CondMin {
+    double res = std::numeric_limits<double>::max();
+    int n = 0;
+    void operator()(bool c, double val) {
+        if (c && val < res) {
+            res = val;
+            ++n;
+        }
+    }
+    double calc(double fill) { return n > 0 ? res : fill; }
+};
+
+template <typename T, typename TComp, typename TCond>
+struct rolling_cond_stat_rb_range {
+public:
+    int window_size{0}, m_count{0};
+    int m_column_size;
+    double q = 0.5, fill = NAN;
+    int method = 1;
+    int least = 3;
+    bool partial = false;
+    std::vector<double> m_cond_data_;
+    std::vector<double> m_val_data_;
+    std::vector<double> internal_;
+    TComp g;
+
+    explicit rolling_cond_stat_rb_range(int column_size_) : m_column_size{column_size_} {}
+
+    double mean(const double* x, int start, int end) {
+        double res = 0, n = 0;
+        for (int i = start; i < end; ++i) {
+            int idx = i % window_size;
+            if (std::isfinite(x[idx])) {
+                res += x[idx];
+                n++;
+            }
+        }
+        return n > 0 ? res / n : fill;
+    }
+
+    double quantile(const double* x, int start, int end) {
+        double res;
+        std::size_t ny = 0;
+        for (int i = start; i < end; ++i) {
+            int idx = i % window_size;
+            if (std::isfinite(x[idx])) {
+                internal_[ny++] = x[idx];
+            }
+        }
+
+        if (ny == 0) {
+            return fill;
+        }
+
+        double idx = (ny - 1) * q;
+        double idx_lb = std::floor(idx);
+        double idx_ub = std::ceil(idx);
+        if (idx_lb == idx_ub) {
+            std::nth_element(internal_.begin(), internal_.begin() + idx, internal_.begin() + ny);
+            res = internal_[idx];
+        } else {
+            std::nth_element(internal_.begin(), internal_.begin() + idx_ub, internal_.begin() + ny);
+            std::nth_element(internal_.begin(), internal_.begin() + idx_lb, internal_.begin() + idx_ub);
+            res = internal_[idx_lb] * (idx_ub - idx) + internal_[idx_ub] * (idx - idx_lb);
+        }
+        return res;
+    }
+
+    double max(const double* x, int start, int end) {
+        double res = std::numeric_limits<double>::min();
+        int n = 0;
+        for (int i = start; i < end; ++i) {
+            int idx = i % window_size;
+            if (std::isfinite(x[idx]) && x[idx] > res) {
+                res = x[idx];
+                ++n;
+            }
+        }
+        return n > 0 ? res : fill;
+    }
+
+    double min(const double* x, int start, int end) {
+        double res = std::numeric_limits<double>::max();
+        int n = 0;
+        for (int i = start; i < end; ++i) {
+            int idx = i % window_size;
+            if (std::isfinite(x[idx]) && x[idx] < res) {
+                res = x[idx];
+                ++n;
+            }
+        }
+        return n > 0 ? res : fill;
+    }
+
+    void init() { m_count = 0; }
+
+    double warm_up() { return 0; }
+
+    void set_ins_num(int ins_num) { m_column_size = ins_num; }
+
+    void set_row_size(int row) {
+        window_size = row;
+        m_cond_data_.resize(row * m_column_size, NAN);
+        m_val_data_.resize(row * m_column_size, NAN);
+        internal_.resize(window_size);
+    }
+
+    double handle(T cond_value, T val_value, double* start_cond_data, double* start_val_data) {
+        start_cond_data[(m_count - 1) % window_size] = cond_value;
+        start_val_data[(m_count - 1) % window_size] = val_value;
+        if (partial && least > 0 && m_count < least) return NAN;
+        if (!partial && m_count < window_size) return NAN;
+        double xx = cond_value;
+        int end = m_count;
+        int start = end - window_size;
+        if (start < 0) start = 0;
+
+        if (method == 1) {
+            xx = mean(start_cond_data, start, end);
+        } else if (method == 2) {
+            xx = quantile(start_cond_data, start, end);
+        } else if (method == 3) {
+            xx = max(start_cond_data, start, end);
+        } else if (method == 4) {
+            xx = min(start_cond_data, start, end);
+        }
+
+        TCond stat;
+        for (int i = start; i < end; ++i) {
+            int idx = i % window_size;
+            stat(g(start_cond_data[idx], xx), start_val_data[idx]);
+        }
+        return stat.calc(fill);
+    }
+
+    template <typename TOut>
+    void operator()(const T* cond_row, const T* val_row, TOut* output) {
+        ++m_count;
+        for (int ii = 0; ii < m_column_size; ++ii) {
+            auto* _start_cond_data = m_cond_data_.data() + ii * window_size;
+            auto* _start_val_data = m_val_data_.data() + ii * window_size;
+
+            output[ii] = handle(cond_row[ii], val_row[ii], _start_cond_data, _start_val_data);
+        }
+    }
+
+    void set_param(const std::string& key, const std::string& value) {
+        if (key == "method") {
+            method = std::stoi(value);
+        } else if (key == "quantile") {
+            q = std::stod(value);
+        } else if (key == "least") {
+            least = std::stoi(value);
+        } else if (key == "fill") {
+            fill = std::stod(value);
+        }
+    }
+};
+
+using TsLteMean = rolling_cond_stat_rb_range<double, std::less_equal<double>, CondMean>;
+using TsGteMean = rolling_cond_stat_rb_range<double, std::greater_equal<double>, CondMean>;
+using TsLteMax = rolling_cond_stat_rb_range<double, std::less_equal<double>, CondMax>;
+using TsGteMax = rolling_cond_stat_rb_range<double, std::greater_equal<double>, CondMax>;
+using TsLteMin = rolling_cond_stat_rb_range<double, std::less_equal<double>, CondMin>;
+using TsGteMin = rolling_cond_stat_rb_range<double, std::greater_equal<double>, CondMin>;
+using TsLteSd = rolling_cond_stat_rb_range<double, std::less_equal<double>, CondSd>;
+using TsGteSd = rolling_cond_stat_rb_range<double, std::greater_equal<double>, CondSd>;
 }  // namespace ornate
 
 #endif

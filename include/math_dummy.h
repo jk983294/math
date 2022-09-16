@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <cstddef>
+#include <functional>
 #include <vector>
 
 namespace ornate {
@@ -38,6 +39,71 @@ double dummy_decay(const std::vector<T>& data_) {
         return NAN;
     }
 }
+
+namespace dminner {
+double mean(const double *x, int start, int end, double fill);
+
+double quantile(const double *x, double q, int start, int end, double fill);
+
+double max(const double *x, int start, int end, double fill);
+
+double min(const double *x, int start, int end, double fill);
+}
+
+using COMPARE = std::function<bool(double, double)>;
+using COND_FUNC = std::function<double(COMPARE, int, const double *, const double *, double, int, int, double)>;
+
+double cond_mean(const COMPARE& g, int method, const double *x, const double *y,
+                 double q, int start, int end, double fill);
+
+double cond_max(const COMPARE& g, int method, const double *x, const double *y,
+                double q, int start, int end, double fill);
+
+double cond_min(const COMPARE& g, int method, const double *x, const double *y,
+                double q, int start, int end, double fill);
+
+double cond_sd(const COMPARE& g, int method, const double *x, const double *y,
+               double q, int start, int end, double fill);
+
+std::vector<double> ts_gte_mean(const std::vector<double> &cond, const std::vector<double> &value,
+                                int n, double q = 0.5, double fill = NAN, int method = 1,
+                                int least = 3, bool partial = false);
+
+std::vector<double> ts_lte_mean(const std::vector<double> &cond, const std::vector<double> &value,
+                                int n, double q = 0.5, double fill = NAN, int method = 1,
+                                int least = 3, bool partial = false);
+
+std::vector<double> ts_gte_max(const std::vector<double> &cond, const std::vector<double> &value,
+                               int n, double q = 0.5, double fill = NAN, int method = 1,
+                               int least = 3, bool partial = false);
+
+std::vector<double> ts_lte_max(const std::vector<double> &cond, const std::vector<double> &value,
+                               int n, double q = 0.5, double fill = NAN, int method = 1,
+                               int least = 3, bool partial = false);
+
+std::vector<double> ts_gte_min(const std::vector<double> &cond, const std::vector<double> &value,
+                               int n, double q = 0.5, double fill = NAN, int method = 1,
+                               int least = 3, bool partial = false);
+
+std::vector<double> ts_lte_min(const std::vector<double> &cond, const std::vector<double> &value,
+                               int n, double q = 0.5, double fill = NAN, int method = 1,
+                               int least = 3, bool partial = false);
+
+std::vector<double> ts_gte_sd(const std::vector<double> &cond, const std::vector<double> &value,
+                              int n, double q = 0.5, double fill = NAN, int method = 1,
+                              int least = 3, bool partial = false);
+
+std::vector<double> ts_lte_sd(const std::vector<double> &cond, const std::vector<double> &value,
+                              int n, double q = 0.5, double fill = NAN, int method = 1,
+                              int least = 3, bool partial = false);
+
+std::vector<double> ts_gte_sum(const std::vector<double> &cond, const std::vector<double> &value,
+                               int n, double q = 0.5, double fill = NAN, int method = 1,
+                               int least = 3, bool partial = false);
+
+std::vector<double> ts_lte_sum(const std::vector<double> &cond, const std::vector<double> &value,
+                               int n, double q = 0.5, double fill = NAN, int method = 1,
+                               int least = 3, bool partial = false);
 }  // namespace ornate
 
 #endif

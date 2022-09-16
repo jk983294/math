@@ -30,6 +30,14 @@ bool FloatEqual(T1 a, T2 b, double epsilon_ = lp_epsilon) {
     }
 }
 
+template <typename T1, typename T2>
+bool FloatVecEqual(T1 a, T2 b, double epsilon_ = lp_epsilon) {
+    for (size_t i = 0; i < a.size(); i++) {
+        if (!FloatEqual(a[i], b[i])) return false;
+    }
+    return true;
+}
+
 template <typename T, typename T1>
 void add_window_vector(std::vector<T>& y, size_t window, T1 val) {
     if (y.size() < window)
