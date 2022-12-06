@@ -223,7 +223,7 @@ double quantile(const double *x, double q, int start, int end, double fill) {
 }
 
 double max(const double *x, int start, int end, double fill) {
-    double res = std::numeric_limits<double>::min();
+    double res = std::numeric_limits<double>::lowest();
     int n = 0;
     for (int i = start; i < end; ++i) {
         if (std::isfinite(x[i]) && x[i] > res) {
@@ -272,7 +272,7 @@ double cond_mean(const COMPARE &g, int method, const double *x, const double *y,
 
 double cond_max(const COMPARE &g, int method, const double *x, const double *y, double q, int start, int end,
                 double fill) {
-    double xx = x[end - 1], res = std::numeric_limits<double>::min();
+    double xx = x[end - 1], res = std::numeric_limits<double>::lowest();
     if (method == 1) {
         xx = dminner::mean(x, start, end, fill);
     } else if (method == 2) {
@@ -283,7 +283,7 @@ double cond_max(const COMPARE &g, int method, const double *x, const double *y, 
             res = y[i];
         }
     }
-    if (res == std::numeric_limits<double>::min()) res = fill;
+    if (res == std::numeric_limits<double>::lowest()) res = fill;
     return res;
 }
 

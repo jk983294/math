@@ -3281,7 +3281,7 @@ struct CondSd {
 };
 
 struct CondMax {
-    double res = std::numeric_limits<double>::min();
+    double res = std::numeric_limits<double>::lowest();
     int n = 0;
     void operator()(bool c, double val) {
         if (c && val > res) {
@@ -3361,7 +3361,7 @@ public:
     }
 
     double max(const double* x, int start, int end) {
-        double res = std::numeric_limits<double>::min();
+        double res = std::numeric_limits<double>::lowest();
         int n = 0;
         for (int i = start; i < end; ++i) {
             int idx = i % window_size;
