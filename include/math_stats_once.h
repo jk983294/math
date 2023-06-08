@@ -437,6 +437,20 @@ public:
         return NAN;
     }
 
+    double query_rank(double value) const {
+        if (m_tuples.empty()) return NAN;
+        int64_t r_min = 0, r_min_old = 0;
+
+        for (const auto& m_tuple : m_tuples) {
+            r_min_old = r_min;
+            r_min += m_tuple.g;
+            if (value <= m_tuple.v) {
+                return double(r_min + r_min_old) / 2 / m_n;
+            }
+        }
+        return 1.;
+    }
+
     void set_epsilon(double epsilon_) {
         m_epsilon = epsilon_;
         m_one_divide_2e = (1. / (2 * epsilon_));
