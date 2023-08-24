@@ -1,5 +1,12 @@
 df <- data.frame(matrix(rnorm(20, 1), ncol = 2))
 plot(x = df$X1, y = df$X2)
+plot(x = df$X1, y = df$X2,
+  pch = 19,         # Solid circle
+  cex = 1.5,        # Make 150% size
+  col = "#cc0000",  # Red
+  main = "x vs y",
+  xlab = "x",
+  ylab = "y")
 
 # find the correlation between one variable versus the remaining ones
 df1 <- data.frame(matrix(rnorm(40, 1), ncol = 4))

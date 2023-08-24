@@ -1,21 +1,24 @@
-x <- c(9, 13, 21, 8, 36, 22, 12, 41, 31, 33, 19)
-hist(x, xlab = "Weight")
-hist(x, xlab = "Weight", col = "green", border = "red", xlim = c(0, 40), ylim = c(0, 
-    5), breaks = 5)
+x <- c(-11.2, -11.3, 9.4, 13.2, 21, 8.1, 13.6, 2.2, 12.2, 4.1, 13.1, 3.3, 19)
+hist(x)
+hist(x, xlim = c(-15, 25), breaks = 4, col = "red")
 
 # 轴须图
-hist(x, xlab = "Weight")
-rug(jitter(x))
+hist(x,
+    freq = FALSE, # Axis shows density, not freq.
+    col = "thistle1", # Color for histogram
+    main = "Histogram of x",
+    xlab = "x"
+)
+
+# Add a normal distribution
+curve(dnorm(x, mean = mean(x), sd = sd(x)),
+    col = "thistle4", # Color of curve
+    lwd = 2, # Line width of 2 pixels
+    add = TRUE
+) # Superimpose on previous graph
+
+# Add kernel density estimators
 lines(density(x), col = "blue", lwd = 2)
 
-# 添加正态密度曲线和外框
-h <- hist(x, xlab = "Weight")
-xfit <- seq(min(x), max(x), length = 40)
-yfit <- dnorm(xfit, mean = mean(x), sd = sd(x))
-yfit <- yfit * diff(h$mids[1:2]) * length(x)
-lines(xfit, yfit, col = "blue", lwd = 2)
-
-# kernel density estimation
-x <- c(5, 10, 15)
-d <- density(x)
-plot(d)
+# Add a rug plot
+rug(x, lwd = 2, col = "gray")

@@ -49,3 +49,4 @@ install/
 **/*.gz
 **/RcppExports.cpp
 **/RcppExports.R
+build/
