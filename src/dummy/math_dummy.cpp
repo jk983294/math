@@ -7,7 +7,7 @@
 namespace ornate {
 int dummy_add(int x, int y) { return x + y; }
 int universal_answer() { return 42; }
-double dummy_ts_cross(const double* x_, const double* y, std::size_t i, std::size_t n) {
+double dummy_ts_cross(const double *x_, const double *y, std::size_t i, std::size_t n) {
     const std::size_t size = i + 1;
     if (size < n + 2) {
         return NAN;
@@ -31,7 +31,7 @@ double dummy_ts_cross(const double* x_, const double* y, std::size_t i, std::siz
     }
 }
 
-double dummy_ts_argmax(const double* x, std::size_t i, std::size_t n) {
+double dummy_ts_argmax(const double *x, std::size_t i, std::size_t n) {
     const std::size_t size = i + 1;
     const std::size_t N = (n == 0) ? size : std::min(size, n);
     int max_idx = -1;
@@ -47,7 +47,7 @@ double dummy_ts_argmax(const double* x, std::size_t i, std::size_t n) {
     return N > 1 ? (1 - max_idx / (N - 1.0)) : 0;
 }
 
-double dummy_ts_backward_cpn(const double* x, std::size_t i, std::size_t n, int sign) {
+double dummy_ts_backward_cpn(const double *x, std::size_t i, std::size_t n, int sign) {
     const std::size_t size = i + 1;
     const std::size_t N = (n == 0) ? size : std::min(size, n);
     double num = 0;
@@ -61,7 +61,7 @@ double dummy_ts_backward_cpn(const double* x, std::size_t i, std::size_t n, int 
     return num;
 }
 
-double dummy_ts_acp(const double* x, int i, int n, int lag) {
+double dummy_ts_acp(const double *x, int i, int n, int lag) {
     int bg = i - n + 1;
     int end = i + 1;
 
@@ -83,7 +83,7 @@ double dummy_ts_acp(const double* x, int i, int n, int lag) {
     return positive_cnt * 1.0 / valid_cnt;
 }
 
-double dummy_dcor(const std::vector<double>& x_, const std::vector<double>& y_) {
+double dummy_dcor(const std::vector<double> &x_, const std::vector<double> &y_) {
     std::vector<double> x, y;
     for (size_t j = 1; j < x_.size(); ++j) {
         x.push_back(x_[j] - x_[j - 1]);
@@ -106,7 +106,7 @@ double dummy_dcor(const std::vector<double>& x_, const std::vector<double>& y_) 
     }
 }
 
-double dummy_r2(const std::vector<double>& x_, const std::vector<double>& y_, double a, double b, int window) {
+double dummy_r2(const std::vector<double> &x_, const std::vector<double> &y_, double a, double b, int window) {
     double err = 0, diff = 0;
     double mean_y = mean(y_);
     int valid_count = 0;
@@ -125,7 +125,7 @@ double dummy_r2(const std::vector<double>& x_, const std::vector<double>& y_, do
         return NAN;
 }
 
-double dummy_r2(const std::vector<double>& x1_, const std::vector<double>& x2_, const std::vector<double>& y_,
+double dummy_r2(const std::vector<double> &x1_, const std::vector<double> &x2_, const std::vector<double> &y_,
                 double b0, double b1, double b2, int window) {
     double err = 0, diff = 0;
     double mean_y = mean(y_);
@@ -145,7 +145,7 @@ double dummy_r2(const std::vector<double>& x1_, const std::vector<double>& x2_, 
         return NAN;
 }
 
-double dummy_r2_no_slope(const std::vector<double>& x_, const std::vector<double>& y_, double b, int window) {
+double dummy_r2_no_slope(const std::vector<double> &x_, const std::vector<double> &y_, double b, int window) {
     double err = 0, diff = 0;
     int valid_count = 0;
     for (int i = 0; i < window; ++i) {
@@ -163,7 +163,7 @@ double dummy_r2_no_slope(const std::vector<double>& x_, const std::vector<double
         return NAN;
 }
 
-double dummy_r2_no_slope(const std::vector<double>& x1_, const std::vector<double>& x2_, const std::vector<double>& y_,
+double dummy_r2_no_slope(const std::vector<double> &x1_, const std::vector<double> &x2_, const std::vector<double> &y_,
                          double b1, double b2, int window) {
     double err = 0, diff = 0;
     int valid_count = 0;
@@ -180,5 +180,247 @@ double dummy_r2_no_slope(const std::vector<double>& x1_, const std::vector<doubl
         return 1. - err / diff;
     else
         return NAN;
+}
+
+namespace dminner {
+double mean(const double *x, int start, int end, double fill) {
+    double res = 0, n = 0;
+    for (int i = start; i < end; ++i) {
+        if (std::isfinite(x[i])) {
+            res += x[i];
+            n++;
+        }
+    }
+    return n > 0 ? res / n : fill;
+}
+
+double quantile(const double *x, double q, int start, int end, double fill) {
+    double res;
+    std::vector<double> y;
+    for (int i = start; i < end; ++i) {
+        if (std::isfinite(x[i])) {
+            y.push_back(x[i]);
+        }
+    }
+
+    std::size_t ny = y.size();
+    if (ny == 0) {
+        return fill;
+    }
+
+    double idx = (ny - 1) * q;
+    double idx_lb = std::floor(idx);
+    double idx_ub = std::ceil(idx);
+    if (idx_lb == idx_ub) {
+        std::nth_element(y.begin(), y.begin() + idx, y.end());
+        res = y[idx];
+    } else {
+        std::nth_element(y.begin(), y.begin() + idx_ub, y.end());
+        std::nth_element(y.begin(), y.begin() + idx_lb, y.begin() + idx_ub);
+        res = y[idx_lb] * (idx_ub - idx) + y[idx_ub] * (idx - idx_lb);
+    }
+    return res;
+}
+
+double max(const double *x, int start, int end, double fill) {
+    double res = std::numeric_limits<double>::lowest();
+    int n = 0;
+    for (int i = start; i < end; ++i) {
+        if (std::isfinite(x[i]) && x[i] > res) {
+            res = x[i];
+            ++n;
+        }
+    }
+    return n > 0 ? res : fill;
+}
+
+double min(const double *x, int start, int end, double fill) {
+    double res = std::numeric_limits<double>::max();
+    int n = 0;
+    for (int i = start; i < end; ++i) {
+        if (std::isfinite(x[i]) && x[i] < res) {
+            res = x[i];
+            ++n;
+        }
+    }
+    return n > 0 ? res : fill;
+}
+}  // namespace dminner
+
+double cond_mean(const COMPARE &g, int method, const double *x, const double *y, double q, int start, int end,
+                 double fill) {
+    double xx = x[end - 1], res = 0;
+    if (method == 1) {
+        xx = dminner::mean(x, start, end, fill);
+    } else if (method == 2) {
+        xx = dminner::quantile(x, q, start, end, fill);
+    } else if (method == 3) {
+        xx = dminner::max(x, start, end, fill);
+    } else if (method == 4) {
+        xx = dminner::min(x, start, end, fill);
+    }
+    int n = 0;
+    for (int i = start; i < end; ++i) {
+        if (g(x[i], xx) && std::isfinite(y[i])) {
+            res += y[i];
+            ++n;
+        }
+    }
+    res = n > 0 ? res / n : fill;
+    return res;
+}
+
+double cond_max(const COMPARE &g, int method, const double *x, const double *y, double q, int start, int end,
+                double fill) {
+    double xx = x[end - 1], res = std::numeric_limits<double>::lowest();
+    if (method == 1) {
+        xx = dminner::mean(x, start, end, fill);
+    } else if (method == 2) {
+        xx = dminner::quantile(x, q, start, end, fill);
+    }
+    for (int i = start; i < end; ++i) {
+        if (g(x[i], xx) && y[i] > res) {
+            res = y[i];
+        }
+    }
+    if (res == std::numeric_limits<double>::lowest()) res = fill;
+    return res;
+}
+
+double cond_min(const COMPARE &g, int method, const double *x, const double *y, double q, int start, int end,
+                double fill) {
+    double xx = x[end - 1], res = std::numeric_limits<double>::max();
+    if (method == 1) {
+        xx = dminner::mean(x, start, end, fill);
+    } else if (method == 2) {
+        xx = dminner::quantile(x, q, start, end, fill);
+    }
+    for (int i = start; i < end; ++i) {
+        if (g(x[i], xx) && y[i] < res) {
+            res = y[i];
+        }
+    }
+    if (res == std::numeric_limits<double>::max()) res = fill;
+    return res;
+}
+
+double cond_sd(const COMPARE &g, int method, const double *x, const double *y, double q, int start, int end,
+               double fill) {
+    double xx = x[end - 1], sx = 0, sxx = 0;
+    if (method == 1) {
+        xx = dminner::mean(x, start, end, fill);
+    } else if (method == 2) {
+        xx = dminner::quantile(x, q, start, end, fill);
+    }
+    int n = 0;
+    for (int i = start; i < end; ++i) {
+        if (g(x[i], xx) && std::isfinite(y[i])) {
+            sx += y[i];
+            sxx += y[i] * y[i];
+            ++n;
+        }
+    }
+    return n >= 2 ? sqrt((sxx / n - sx * sx / (n * n)) * n / (n - 1)) : fill;
+}
+
+double cond_sum(const COMPARE &g, int method, const double *x, const double *y, double q, int start, int end,
+                double fill) {
+    double xx = x[end - 1], res = 0;
+    if (method == 1) {
+        xx = dminner::mean(x, start, end, fill);
+    } else if (method == 2) {
+        xx = dminner::quantile(x, q, start, end, fill);
+    } else if (method == 3) {
+        xx = dminner::max(x, start, end, fill);
+    } else if (method == 4) {
+        xx = dminner::min(x, start, end, fill);
+    }
+    for (int i = start; i < end; ++i) {
+        if (g(x[i], xx) && std::isfinite(y[i])) {
+            res += y[i];
+        }
+    }
+    return res;
+}
+
+std::vector<double> ts_cond_stat(COND_FUNC f, COMPARE g, int method, const std::vector<double> &cond,
+                                 const std::vector<double> &value, int n, double q, double fill = 0, int least = 3,
+                                 bool partial = true) {
+    int size = cond.size();
+    std::vector<double> output(size, fill);
+    if (least < 3) throw std::range_error("'least' must >= 3");
+
+    const double *x = cond.data();
+    const double *y = value.data();
+    double *pout = output.data();
+
+    for (int i = (partial ? least : n) - 1; i < size; i++) {
+        pout[i] = f(g, method, x, y, q, std::max(i - n + 1, 0), i + 1, fill);
+    }
+    return output;
+}
+
+static bool gte(double x, double y) { return x >= y; }
+
+static bool lte(double x, double y) { return x <= y; }
+
+std::vector<double> ts_gte_mean(const std::vector<double> &cond, const std::vector<double> &value, int n, double q,
+                                double fill, int method, int least, bool partial) {
+    std::vector<double> output = ts_cond_stat(cond_mean, gte, method, cond, value, n, q, fill, least, partial);
+    return output;
+}
+
+std::vector<double> ts_lte_mean(const std::vector<double> &cond, const std::vector<double> &value, int n, double q,
+                                double fill, int method, int least, bool partial) {
+    std::vector<double> output = ts_cond_stat(cond_mean, lte, method, cond, value, n, q, fill, least, partial);
+    return output;
+}
+
+std::vector<double> ts_gte_max(const std::vector<double> &cond, const std::vector<double> &value, int n, double q,
+                               double fill, int method, int least, bool partial) {
+    std::vector<double> output = ts_cond_stat(cond_max, gte, method, cond, value, n, q, fill, least, partial);
+    return output;
+}
+
+std::vector<double> ts_lte_max(const std::vector<double> &cond, const std::vector<double> &value, int n, double q,
+                               double fill, int method, int least, bool partial) {
+    std::vector<double> output = ts_cond_stat(cond_max, lte, method, cond, value, n, q, fill, least, partial);
+    return output;
+}
+
+std::vector<double> ts_gte_min(const std::vector<double> &cond, const std::vector<double> &value, int n, double q,
+                               double fill, int method, int least, bool partial) {
+    std::vector<double> output = ts_cond_stat(cond_min, gte, method, cond, value, n, q, fill, least, partial);
+    return output;
+}
+
+std::vector<double> ts_lte_min(const std::vector<double> &cond, const std::vector<double> &value, int n, double q,
+                               double fill, int method, int least, bool partial) {
+    std::vector<double> output = ts_cond_stat(cond_min, lte, method, cond, value, n, q, fill, least, partial);
+    return output;
+}
+
+std::vector<double> ts_gte_sd(const std::vector<double> &cond, const std::vector<double> &value, int n, double q,
+                              double fill, int method, int least, bool partial) {
+    std::vector<double> output = ts_cond_stat(cond_sd, gte, method, cond, value, n, q, fill, least, partial);
+    return output;
+}
+
+std::vector<double> ts_lte_sd(const std::vector<double> &cond, const std::vector<double> &value, int n, double q,
+                              double fill, int method, int least, bool partial) {
+    std::vector<double> output = ts_cond_stat(cond_sd, lte, method, cond, value, n, q, fill, least, partial);
+    return output;
+}
+
+std::vector<double> ts_gte_sum(const std::vector<double> &cond, const std::vector<double> &value, int n, double q,
+                               double fill, int method, int least, bool partial) {
+    std::vector<double> output = ts_cond_stat(cond_sum, gte, method, cond, value, n, q, fill, least, partial);
+    return output;
+}
+
+std::vector<double> ts_lte_sum(const std::vector<double> &cond, const std::vector<double> &value, int n, double q,
+                               double fill, int method, int least, bool partial) {
+    std::vector<double> output = ts_cond_stat(cond_sum, lte, method, cond, value, n, q, fill, least, partial);
+    return output;
 }
 }  // namespace ornate

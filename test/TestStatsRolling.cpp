@@ -8,7 +8,6 @@
 using namespace std;
 using namespace ornate;
 
-
 void test_variance_rolling(const vector<double>& _data, int window) {
     rolling_variance_rb_range rvrr(1);
     rolling_variance_rb_range nrvrr(1);
@@ -1199,6 +1198,36 @@ void test_tsargmax_by_window(const vector<double>& _data1, int window) {
     }
 }
 
+void test_TsLteMean_method(int method, const vector<double>& data) {
+    int window = 5, ins_num = 2;
+    auto dummy_ret = ts_lte_mean(data, data, window, 0.5, NAN, method, 3, true);
+
+    rolling_data_container<> container(window, ins_num);
+    vector<double> row(ins_num, 0);
+    TsLteMean rcs(ins_num);
+    rcs.set_row_size(window);
+    rcs.partial = true;
+    rcs.method = method;
+
+    for (int round = 0; round < 2; ++round) {
+        container.clear();
+        rcs.init();
+
+        for (int j = 0; j < (int)data.size(); ++j) {
+            double i = data[j];
+            for (int k = 0; k < ins_num; ++k) {
+                row[k] = i;
+            }
+            container.push(row);
+
+            rcs(container.get_new_row(), container.get_new_row(), row.data());
+            for (int k = 0; k < ins_num; ++k) {
+                REQUIRE(FloatEqual(dummy_ret[j], row[k]));
+            }
+        }
+    }
+}
+
 TEST_CASE("math_stats_rolling_rb_range", "[MathStatsRolling]") {
     vector<double> x = {1, 2, NAN, 3, NAN, NAN, 4, 5.5, 6, 7, NAN, 8, 9};
     vector<double> x1 = {3, 2, NAN, 1, NAN, NAN, 5, 3.5, 7, 6, NAN, 5, 7};
@@ -1548,5 +1577,201 @@ TEST_CASE("math_stats_rolling_rb_range", "[MathStatsRolling]") {
         test_tsargmax_by_window(datum, 4);
         test_tsargmax_by_window(datum, 5);
         test_tsargmax_by_window(datum, 6);
+    }
+
+    SECTION("ts_gte_mean rolling nan", "[MathStatsRolling]") {
+        int window = 5, ins_num = 2;
+        auto dummy_ret = ts_gte_mean(data, data, window, 0.5, NAN, 1);
+        std::vector<double> expected = {NAN, NAN, NAN, NAN, 4.0, 5.0};
+        REQUIRE(FloatVecEqual(dummy_ret, expected));
+
+        rolling_data_container<> container(window, ins_num);
+        vector<double> row(ins_num, 0);
+        TsGteMean rcs(ins_num);
+        rcs.set_row_size(window);
+
+        for (int round = 0; round < 2; ++round) {
+            container.clear();
+            rcs.init();
+
+            for (int j = 0; j < (int)data.size(); ++j) {
+                double i = data[j];
+                for (int k = 0; k < ins_num; ++k) {
+                    row[k] = i;
+                }
+                container.push(row);
+
+                rcs(container.get_new_row(), container.get_new_row(), row.data());
+                for (int k = 0; k < ins_num; ++k) {
+                    REQUIRE(FloatEqual(expected[j], row[k]));
+                }
+            }
+        }
+    }
+
+    SECTION("ts_lte_mean rolling nan", "[MathStatsRolling]") {
+        int window = 5, ins_num = 2;
+        auto dummy_ret = ts_lte_mean(data, data, window, 0.5, NAN, 1);
+        std::vector<double> expected = {NAN, NAN, NAN, NAN, 2.0, 3.0};
+        REQUIRE(FloatVecEqual(dummy_ret, expected));
+
+        rolling_data_container<> container(window, ins_num);
+        vector<double> row(ins_num, 0);
+        TsLteMean rcs(ins_num);
+        rcs.set_row_size(window);
+
+        for (int round = 0; round < 2; ++round) {
+            container.clear();
+            rcs.init();
+
+            for (int j = 0; j < (int)data.size(); ++j) {
+                double i = data[j];
+                for (int k = 0; k < ins_num; ++k) {
+                    row[k] = i;
+                }
+                container.push(row);
+
+                rcs(container.get_new_row(), container.get_new_row(), row.data());
+                for (int k = 0; k < ins_num; ++k) {
+                    REQUIRE(FloatEqual(expected[j], row[k]));
+                }
+            }
+        }
+    }
+
+    SECTION("ts_lte_mean rolling nan partial method", "[MathStatsRolling]") {
+        test_TsLteMean_method(0, data);
+        test_TsLteMean_method(1, data);
+        test_TsLteMean_method(2, data);
+        test_TsLteMean_method(3, data);
+        test_TsLteMean_method(4, data);
+    }
+
+    SECTION("ts_lte_mean rolling nan partial", "[MathStatsRolling]") {
+        int window = 5, ins_num = 2;
+        auto dummy_ret = ts_lte_mean(data, data, window, 0.5, NAN, 1, 3, true);
+        std::vector<double> expected = {NAN, NAN, 1.5, 1.5, 2.0, 3.0};
+        // REQUIRE(dummy_ret == expected);
+        REQUIRE(FloatVecEqual(dummy_ret, expected));
+
+        rolling_data_container<> container(window, ins_num);
+        vector<double> row(ins_num, 0);
+        TsLteMean rcs(ins_num);
+        rcs.set_row_size(window);
+        rcs.partial = true;
+
+        for (int round = 0; round < 2; ++round) {
+            container.clear();
+            rcs.init();
+
+            for (int j = 0; j < (int)data.size(); ++j) {
+                double i = data[j];
+                for (int k = 0; k < ins_num; ++k) {
+                    row[k] = i;
+                }
+                container.push(row);
+
+                rcs(container.get_new_row(), container.get_new_row(), row.data());
+                for (int k = 0; k < ins_num; ++k) {
+                    REQUIRE(FloatEqual(expected[j], row[k]));
+                }
+            }
+        }
+    }
+
+    SECTION("ts_lte_max rolling nan partial", "[MathStatsRolling]") {
+        int window = 5, ins_num = 2;
+        auto dummy_ret = ts_lte_max(data, data, window, 0.5, NAN, 1, 3, true);
+        std::vector<double> expected = {NAN, NAN, 2.0, 2.0, 3.0, 4.0};
+        // REQUIRE(dummy_ret == expected);
+        REQUIRE(FloatVecEqual(dummy_ret, expected));
+
+        rolling_data_container<> container(window, ins_num);
+        vector<double> row(ins_num, 0);
+        TsLteMax rcs(ins_num);
+        rcs.set_row_size(window);
+        rcs.partial = true;
+
+        for (int round = 0; round < 2; ++round) {
+            container.clear();
+            rcs.init();
+
+            for (int j = 0; j < (int)data.size(); ++j) {
+                double i = data[j];
+                for (int k = 0; k < ins_num; ++k) {
+                    row[k] = i;
+                }
+                container.push(row);
+
+                rcs(container.get_new_row(), container.get_new_row(), row.data());
+                for (int k = 0; k < ins_num; ++k) {
+                    REQUIRE(FloatEqual(expected[j], row[k]));
+                }
+            }
+        }
+    }
+
+    SECTION("ts_lte_min rolling nan partial", "[MathStatsRolling]") {
+        int window = 5, ins_num = 2;
+        auto dummy_ret = ts_lte_min(data, data, window, 0.5, NAN, 1, 3, true);
+        std::vector<double> expected = {NAN, NAN, 1.0, 1.0, 1.0, 2.0};
+        // REQUIRE(dummy_ret == expected);
+        REQUIRE(FloatVecEqual(dummy_ret, expected));
+
+        rolling_data_container<> container(window, ins_num);
+        vector<double> row(ins_num, 0);
+        TsLteMin rcs(ins_num);
+        rcs.set_row_size(window);
+        rcs.partial = true;
+
+        for (int round = 0; round < 2; ++round) {
+            container.clear();
+            rcs.init();
+
+            for (int j = 0; j < (int)data.size(); ++j) {
+                double i = data[j];
+                for (int k = 0; k < ins_num; ++k) {
+                    row[k] = i;
+                }
+                container.push(row);
+
+                rcs(container.get_new_row(), container.get_new_row(), row.data());
+                for (int k = 0; k < ins_num; ++k) {
+                    REQUIRE(FloatEqual(expected[j], row[k]));
+                }
+            }
+        }
+    }
+
+    SECTION("ts_lte_sd rolling nan partial", "[MathStatsRolling]") {
+        int window = 5, ins_num = 2;
+        auto dummy_ret = ts_lte_sd(data, data, window, 0.5, NAN, 1, 3, true);
+        std::vector<double> expected = {NAN, NAN, 0.7071067812, 0.7071067812, 1.0, 1.0};
+        // REQUIRE(dummy_ret == expected);
+        REQUIRE(FloatVecEqual(dummy_ret, expected));
+
+        rolling_data_container<> container(window, ins_num);
+        vector<double> row(ins_num, 0);
+        TsLteSd rcs(ins_num);
+        rcs.set_row_size(window);
+        rcs.partial = true;
+
+        for (int round = 0; round < 2; ++round) {
+            container.clear();
+            rcs.init();
+
+            for (int j = 0; j < (int)data.size(); ++j) {
+                double i = data[j];
+                for (int k = 0; k < ins_num; ++k) {
+                    row[k] = i;
+                }
+                container.push(row);
+
+                rcs(container.get_new_row(), container.get_new_row(), row.data());
+                for (int k = 0; k < ins_num; ++k) {
+                    REQUIRE(FloatEqual(expected[j], row[k]));
+                }
+            }
+        }
     }
 }
