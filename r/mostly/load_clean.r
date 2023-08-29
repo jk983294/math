@@ -2,6 +2,10 @@ library(datasets) # Load built-in datasets
 
 summary(iris) # Summary statistics for iris data
 
+search() # currently loaded packages
+lsf.str("package:QA") # all exported functions
+ls("package:QA") # all exported functions
+help(package = QA)
 
 # CLEAN UP #################################################
 

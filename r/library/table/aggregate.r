@@ -34,7 +34,7 @@ dt[order(-y)][, head(.SD, 1), by = x] # top n value by x
 # apply to all subset using .SD
 dt[, print(.SD), by = x] # .SD contains all the columns except the grouping columns by default
 dt[, head(.SD, 1), by = x] # first row for each x
-# group function apply to all columns
+# group function apply to all columns except by columns
 dt[, lapply(.SD, mean, na.rm = TRUE), by = .(x, m)]
 
 dt_stats <- function(x) {
@@ -53,8 +53,12 @@ dt[, dt_stats(.SD), .SDcols = c("y", "z")] # whole column stats
 
 # expression in by
 (ans <- dt[, .(.N), by = .(y > 1.5)]) # each group count
+(ans <- dt[, .(.N), by = .(x, condtion_y = y > 1.5)]) # each group count
 
 # group and sort
+# it retaining the original order of groups is intentional and by design.
+# keyby means to automatically sort by the variables in our grouping.
+# keyby is typically faster than by because it doesn’t require recovering the original table’s order step.
 (ans <- dt[, .(mean(y), mean(z)), keyby = .(x)]) # each group mean and sort by key
 (ans <- dt[, .(mean(y), mean(z)), by = .(x)][order(x)]) # each group mean and sort by key
 (ans <- dt[, .(mean(y), mean(z)), by = .(x)][order(-x)]) # reverse sort

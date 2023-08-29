@@ -9,10 +9,10 @@ dt <- data.table(x = c("a", "b", "c", "b"), y = c(2, 1, 3, 4), z = c(1, 3, 2, 2)
 # subset rows in i
 (ans <- dt[x == "b" & y > 3])
 (ans <- dt[y %between% c(1.5, 3.5)])
-(ans <- dt[1:2]) # get the first two rows
+(ans <- dt[1L:2L]) # get the first two rows
 dt[.N] # last row of all columns
-dt[, .SD[1]] # first row of all columns
-dt[order(-y)][ , head(.SD, 1), by = x] # top n value by x
+dt[, .SD[1L]] # first row of all columns
+dt[order(-y)][, head(.SD, 2L), by = x] # top n value by x
 
 # subset rows in vec
 vec_y_to_select <- c(1, 2)
@@ -24,12 +24,14 @@ setDT(dt, key = "y")[J(vec_y_to_select)]
 
 
 # subset columns in j
+(ans <- dt$z) # return vector z in data.frame way
 (ans <- dt[, z]) # return vector z
 (ans <- dt[, list(z)]) # return table contains column z
 (ans <- dt[, list(y, z)]) # return table contains column y&z
 (ans <- dt[, .(y, z)]) # .() list sugar, return table
 (ans <- dt[, c("y", "z")]) # refer to columns by string names
 dt[, .SD, .SDcols = x:z] # select columns between 'x' and 'y'
+dt[, .SD, .SDcols = c("x", "y")] # select columns
 
 # Why two dots? Think of it like the two dots in a Unix command-line terminal that move you up one directory.
 # Here, you’re moving up one namespace, from the environment inside data.table brackets up to the global environment.

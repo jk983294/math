@@ -1,4 +1,6 @@
-# think of .SD as a symbol representing “each group"
+# .SD, It stands for Subset of Data, It by itself is a data.table that holds the data for the current group defined using by.
+# .SD contains all the columns except the grouping columns by default.
+# .SDcols specify columns in .SD, like .SDcols = c("x", "y") or .SDcols = x:y or .SDcols = !(x:y) or .SDcols = patterns('team')
 # .BY is a special symbol that holds the value of by
 # .N is an integer containing the number of rows in the group.
 # .I is an integer vector equal to seq_len(nrow(x))
@@ -32,3 +34,7 @@ DT[, c(.(y = max(y)), lapply(.SD, min)),
 DT[, grp := .GRP, by = x] # add a group id by 'x'
 DT[, grp_pct := .GRP / .NGRP, by = x] # add a group "progress" counter
 X[, DT[.BY, y, on = "x"], by = x] # join within each group
+
+# select columns by pattern
+col_idx <- grep("x", names(DT), value = TRUE) # .SDcols = patterns('x')
+DT[, (col_idx) : lapply(.SD, factor), .SDcols = col_idx]
