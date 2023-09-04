@@ -16,3 +16,8 @@ roll <- function(bones = 1:6) {
 }
 
 roll()
+
+my_plot <- function(x, y, type = "l", ...) {
+    plot(x, y, type = type, ...) # Pass '...' to 'plot' function
+}
+my_plot(x = 1L:5L, y = 2L:6L, main = "my plot")

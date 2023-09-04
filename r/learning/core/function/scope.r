@@ -16,3 +16,14 @@ f(x)  # 12
 x
 y  # changed to 1 since we use assign inside function
 z  # changed to 2 since we use <<- inside function
+
+# Lexical Scoping
+y <- 10L
+f <- function(x) {
+    y <- 2L
+    y^2L + g(x)
+}
+g <- function(x) {
+    x * y
+}
+f(3L) # y in g is 10, not 2 defined in f
