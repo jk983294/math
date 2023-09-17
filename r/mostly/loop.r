@@ -20,3 +20,7 @@ lapply(1L:3L, function(x, to_add) x + 1L + to_add, to_add = 3L)
 mapply(rep, 1L:4L, 4L:1L) # = list(rep(1, 4), rep(2, 3), rep(3, 2), rep(4, 1))
 mapply(sum, dt)  # the same as sapply(dt, sum)
 mapply(sum, dt, dt)  # twice of sapply(dt, sum)
+
+x <- c(1L:10L)
+results <- numeric(length(x)) # pre-allocation
+for (i in 1L:length(x)) results[i] <- log(x[i])

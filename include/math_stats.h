@@ -177,12 +177,14 @@ R covariance(const T1 *data1, const T2 *data2, size_t n) {
     return covariance_one_pass<dof, R, T1, T2>(data1, data2, n);
 }
 
-template <typename T = float>
-int __cov(const T *x, const T *y, size_t num, double &cov_, double &std_x, double &std_y) {
+template <typename T = float, typename T1 = float>
+int __cov(const T *x, const T1 *y, size_t num, double &cov_, double &std_x, double &std_y, int x_sign = 0, int y_sign = 0) {
     double sum_x = 0, sum_x2 = 0, sum_xy = 0, sum_y = 0, sum_y2 = 0;
     int count = 0;
     for (size_t i = 0; i < num; ++i) {
         if (!std::isfinite(x[i]) || !std::isfinite(y[i])) continue;
+        if (y_sign != 0 && y[i] * y_sign < 0) continue;
+        if (x_sign != 0 && x[i] * x_sign < 0) continue;
         ++count;
         sum_x += x[i];
         sum_y += y[i];
@@ -199,21 +201,39 @@ int __cov(const T *x, const T *y, size_t num, double &cov_, double &std_x, doubl
     return count;
 }
 
-template <typename T = float>
-double corr(const T *x, const T *y, size_t num) {
+template <typename T = float, typename T1 = float>
+double corr(const T *x, const T1 *y, size_t num, int x_sign = 0, int y_sign = 0) {
     double cov_ = NAN, std_x = NAN, std_y = NAN;
-    if (__cov(x, y, num, cov_, std_x, std_y) < 2) return NAN;
+    if (__cov(x, y, num, cov_, std_x, std_y, x_sign, y_sign) < 2) return NAN;
     if (std_x < epsilon || std_y < epsilon) return NAN;
     return cov_ / std_x / std_y;
 }
 
-template <typename T = float>
-double corr(const std::vector<T> &x, const std::vector<T> &y) {
+template <typename T = float, typename T1 = float>
+double corr(const std::vector<T> &x, const std::vector<T1> &y, int x_sign = 0, int y_sign = 0) {
     return corr(&x[0], &y[0], x.size());
 }
 
-template <typename T = double>
-int __cov_sample(const T *x, const T *y, const std::vector<int> &idx, double &cov_, double &std_x, double &std_y) {
+template <typename T = float>
+std::vector<double> auto_pcor(const T* px, const std::vector<int> &lags, int len) {
+    std::vector<double> ret;
+    for (int lag: lags) {
+        if (len - lag > 0) {
+            ret.push_back(ornate::corr(px, px + lag, len - lag));
+        } else {
+            ret.push_back(NAN);
+        }
+    }
+    return ret;
+}
+
+template <typename T = float>
+std::vector<double> auto_pcor(const std::vector<T> &x, const std::vector<int> &lags) {
+    return auto_pcor(x.data(), lags, (int)x.size());
+}
+
+template <typename T = double, typename T1 = double>
+int __cov_sample(const T *x, const T1 *y, const std::vector<int> &idx, double &cov_, double &std_x, double &std_y) {
     long double sum_x = 0, sum_x2 = 0, sum_xy = 0, sum_y = 0, sum_y2 = 0;
     int count = 0;
     for (int i : idx) {
@@ -234,27 +254,27 @@ int __cov_sample(const T *x, const T *y, const std::vector<int> &idx, double &co
     return count;
 }
 
-template <typename T = double>
-double corr_sample(const T *x, const T *y, const std::vector<int> &idx) {
+template <typename T = double, typename T1 = double>
+double corr_sample(const T *x, const T1 *y, const std::vector<int> &idx) {
     double cov_, std_x, std_y;
     if (__cov_sample(x, y, idx, cov_, std_x, std_y) < 2) return NAN;
     if (std_x < 1e-9 || std_y < 1e-9) return NAN;
     return cov_ / std_x / std_y;
 }
 
-template <typename T = float>
-double corr_sample(const std::vector<T> &x, const std::vector<T> &y, const std::vector<int> &idx) {
+template <typename T = float, typename T1 = float>
+double corr_sample(const std::vector<T> &x, const std::vector<T1> &y, const std::vector<int> &idx) {
     return corr_sample(&x[0], &y[0], idx);
 }
 
-template <typename T = float>
-double corr_sample_by_ratio(const std::vector<T> &x, const std::vector<T> &y, double ratio) {
+template <typename T = float, typename T1 = float>
+double corr_sample_by_ratio(const std::vector<T> &x, const std::vector<T1> &y, double ratio) {
     std::vector<int> idx = ornate::sample_by_ratio(x.size(), ratio);
     return corr_sample(&x[0], &y[0], idx);
 }
 
-template <typename T = float>
-int __weighted_cov(const T *x, const T *y, const T *weight, size_t num, double &cov_, double &std_x, double &std_y) {
+template <typename T = float, typename T1 = float>
+int __weighted_cov(const T *x, const T1 *y, const T *weight, size_t num, double &cov_, double &std_x, double &std_y) {
     double sum_x = 0, sum_x2 = 0, sum_xy = 0, sum_y = 0, sum_y2 = 0, sum_weight = 0;
     int count = 0;
     for (size_t i = 0; i < num; ++i) {
@@ -276,8 +296,8 @@ int __weighted_cov(const T *x, const T *y, const T *weight, size_t num, double &
     return count;
 }
 
-template <typename T = float>
-double weighted_corr(const T *x, const T *y, const T *weight, size_t num) {
+template <typename T = float, typename T1 = float>
+double weighted_corr(const T *x, const T1 *y, const T *weight, size_t num) {
     double cov_, std_x, std_y;
     if (weight == nullptr) {
         if (__cov(x, y, num, cov_, std_x, std_y) < 2) return NAN;
@@ -288,18 +308,19 @@ double weighted_corr(const T *x, const T *y, const T *weight, size_t num) {
     return cov_ / std_x / std_y;
 }
 
-template <typename T = float>
-double weighted_corr(const std::vector<T> &x, const std::vector<T> &y, const std::vector<T> &weight) {
+template <typename T = float, typename T1 = float>
+double weighted_corr(const std::vector<T> &x, const std::vector<T1> &y, const std::vector<T> &weight) {
     return weighted_corr(&x[0], &y[0], &weight[0], x.size());
 }
 
-template <typename T = float>
-int __rcov(const T *x, const T *y, size_t num, double &cov_, double &std_x, double &std_y, int sign) {
+template <typename T = float, typename T1 = float>
+int __rcov(const T *x, const T1 *y, size_t num, double &cov_, double &std_x, double &std_y, int y_sign, int x_sign) {
     double sum_x2 = 0, sum_xy = 0, sum_y2 = 0;
     int count = 0;
     for (size_t i = 0; i < num; ++i) {
         if (!std::isfinite(x[i]) || !std::isfinite(y[i])) continue;
-        if (sign != 0 && y[i] * sign < 0) continue;
+        if (y_sign != 0 && y[i] * y_sign < 0) continue;
+        if (x_sign != 0 && x[i] * x_sign < 0) continue;
         ++count;
         sum_x2 += x[i] * x[i];
         sum_y2 += y[i] * y[i];
@@ -312,21 +333,21 @@ int __rcov(const T *x, const T *y, size_t num, double &cov_, double &std_x, doub
     return count;
 }
 
-template <typename T = float>
-double rcor(const T *x, const T *y, int num, int sign = 0) {
+template <typename T = float, typename T1 = float>
+double rcor(const T *x, const T1 *y, int num, int y_sign = 0, int x_sign = 0) {
     double cov_, std_x, std_y;
-    if (__rcov(x, y, num, cov_, std_x, std_y, sign) < 2) return NAN;
+    if (__rcov(x, y, num, cov_, std_x, std_y, y_sign, x_sign) < 2) return NAN;
     if (std_x < epsilon || std_y < epsilon) return NAN;
     return cov_ / std_x / std_y;
 }
 
-template <typename T = float>
-double rcor(const std::vector<T> &x, const std::vector<T> &y, int sign = 0) {
-    return rcor(&x[0], &y[0], x.size(), sign);
+template <typename T = float, typename T1 = float>
+double rcor(const std::vector<T> &x, const std::vector<T1> &y, int y_sign = 0, int x_sign = 0) {
+    return rcor(&x[0], &y[0], x.size(), y_sign, x_sign);
 }
 
-template <typename T = float>
-int __weighted_rcov(const T *x, const T *y, const T *weight, int num, double &cov_, double &std_x, double &std_y,
+template <typename T = float, typename T1 = float>
+int __weighted_rcov(const T *x, const T1 *y, const T *weight, int num, double &cov_, double &std_x, double &std_y,
                     int sign) {
     double sum_x2 = 0, sum_xy = 0, sum_y2 = 0;
     int count = 0;
@@ -345,8 +366,8 @@ int __weighted_rcov(const T *x, const T *y, const T *weight, int num, double &co
     return count;
 }
 
-template <typename T = float>
-double weighted_rcor(const T *x, const T *y, const T *weight, int num, int sign = 0) {
+template <typename T = float, typename T1 = float>
+double weighted_rcor(const T *x, const T1 *y, const T *weight, int num, int sign = 0) {
     double cov_, std_x, std_y;
     if (weight == nullptr) {
         if (__rcov(x, y, num, cov_, std_x, std_y, sign) < 2) return NAN;
@@ -357,8 +378,8 @@ double weighted_rcor(const T *x, const T *y, const T *weight, int num, int sign 
     return cov_ / std_x / std_y;
 }
 
-template <typename T = float>
-double weighted_rcor(const std::vector<T> &x, const std::vector<T> &y, const std::vector<T> &weight, int sign = 0) {
+template <typename T = float, typename T1 = float>
+double weighted_rcor(const std::vector<T> &x, const std::vector<T1> &y, const std::vector<T> &weight, int sign = 0) {
     return weighted_rcor(&x[0], &y[0], &weight[0], x.size(), sign);
 }
 
@@ -454,16 +475,16 @@ int acf_half_life(const T *x, int max_life, int num, int shift_bulk = 1) {
     }
 }
 
-template <typename T = float>
-double cov(const T *x, const T *y, size_t num) {
+template <typename T = float, typename T1 = float>
+double cov(const T *x, const T1 *y, size_t num) {
     double cov_, std_x, std_y;
     if (__cov(x, y, num, cov_, std_x, std_y) <= 2) return NAN;
     if (std_x < epsilon || std_y < epsilon) return NAN;
     return cov_;
 }
 
-template <typename T = float>
-double cov(const std::vector<T> &x, const std::vector<T> &y) {
+template <typename T = float, typename T1 = float>
+double cov(const std::vector<T> &x, const std::vector<T1> &y) {
     return cov(&x[0], &y[0], x.size());
 }
 
