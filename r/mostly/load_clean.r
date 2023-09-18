@@ -18,6 +18,8 @@ search() # currently loaded packages
 lsf.str("package:QA") # all exported functions
 ls("package:QA") # all exported functions
 help(package = QA)
+sessionInfo() # check pkg version
+packageVersion("data.table")
 
 # query function
 str(lm)

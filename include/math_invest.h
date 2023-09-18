@@ -28,6 +28,19 @@ inline float calc_return(float p, float p0) {
     return r * 10000;
 }
 
+template <typename T = float>
+std::vector<double> calc_ret(const std::vector<T> &x, int lag, int skip = 0) {
+    int n = x.size();
+    std::vector<double> ret(n, NAN);
+    if (skip < lag) {
+        for (int i = 0; i < n - lag; ++i) {
+            double a = x[i + lag], b = x[i + skip];
+            ret[i] = a / b - 1.;
+        }
+    }
+    return ret;
+}
+
 inline bool is_valid_maturity(int n) { return (n > 0 && n < 9999); }
 inline bool is_same_maturity(int mat0, int mat1) { return (mat0 == mat1 && is_valid_maturity(mat0)); }
 
