@@ -296,7 +296,7 @@ struct regression2_once {
 };
 
 struct rolling_all_once {
-    long double total_sum{0}, total_square_sum{0}, total_cube_sum{0};
+    long double total_sum{0}, total_square_sum{0}, total_cube_sum{0}, total_x4{0};
     double high{NAN}, low{NAN}, last{NAN}, first{NAN};
     int cnt{0};
 
@@ -315,6 +315,7 @@ struct rolling_all_once {
             total_sum += x;
             total_square_sum += x * x;
             total_cube_sum += x * x * x;
+            total_x4 += x * x * x * x;
             ++cnt;
 
             if (cnt == 1) {
@@ -323,11 +324,31 @@ struct rolling_all_once {
         }
     }
 
+    void merge(const rolling_all_once& r) {
+        total_sum += r.total_sum;
+        total_square_sum += r.total_square_sum;
+        total_cube_sum += r.total_cube_sum;
+        total_x4 += r.total_x4;
+        cnt += r.cnt;
+        if (std::isnan(first)) first = r.first;
+        if (!std::isnan(r.last)) last = r.last;
+        if (std::isfinite(r.high)) {
+            if (std::isnan(high) || r.high > high) {
+                high = r.high;
+            }
+        }
+        if (std::isfinite(r.low)) {
+            if (std::isnan(low) || r.low < low) {
+                low = r.low;
+            }
+        }
+    }
+
     void clear() {
         high = NAN;
         low = NAN;
         last = NAN;
-        total_cube_sum = total_square_sum = total_sum = 0;
+        total_x4 = total_cube_sum = total_square_sum = total_sum = 0;
         cnt = 0;
     }
 
@@ -365,6 +386,24 @@ struct rolling_all_once {
                 double mean3 = mean * mean * mean;
                 double m3 = total_cube_sum / cnt - 3 * mean * total_square_sum / cnt + 2 * mean3;
                 return m3 / std::pow(var, 1.5);
+            }
+        } else
+            return NAN;
+    }
+
+    double get_kurt() {
+        if (cnt >= 2) {
+            double mean = total_sum / cnt;
+            double mean2 = mean * mean;
+            double var = total_square_sum / cnt - mean2;
+            if (var <= 1e-14)
+                return NAN;
+            else {
+                double mean3 = mean2 * mean;
+                double mean4 = mean3 * mean;
+                double m4 = total_x4 / cnt - 4 * mean * total_cube_sum / cnt +
+                            6 * mean2 * total_square_sum / cnt - 3 * mean4;
+                return m4 / std::pow(var, 2) - 3.0;
             }
         } else
             return NAN;
