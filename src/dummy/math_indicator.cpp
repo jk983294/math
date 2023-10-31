@@ -1,9 +1,10 @@
 #include <math_indicator.h>
+#include <math_stats.h>
 #include <vector>
 #include <algorithm>
 
 namespace ornate {
-double HHS(const double* close, const double* volume, const double* oi, std::size_t i, std::size_t n) {
+double HHS(const double* close, const double* volume, const double* oi, std::size_t i, std::size_t n, double blowup_factor) {
     std::size_t s_pos = 0;
     if (i >= n) s_pos = i - n;
     std::vector<double> vals;
@@ -19,6 +20,7 @@ double HHS(const double* close, const double* volume, const double* oi, std::siz
     int valid_n = vals.size();
     double one_third =  vals.front() + (vals.back() - vals.front()) / 3.;
     double two_third =  vals.back() - (vals.back() - vals.front()) / 3.;
+    double mean_ = ornate::mean(vals);
     if (valid_n > 1 && valid_n <= 3) {
         one_third = vals.front() + (vals[i] - vals.front()) / 2.;
         two_third = vals.back() - (vals.back() - *(vals.end() - 2)) / 2.;
@@ -32,7 +34,8 @@ double HHS(const double* close, const double* volume, const double* oi, std::siz
         if (not std::isfinite(close[j]) || j == 0 || not std::isfinite(close[j - 1])) continue;
         if (not std::isfinite(volume[j]) || not std::isfinite(volume[j - 1])) continue;
         if (close[j] > close[j - 1]) {
-            if (volume[j] >= two_third) bull += 1;
+            if (volume[j] >= mean_ * blowup_factor) bear += 1;
+            else if (volume[j] >= two_third) bull += 1;
             else if (volume[j] <= one_third) bear += 1;
 
             if (oi) {
@@ -40,7 +43,8 @@ double HHS(const double* close, const double* volume, const double* oi, std::siz
                 else bear += 1;
             }
         } else if (close[j] < close[j - 1]) {
-            if (volume[j] >= two_third) bear += 1;
+            if (volume[j] >= mean_ * blowup_factor) bull += 1;
+            else if (volume[j] >= two_third) bear += 1;
             else if (volume[j] <= one_third) bull += 1;
 
             if (oi) {
