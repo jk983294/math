@@ -1,6 +1,7 @@
+#include <math_lm.h>
+#include <math_stats.h>
 #include <cstring>
 #include <random>
-#include <math_lm.h>
 
 using namespace ornate;
 
@@ -8,15 +9,14 @@ using namespace ornate;
 int main(int argc, char** argv) {
     Model model;
     size_t n = 100;
-    size_t total_row = n * n;
+    size_t n_row = n * n;
     std::random_device rd;
     std::mt19937 generator(rd());
     std::normal_distribution<double> nd(0., 0.001);
-    model.total_row = total_row;
 
-    std::vector<double> x0(total_row, NAN);
-    std::vector<double> x1(total_row, NAN);
-    std::vector<double> y(total_row, NAN);
+    std::vector<double> x0(n_row, NAN);
+    std::vector<double> x1(n_row, NAN);
+    std::vector<double> y(n_row, NAN);
 
     // y = 2 * x0 + 3 * x1  - 1 + delta
     for (size_t i = 0; i < n; ++i) {
@@ -27,9 +27,21 @@ int main(int argc, char** argv) {
         }
     }
 
-    model.m_y = y.data();
-    model.m_features.push_back(x0.data());
-    model.m_features.push_back(x1.data());
-    model.fit_lm();
+    model.set_n(n_row);
+//    model.set_y(y.data());
+//    model.add_feature("x0", x0.data());
+//    model.add_feature("x1", x1.data());
+    model.set_y_real(y);
+    model.add_feature_real("x0", x0);
+    model.add_feature_real("x1", x1);
+    vector<bool> untradable(n_row, false);
+    model.set_untradable(untradable);
+    model.train(TrainType::LM, {});
+    auto fitted = model.fit(TrainType::LM);
+    double pcor0 = ornate::corr(fitted, y);
+    model.train(TrainType::LM, {"x0"});
+    fitted = model.fit(TrainType::LM);
+    double pcor1 = ornate::corr(fitted, y);
+    printf("corr %f <-> %f\n", pcor0, pcor1);
     return 0;
 }

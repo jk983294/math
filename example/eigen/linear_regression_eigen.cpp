@@ -33,7 +33,7 @@ int main() {
     double* pb= b.data();
     std::copy(b_data.begin(), b_data.end(), pb);
 
-    VectorXd coef = A.bdcSvd(ComputeThinU | ComputeThinV).solve(b);  // throw if no solution found
+    VectorXd coef = A.bdcSvd(ComputeThinU | ComputeThinV).solve(b);
     cout << "A:\n" << A << endl;
     cout << "b:\n" << b << endl;
     cout << "coef:\n" << coef << endl;  // [2, 1, -1]^T

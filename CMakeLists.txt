@@ -12,7 +12,7 @@ set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/)
 
 
 SET(CMAKE_CXX_FLAGS "-std=c++17 -O3 -s -Wall -Werror")
-#SET(CMAKE_CXX_FLAGS "-std=c++17 -g -Wall -Werror")
+#SET(CMAKE_CXX_FLAGS "-std=c++17 -g -Wall -Werror -fsanitize=address -fno-omit-frame-pointer")
 
 message ("cxx Flags: " ${CMAKE_CXX_FLAGS})
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
