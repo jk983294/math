@@ -1,6 +1,5 @@
 #include <math_lm.h>
 #include <math_random.h>
-#include <math_stats.h>
 #include <math_vector.h>
 #include <cmath>
 #include <cstdio>
@@ -8,6 +7,8 @@
 #include <tuple>
 #include <Eigen/Dense>
 #include <zerg_template.h>
+#include <fstream>
+#include <zerg_file.h>
 
 namespace ornate {
 namespace {
@@ -42,7 +43,6 @@ static double calc_r2(const Eigen::MatrixXd& X_mat, const Eigen::VectorXd& b,
 }
 }  // namespace
 double LmModel::train_lm_first_n_features(int feature_count) {
-    printf("train step 1\n");
     selected.clear();
     for (int i = 0; i < feature_count; ++i) selected.push_back(i);
 
@@ -50,8 +50,6 @@ double LmModel::train_lm_first_n_features(int feature_count) {
     std::tie(train_cnt, test_cnt) = calc_skip_indices();
 
     m_coefs.clear();
-    m_signal_mean = {0};  // 截距项
-    m_signal_sd = {0};
     int col = feature_count;
     if (m_param.m_intercept) col += 1;
     Eigen::MatrixXd X(train_cnt, col);
@@ -63,7 +61,6 @@ double LmModel::train_lm_first_n_features(int feature_count) {
         std::fill(pX_test, pX_test + test_cnt, 1.0);  // intercept
     }
 
-    printf("train step 2\n");
     Eigen::VectorXd b(train_cnt);
     Eigen::VectorXd b_test(test_cnt);
     fill_data(train_cnt, SKIP_INDEX_TRAIN, m_param.m_y, b.data());
@@ -73,11 +70,6 @@ double LmModel::train_lm_first_n_features(int feature_count) {
     int X_offset = 0;
     if (m_param.m_intercept) X_offset = 1;
     for (int i = 0; i < feature_count; ++i) {
-        double mean_ = ornate::mean(m_param.m_features[i], m_param.n_row);
-        double sd_ = ornate::std(m_param.m_features[i], m_param.n_row);
-        m_signal_mean.push_back(mean_);
-        m_signal_sd.push_back(sd_);
-
         fill_data(train_cnt, SKIP_INDEX_TRAIN, m_param.m_features[i], &pX[(i + X_offset) * train_cnt]);
         fill_data(test_cnt, SKIP_INDEX_TEST, m_param.m_features[i], &pX[(i + X_offset) * test_cnt]);
     }
@@ -88,9 +80,8 @@ double LmModel::train_lm_first_n_features(int feature_count) {
     const Eigen::VectorXd& residual = b - fitted;
     double r_squared = 1 - residual.dot(residual) / ytot.dot(ytot);
 
-    std::vector<double> pvalue = calc_p_value(X, residual, coef);
+    m_pvalues = calc_p_value(X, residual, coef);
 
-    printf("train step 3\n");
     if (m_param.m_intercept) {
         m_coefs.resize(coef.size());
         std::copy(coef.data(), coef.data() + coef.size(), m_coefs.begin());
@@ -108,7 +99,7 @@ double LmModel::train_lm_first_n_features(int feature_count) {
     printf("train_whole r_squared=(%f,%f)\n", r_squared, r_squared_test);
     printf("f: intercept,%s\n", ztool::head(m_param.m_f_names, 0).c_str());
     printf("coef: %s\n", ztool::head(m_coefs, 0).c_str());
-    printf("pvalue: %s\n", ztool::head(pvalue, 0).c_str());
+    printf("pvalue: %s\n", ztool::head(m_pvalues, 0).c_str());
     return r_squared;
 }
 
@@ -152,12 +143,30 @@ void LmModel::train(const TrainParam& param) {
 }
 
 std::vector<double> LmModel::fit_new(size_t n, const std::unordered_map<std::string, const double*>& name2features) {
-    // TODO
-    return {};
+    std::vector<double> rets(n, NAN);
+    int f_cnt = m_param.m_f_names.size();
+    std::vector<const double*> _features(f_cnt, nullptr);
+    for (int j = 0; j < f_cnt; ++j) {
+        auto itr = name2features.find(m_param.m_f_names[j]);
+        if (itr == name2features.end()) {
+            printf("fit_new failed missing %s\n", m_param.m_f_names[j].c_str());
+            return rets;
+        } else {
+            _features[j] = itr->second;
+        }
+    }
+    std::vector<double> inputs(f_cnt, NAN);
+    for (size_t i = 0; i < n; ++i) {
+        for (int j = 0; j < f_cnt; ++j) {
+            inputs[j] = _features[j][i];
+        }
+        rets[i] = fit_row(inputs);
+    }
+    return rets;
 }
 
 double LmModel::fit_row(const std::vector<double>& inputs) {
-    int f_cnt = m_param.m_features.size();
+    int f_cnt = inputs.size();
     double ret = m_coefs[0];
     for (int i = 0; i < f_cnt; ++i) {
         if (ornate::isvalid(inputs[i]))
@@ -233,5 +242,53 @@ bool LmModel::if_all_feature_valid(size_t row_id) {
         if (!std::isfinite((m_param.m_features[fid])[row_id])) return false;
     }
     return true;
+}
+
+bool LmModel::save(std::string path) {
+    path = ztool::FileExpandUser(path);
+    std::ofstream ofs(path, std::ofstream::out | std::ofstream::trunc);
+
+    if (!ofs) {
+        printf("save lm model open file %s failed\n", path.c_str());
+        return false;
+    }
+    if (m_param.m_f_names.empty()) return false;
+    ofs << "#LM\n";
+    ofs << "F_CNT," << m_param.m_f_names.size() << "\n";
+    ofs << "INTERCEPT," << m_coefs.front() << "\n";
+    for (size_t i = 0; i < m_param.m_f_names.size(); ++i) {
+        ofs << m_param.m_f_names[i] << "," << m_coefs[i + 1] << "\n";
+    }
+    printf("write lm model to %s\n", path.c_str());
+    return true;
+}
+bool LmModel::load(std::string path) {
+    path = ztool::FileExpandUser(path);
+    std::ifstream ifs(path, std::ifstream::in);
+
+    if (!ifs) {
+        printf("load lm model open file %s failed\n", path.c_str());
+        return false;
+    }
+
+    string s;
+    int f_cnt = 0;
+    while (getline(ifs, s)) {
+        if (s.empty() || s.front() == '#') continue;
+        auto itr = s.find_first_of(',');
+        auto first = s.substr(0, itr);
+        auto second = s.substr(itr + 1);
+        if (first == "F_CNT") {
+            f_cnt = std::stoi(second);
+        } else if (first == "INTERCEPT") {
+            m_coefs.push_back(std::stod(second));
+        } else {
+            m_coefs.push_back(std::stod(second));
+            m_param.m_f_names.push_back(first);
+        }
+    }
+
+    ifs.close();
+    return (int)m_param.m_f_names.size() == f_cnt;
 }
 }  // namespace ornate

@@ -724,6 +724,27 @@ inline bool sign_ratio_out_range(double neg_ratio, double sign_threshold) {
             neg_ratio > std::max(sign_threshold, 1.0 - sign_threshold));
 }
 
+/**
+ * it will only hold one cycle, usually daily
+ * @param signals
+ * @param ret1 next bar's return
+ * @param len
+ * @param long_t >= threshold, open long
+ * @param short_t <= threshold, open short
+ * @param cost
+ * @return
+ */
+std::vector<double> t0_nav(const double* signals, const double* ret1, size_t len,
+                                                   double long_t, double short_t, double cost);
+
+inline double fcap(double x, double lower, double upper) {
+    if (x > upper)
+        return upper;
+    else if (x < lower)
+        return lower;
+    else
+        return x;
+}
 }  // namespace ornate
 
 #endif

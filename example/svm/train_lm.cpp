@@ -43,5 +43,16 @@ int main(int argc, char** argv) {
     fitted = model.fit(TrainType::LM);
     double pcor1 = ornate::corr(fitted, y);
     printf("corr %f <-> %f\n", pcor0, pcor1);
+
+    std::string m_path = "/tmp/test.lm.model";
+    model.save(TrainType::LM, m_path);
+
+    Model model1;
+    model1.load(TrainType::LM, m_path);
+    std::unordered_map<std::string, const double*> name2features;
+    name2features["x0"] = x0.data();
+    auto fitted1 = model1.fit_new(TrainType::LM, n_row, name2features);
+    double pcor2 = ornate::corr(fitted1, y);
+    printf("corr %f <-> %f\n", pcor0, pcor2);
     return 0;
 }

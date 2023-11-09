@@ -1,11 +1,6 @@
 #include <math_lm.h>
-#include <math_random.h>
-#include <math_stats.h>
 #include <math_vector.h>
-#include <armadillo>
-#include <cmath>
 #include <cstdio>
-#include <stats.hpp>
 #include <tuple>
 
 namespace ornate {
@@ -130,4 +125,21 @@ void Model::set_untradable(std::string name) {
     }
 }
 
+bool Model::save(TrainType type, std::string path) {
+    if (type == TrainType::LM)
+        return m_lm.save(path);
+    else {
+        printf("Model::save type not support\n");
+        return false;
+    }
+}
+
+bool Model::load(TrainType type, std::string path) {
+    if (type == TrainType::LM)
+        return m_lm.load(path);
+    else {
+        printf("Model::load type not support\n");
+        return false;
+    }
+}
 }  // namespace ornate

@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 #include <vector>
+#include <cmath>
 
 using std::vector;
 
@@ -27,13 +28,15 @@ struct LmModel {
     void train(const TrainParam& param);
     std::vector<double> fit_new(size_t n, const std::unordered_map<std::string, const double*>& name2features);
     std::vector<double> fit();
+    bool save(std::string path);
+    bool load(std::string path);
 
     TrainParam m_param;
     vector<int> selected;
     std::vector<int> m_skip_indices;
     int m_max_feature_num{-1};
     size_t m_train_cnt{0}, m_test_offset{0}, m_test_cnt{0};
-    std::vector<double> m_coefs, m_signal_mean, m_signal_sd;
+    std::vector<double> m_coefs, m_pvalues;
 
 private:
     double fit_row(const std::vector<double>& inputs);
@@ -75,6 +78,10 @@ struct Model {
     void reset_untradable();
     void set_untradable(const std::vector<bool>& untradable);
     void set_untradable(std::string name);
+    LmModel& get_lm_model() { return m_lm; }
+
+    bool save(TrainType type, std::string path);
+    bool load(TrainType type, std::string path);
 
 private:
     std::vector<std::vector<double>*> m_real_datum;
