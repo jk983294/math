@@ -239,7 +239,7 @@ void MaxMinSlideWindow<T>::copy_tree(MmswRBNode<T>* node, const MmswRBNode<T>* f
 template <typename T>
 MaxMinSlideWindow<T>::~MaxMinSlideWindow<T>() {
     delete nil;
-    delete pool;
+    delete[] pool;
 }
 
 template <typename T>

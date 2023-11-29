@@ -1,16 +1,16 @@
 #pragma once
 
+#include <linear_svm.h>
+#include <math_lasso.h>
+#include <cmath>
 #include <unordered_map>
 #include <vector>
-#include <cmath>
 
 using std::vector;
 
 namespace ornate {
 
-enum TrainType: int {
-    LM = 0, Lasso, SVM
-};
+enum TrainType : int { LM = 0, Lasso, SVM };
 
 struct TrainParam {
     std::vector<const double*> m_features;
@@ -20,8 +20,16 @@ struct TrainParam {
     size_t n_row{0};
 
     bool m_intercept{true};
-    bool m_skip_na_feature{false}; // if any feature nan will cause this row skipped
-    bool is_step{false};
+    bool m_skip_na_feature{false};  // if any feature nan will cause this row skipped
+    bool m_verbose{true};
+    bool m_lasso{false};
+    bool m_lasso_need_scale{false};
+    // bool m_lasso_need_bias{false}; same with m_intercept
+    double lasso_lambda{0.2};
+    double lasso_error_threshold{0.01};
+    size_t lasso_n_iter{100};
+
+    svm::parameter m_svm_param;
 };
 
 struct LmModel {
@@ -32,31 +40,28 @@ struct LmModel {
     bool load(std::string path);
 
     TrainParam m_param;
-    vector<int> selected;
     std::vector<int> m_skip_indices;
-    int m_max_feature_num{-1};
-    size_t m_train_cnt{0}, m_test_offset{0}, m_test_cnt{0};
+    size_t m_train_cnt{0};
     std::vector<double> m_coefs, m_pvalues;
 
 private:
     double fit_row(const std::vector<double>& inputs);
-    void train_lm_step();
-    double train_lm_whole();
-    double train_lm_first_n_features(int feature_count);
+    double train_lm();
+    double train_lasso();
 
 private:
-    bool if_feature_valid(size_t row_id);
     bool if_any_feature_valid(size_t row_id);
     bool if_all_feature_valid(size_t row_id);
-    std::pair<size_t, size_t> calc_skip_indices();
-    bool need_test_set(size_t idx) const { return m_test_cnt > 0 && idx >= m_test_offset; }
+    size_t calc_skip_indices();
     void fill_data(size_t expected_row_cnt, int flag, const double* src, double* dest);
+    int prepare_Xy(Eigen::MatrixXd& X, Eigen::VectorXd& y);
 };
 
 struct Model {
     ~Model();
     bool train(TrainType type, const std::vector<std::string>& features);
-    std::vector<double> fit_new(TrainType type, size_t n, const std::unordered_map<std::string, const double*>& name2features);
+    std::vector<double> fit_new(TrainType type, size_t n,
+                                const std::unordered_map<std::string, const double*>& name2features);
     std::vector<double> fit(TrainType type);
 
     bool add_feature(std::string name, const double* f);
@@ -84,6 +89,11 @@ struct Model {
     bool load(TrainType type, std::string path);
 
 private:
+    void train_svm();
+    std::vector<double> fit_svm();
+    std::vector<double> fit_new_svm(size_t n, const std::unordered_map<std::string, const double*>& name2features);
+
+public:
     std::vector<std::vector<double>*> m_real_datum;
     std::vector<std::vector<bool>*> m_real_bool_datum;
     std::vector<bool> m_untradable;
@@ -95,6 +105,7 @@ private:
     std::unordered_map<std::string, const std::vector<bool>*> m_name2bFeatures;
     const double* m_y{nullptr};
     LmModel m_lm;
+    svm::LinearSvm m_svm;
     TrainParam m_param;
 };
 }  // namespace ornate

@@ -178,7 +178,8 @@ R covariance(const T1 *data1, const T2 *data2, size_t n) {
 }
 
 template <typename T = float, typename T1 = float>
-int __cov(const T *x, const T1 *y, size_t num, double &cov_, double &std_x, double &std_y, int x_sign = 0, int y_sign = 0) {
+int __cov(const T *x, const T1 *y, size_t num, double &cov_, double &std_x, double &std_y, int x_sign = 0,
+          int y_sign = 0) {
     double sum_x = 0, sum_x2 = 0, sum_xy = 0, sum_y = 0, sum_y2 = 0;
     int count = 0;
     for (size_t i = 0; i < num; ++i) {
@@ -215,9 +216,9 @@ double corr(const std::vector<T> &x, const std::vector<T1> &y, int x_sign = 0, i
 }
 
 template <typename T = float>
-std::vector<double> auto_pcor(const T* px, const std::vector<int> &lags, int len) {
+std::vector<double> auto_pcor(const T *px, const std::vector<int> &lags, int len) {
     std::vector<double> ret;
-    for (int lag: lags) {
+    for (int lag : lags) {
         if (len - lag > 0) {
             ret.push_back(ornate::corr(px, px + lag, len - lag));
         } else {
@@ -334,7 +335,7 @@ int __rcov(const T *x, const T1 *y, size_t num, double &cov_, double &std_x, dou
 }
 
 template <typename T = float, typename T1 = float>
-double rcor(const T *x, const T1 *y, int num, int y_sign = 0, int x_sign = 0) {
+double rcor(const T *x, const T1 *y, size_t num, int y_sign = 0, int x_sign = 0) {
     double cov_, std_x, std_y;
     if (__rcov(x, y, num, cov_, std_x, std_y, y_sign, x_sign) < 2) return NAN;
     if (std_x < epsilon || std_y < epsilon) return NAN;

@@ -9,11 +9,11 @@
 #include <zerg_template.h>
 #include <fstream>
 #include <zerg_file.h>
+#include <math_lasso.h>
 
 namespace ornate {
 namespace {
 constexpr int SKIP_INDEX_NAN = -1;
-constexpr int SKIP_INDEX_TEST = 0;
 constexpr int SKIP_INDEX_TRAIN = 1;
 
 static std::vector<double> calc_p_value(const Eigen::MatrixXd& A, const Eigen::VectorXd& residual, const Eigen::VectorXd& coef) {
@@ -33,51 +33,17 @@ static std::vector<double> calc_p_value(const Eigen::MatrixXd& A, const Eigen::V
     }
     return pvalue;
 }
-
-static double calc_r2(const Eigen::MatrixXd& X_mat, const Eigen::VectorXd& b,
-                           const Eigen::VectorXd& coef) {
-    Eigen::VectorXd ytot = b.array() - b.array().mean();
-    Eigen::VectorXd fitted = X_mat * coef;
-    Eigen::VectorXd residual = b - fitted;
-    return 1 - residual.dot(residual) / ytot.dot(ytot);
-}
 }  // namespace
-double LmModel::train_lm_first_n_features(int feature_count) {
-    selected.clear();
-    for (int i = 0; i < feature_count; ++i) selected.push_back(i);
-
-    size_t train_cnt, test_cnt;
-    std::tie(train_cnt, test_cnt) = calc_skip_indices();
-
-    m_coefs.clear();
-    int col = feature_count;
-    if (m_param.m_intercept) col += 1;
-    Eigen::MatrixXd X(train_cnt, col);
-    Eigen::MatrixXd X_test(test_cnt, col);
-    double* pX = X.data();
-    double* pX_test = X_test.data();
-    if (m_param.m_intercept) {
-        std::fill(pX, pX + train_cnt, 1.0);           // intercept
-        std::fill(pX_test, pX_test + test_cnt, 1.0);  // intercept
-    }
-
-    Eigen::VectorXd b(train_cnt);
-    Eigen::VectorXd b_test(test_cnt);
-    fill_data(train_cnt, SKIP_INDEX_TRAIN, m_param.m_y, b.data());
-    fill_data(test_cnt, SKIP_INDEX_TEST, m_param.m_y, b_test.data());
-    Eigen::VectorXd ytot = b.array() - b.array().mean();
-
-    int X_offset = 0;
-    if (m_param.m_intercept) X_offset = 1;
-    for (int i = 0; i < feature_count; ++i) {
-        fill_data(train_cnt, SKIP_INDEX_TRAIN, m_param.m_features[i], &pX[(i + X_offset) * train_cnt]);
-        fill_data(test_cnt, SKIP_INDEX_TEST, m_param.m_features[i], &pX[(i + X_offset) * test_cnt]);
-    }
+double LmModel::train_lm() {
+    Eigen::MatrixXd X;
+    Eigen::VectorXd y;
+    int col = prepare_Xy(X, y);
 
     // LOG_INFO("train_whole start");
-    Eigen::VectorXd coef = X.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(b);
+    Eigen::VectorXd coef = X.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(y);
     const Eigen::VectorXd& fitted = X * coef;
-    const Eigen::VectorXd& residual = b - fitted;
+    const Eigen::VectorXd& residual = y - fitted;
+    Eigen::VectorXd ytot = y.array() - y.array().mean();
     double r_squared = 1 - residual.dot(residual) / ytot.dot(ytot);
 
     m_pvalues = calc_p_value(X, residual, coef);
@@ -91,24 +57,80 @@ double LmModel::train_lm_first_n_features(int feature_count) {
         std::copy(coef.data(), coef.data() + col, m_coefs.begin() + 1);
     }
 
-    double r_squared_test = NAN;
-    if (m_test_cnt > 0) {
-        r_squared_test = calc_r2(X_test, b_test, coef);
-    }
-
-    printf("train_whole r_squared=(%f,%f)\n", r_squared, r_squared_test);
+    printf("train_whole r_squared=%f\n", r_squared);
     printf("f: intercept,%s\n", ztool::head(m_param.m_f_names, 0).c_str());
     printf("coef: %s\n", ztool::head(m_coefs, 0).c_str());
     printf("pvalue: %s\n", ztool::head(m_pvalues, 0).c_str());
     return r_squared;
 }
 
-std::pair<size_t, size_t> LmModel::calc_skip_indices() {
+int LmModel::prepare_Xy(Eigen::MatrixXd& X, Eigen::VectorXd& y) {
+    int feature_count = m_param.m_features.size();
+    size_t train_cnt = calc_skip_indices();
+
+    m_coefs.clear();
+    int col = feature_count;
+    if (m_param.m_intercept) col += 1;
+    X.resize(train_cnt, col);
+    double* pX = X.data();
+    if (m_param.m_intercept) {
+        std::fill(pX, pX + train_cnt, 1.0);           // intercept
+    }
+
+    y.resize(train_cnt);
+    fill_data(train_cnt, SKIP_INDEX_TRAIN, m_param.m_y, y.data());
+
+
+    int X_offset = 0;
+    if (m_param.m_intercept) X_offset = 1;
+    for (int i = 0; i < feature_count; ++i) {
+        fill_data(train_cnt, SKIP_INDEX_TRAIN, m_param.m_features[i], &pX[(i + X_offset) * train_cnt]);
+    }
+    return col;
+}
+
+double LmModel::train_lasso() {
+    Eigen::MatrixXd X;
+    Eigen::VectorXd y;
+    int col = prepare_Xy(X, y);
+
+    // LOG_INFO("train_whole start");
+    ornate::LassoModel model(m_param.lasso_lambda, m_param.lasso_n_iter, m_param.lasso_error_threshold,
+                             m_param.m_lasso_need_scale, false);
+    model.set_verbose(m_param.m_verbose);
+    model.fit(X, y);
+    Eigen::VectorXd y_hat = model.predict(X);
+    Eigen::VectorXd coef = model.get_model().coef;
+    Eigen::VectorXd ytot = y.array() - y.array().mean();
+
+    const Eigen::VectorXd& fitted = X * coef;
+    const Eigen::VectorXd& residual = y - fitted;
+    double r_squared = 1 - residual.dot(residual) / ytot.dot(ytot);
+
+    m_pvalues = calc_p_value(X, residual, coef);
+
+    if (m_param.m_intercept) {
+        m_coefs.resize(coef.size());
+        std::copy(coef.data(), coef.data() + coef.size(), m_coefs.begin());
+    } else {
+        m_coefs.resize(col + 1);
+        m_coefs[0] = 0.;  // intercept
+        std::copy(coef.data(), coef.data() + col, m_coefs.begin() + 1);
+    }
+
+    printf("train_whole r_squared=%f\n", r_squared);
+    printf("f: intercept,%s\n", ztool::head(m_param.m_f_names, 0).c_str());
+    printf("coef: %s\n", ztool::head(m_coefs, 0).c_str());
+    printf("pvalue: %s\n", ztool::head(m_pvalues, 0).c_str());
+    return r_squared;
+}
+
+size_t LmModel::calc_skip_indices() {
     m_skip_indices.clear();
     m_skip_indices.resize(m_param.n_row, SKIP_INDEX_NAN);
     auto untradable = *m_param.m_untradable;
     ornate::MyRandom myRandom;
-    size_t feature_all_nan_count{0}, feature_any_nan_count{0}, na_cnt{0}, train_cnt{0}, test_cnt{0}, untradable_cnt{0};
+    size_t feature_all_nan_count{0}, feature_any_nan_count{0}, na_cnt{0}, train_cnt{0}, untradable_cnt{0};
     for (size_t i = 0; i < m_param.n_row; ++i) {
         if (!untradable.empty() && untradable.size() == m_param.n_row && untradable[i]) {
             ++untradable_cnt;
@@ -119,26 +141,21 @@ std::pair<size_t, size_t> LmModel::calc_skip_indices() {
         } else if (m_param.m_skip_na_feature && !if_all_feature_valid(i)) {
             ++feature_any_nan_count;
         } else {
-            if (need_test_set(i)) {
-                m_skip_indices[i] = SKIP_INDEX_TEST;
-                ++test_cnt;
-            } else {
-                m_skip_indices[i] = SKIP_INDEX_TRAIN;
-                ++train_cnt;
-            }
+            m_skip_indices[i] = SKIP_INDEX_TRAIN;
+            ++train_cnt;
         }
     }
-    printf("na=%zu, untradable=%zu, feature_nan=(%zu,%zu), train/test=(%zu,%zu), total=%zu\n",
-           na_cnt, untradable_cnt, feature_all_nan_count, feature_any_nan_count, train_cnt, test_cnt, m_param.n_row);
-    return {train_cnt, test_cnt};
+    printf("na=%zu, untradable=%zu, feature_nan=(%zu,%zu), train=%zu, total=%zu\n",
+           na_cnt, untradable_cnt, feature_all_nan_count, feature_any_nan_count, train_cnt, m_param.n_row);
+    return train_cnt;
 }
 
 void LmModel::train(const TrainParam& param) {
     m_param = param;
-    if (m_param.is_step) {
-        train_lm_step();
+    if (param.m_lasso) {
+        train_lasso();
     } else {
-        train_lm_whole();
+        train_lm();
     }
 }
 
@@ -188,16 +205,6 @@ std::vector<double> LmModel::fit() {
     return rets;
 }
 
-void LmModel::train_lm_step() {}
-
-double LmModel::train_lm_whole() {
-    if (m_max_feature_num > 0 && m_max_feature_num < (int)m_param.m_features.size()) {
-        return train_lm_first_n_features(m_max_feature_num);
-    } else {
-        return train_lm_first_n_features(m_param.m_features.size());
-    }
-}
-
 /**
  * 根据y来填x, 如果y invalid，该行不要
  * 如果x invalid, 取0
@@ -218,15 +225,6 @@ void LmModel::fill_data(size_t expected_row_cnt, int flag, const double* src, do
         printf("na cnt wrong %zu %zu\n", offset, expected_row_cnt);
         exit(1);
     }
-}
-
-bool LmModel::if_feature_valid(size_t row_id) {
-    int f_count = selected.size();
-    for (int j = 0; j < f_count; ++j) {
-        int fid = selected[j];
-        if (std::isfinite((m_param.m_features[fid])[row_id])) return true;
-    }
-    return false;
 }
 
 bool LmModel::if_any_feature_valid(size_t row_id) {
@@ -253,7 +251,8 @@ bool LmModel::save(std::string path) {
         return false;
     }
     if (m_param.m_f_names.empty()) return false;
-    ofs << "#LM\n";
+    if (m_param.m_lasso) ofs << "#LASSO\n";
+    else ofs << "#LM\n";
     ofs << "F_CNT," << m_param.m_f_names.size() << "\n";
     ofs << "INTERCEPT," << m_coefs.front() << "\n";
     for (size_t i = 0; i < m_param.m_f_names.size(); ++i) {

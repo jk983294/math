@@ -53,13 +53,15 @@ int main(int argc, char** argv) {
         }
     }
 
+    // https://stats.stackexchange.com/questions/184272/why-is-the-bias-term-in-svm-estimated-separately-instead-of-an-extra-dimension
+    lsvm.bias = 1;  // for this problem, we have bias term
     lsvm.init();
     ornate::DataSet ds;
     prepare_data(ds);
     lsvm.set_data(ds);
     lsvm.work();
-    if (!lsvm.flag_cross_validation)
-        lsvm.predict_test();
+    lsvm.save("/tmp/svm.model", {"x0", "x1", "intercept"});
+    if (!lsvm.flag_cross_validation) lsvm.predict_test();
     return 0;
 }
 
@@ -80,5 +82,3 @@ void prepare_data(ornate::DataSet& ds) {
         }
     }
 }
-
-

@@ -589,7 +589,7 @@ void test_quantile_by_window(const vector<double>& x_, int window, double percen
 }
 
 void test_ema_hl_pp_by_window(const vector<double>& x_, int window) {
-    rolling_data_container<> container(window, 2);
+    rolling_data_container<> container(window, 1);
     vector<double> row(1, 0);
     rolling_ema_hl_rb_range rqrr(1);
     rqrr.set_row_size(window);

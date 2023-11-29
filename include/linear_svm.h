@@ -13,10 +13,14 @@ struct problem {
     int n;  // the number of feature (including the bias feature if bias >= 0)
     std::vector<double> m_y;
     std::vector<const double *> m_x;
-    double bias{1}; /* < 0 if no bias term */
+    double bias{-1}; /* < 0 if no bias term */
 };
 
-enum { L2R_L2LOSS_SVR = 11, L2R_L2LOSS_SVR_DUAL, L2R_L1LOSS_SVR_DUAL }; /* solver_type */
+enum {
+    L2R_L2LOSS_SVR = 11,  // L2-regularized L2-loss support vector regression (primal)
+    L2R_L2LOSS_SVR_DUAL,  // L2-regularized L2-loss support vector regression (dual)
+    L2R_L1LOSS_SVR_DUAL   // L2-regularized L1-loss support vector regression (dual)
+};                        /* solver_type */
 
 struct parameter {
     int solver_type = L2R_L2LOSS_SVR;
@@ -27,6 +31,7 @@ struct parameter {
     double p{0.1};                 // sensitiveness of loss of support vector regression
     std::vector<double> init_sol;  // initial weight vectors
     bool regularize_bias{true};
+    bool verbose{false};
 };
 
 struct model {
@@ -63,6 +68,7 @@ private:
     double eps_cg;
     int max_iter;
     function *fun_obj;
+    bool verbose{false};
 };
 
 struct model train(const struct problem *prob, const struct parameter *param);
@@ -73,8 +79,8 @@ void find_parameters(const struct problem *prob, const struct parameter *param, 
 double predict_values(const struct model *model_, const double *x);
 double predict(const struct model *model_, const double *x);
 
-int save_model(const char *model_file_name, const struct model *model_);
-model *load_model(const char *model_file_name);
+int save_model(const char *model_file_name, const struct model *model_, const std::vector<std::string> &f_names);
+model *load_model(const char *model_file_name, std::vector<std::string> &f_names);
 
 const char *check_parameter(const struct problem *prob, const struct parameter *param);
 int check_regression_model(const struct model *model);
@@ -87,6 +93,9 @@ struct LinearSvm {
     void do_find_parameters();
     void set_data(ornate::DataSet &ds);
     void predict_test();
+    bool save(std::string model_file_name, const std::vector<std::string> &f_names);
+    bool load(std::string model_file_name, std::vector<std::string> &f_names);
+    double predict_x(const double *x);
 
 private:
     void train_model_with_param();
@@ -101,8 +110,7 @@ public:
     bool flag_p_specified{false};
     bool flag_solver_specified{false};
     int nr_fold{0};
-    double bias{1};
-    std::string model_file_name;
+    double bias{-1};
 };
 
 }  // namespace ornate::svm

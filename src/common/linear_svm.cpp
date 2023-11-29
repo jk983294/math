@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <vector>
+#include <fstream>
 
 #ifdef __cplusplus
 extern "C" {
@@ -607,8 +608,10 @@ static void find_parameter_C(const problem *prob, parameter *param_tmp, double s
                 *best_score = current_error;
             }
 
-            printf("log2c=%7.2f\tp=%7.2f\tMean squared error=%g\n", log(param_tmp->C) / log(2.0), param_tmp->p,
-                   current_error);
+            if (param_tmp->verbose) {
+                printf("log2c=%7.2f\tp=%7.2f\tMean squared error=%g\n", log(param_tmp->C) / log(2.0),
+                       param_tmp->p, current_error);
+            }
         }
 
         num_unchanged_w++;
@@ -786,33 +789,23 @@ static const char *solver_type_table[] = {
     "", "", "", "", "", "", "", "", "",     "", "", "L2R_L2LOSS_SVR", "L2R_L2LOSS_SVR_DUAL", "L2R_L1LOSS_SVR_DUAL",
     "", "", "", "", "", "", "", "", nullptr};
 
-int save_model(const char *model_file_name, const struct model *model_) {
-    int i;
+int save_model(const char *model_file_name, const struct model *model_, const std::vector<std::string>& f_names) {
     int nr_feature = model_->nr_feature;
-    int n;
     const parameter &param = model_->param;
 
-    if (model_->bias >= 0)
-        n = nr_feature + 1;
-    else
-        n = nr_feature;
-    int w_size = n;
     FILE *fp = fopen(model_file_name, "w");
     if (fp == nullptr) return -1;
 
-    int nr_w = 1;
-
-    fprintf(fp, "solver_type %s\n", solver_type_table[param.solver_type]);
-
-    fprintf(fp, "nr_feature %d\n", nr_feature);
-
-    fprintf(fp, "bias %.17g\n", model_->bias);
-
-    fprintf(fp, "w\n");
-    for (i = 0; i < w_size; i++) {
-        int j;
-        for (j = 0; j < nr_w; j++) fprintf(fp, "%.17g ", model_->w[i * nr_w + j]);
+    fprintf(fp, "solver_type,%s\n", solver_type_table[param.solver_type]);
+    fprintf(fp, "nr_feature,%d\n", nr_feature);
+    fprintf(fp, "bias,%.17g\n", model_->bias);
+    for (int i = 0; i < nr_feature; i++) {
+        fprintf(fp, "%s,", f_names[i].c_str());
+        fprintf(fp, "%.17g", model_->w[i]);
         fprintf(fp, "\n");
+    }
+    if (model_->bias >= 0) {
+        fprintf(fp, "INTERCEPT,%.17g\n", model_->w[nr_feature]);
     }
 
     if (ferror(fp) != 0 || fclose(fp) != 0)
@@ -821,68 +814,44 @@ int save_model(const char *model_file_name, const struct model *model_) {
         return 0;
 }
 
-#define FSCANF(_stream, _format, _var)                                   \
-    do {                                                                 \
-        if (fscanf(_stream, _format, _var) != 1) {                       \
-            fprintf(stderr, "ERROR: fscanf failed to read the model\n"); \
-            delete model_;                                               \
-            return nullptr;                                              \
-        }                                                                \
-    } while (0)
+model *load_model(const char *model_file_name, std::vector<std::string>& f_names) {
+    f_names.clear();
+    std::ifstream ifs(model_file_name, std::ifstream::in);
 
-model *load_model(const char *model_file_name) {
-    FILE *fp = fopen(model_file_name, "r");
-    if (fp == nullptr) return nullptr;
+    if (!ifs) {
+        printf("load model open file %s failed\n", model_file_name);
+        return nullptr;
+    }
 
-    int nr_feature;
-    int n;
-    double bias;
     auto *model_ = new model;
     parameter &param = model_->param;
 
-    char cmd[81];
-    while (true) {
-        FSCANF(fp, "%80s", cmd);
-        if (strcmp(cmd, "solver_type") == 0) {
-            FSCANF(fp, "%80s", cmd);
-            int i;
-            for (i = 0; solver_type_table[i]; i++) {
-                if (strcmp(solver_type_table[i], cmd) == 0) {
+    std::string s;
+    while (getline(ifs, s)) {
+        if (s.empty() || s.front() == '#') continue;
+        auto itr = s.find_first_of(',');
+        auto first = s.substr(0, itr);
+        auto second = s.substr(itr + 1);
+        if (first == "nr_feature") {
+            model_->nr_feature = std::stoi(second);
+        } else if (first == "bias") {
+            model_->bias = std::stod(second);
+        } else if (first == "solver_type") {
+            for (int i = 0; solver_type_table[i]; i++) {
+                if (strcmp(solver_type_table[i], second.c_str()) == 0) {
                     param.solver_type = i;
                     break;
                 }
             }
-            if (solver_type_table[i] == nullptr) {
-                fprintf(stderr, "unknown solver type.\n");
-                return nullptr;
-            }
-        } else if (strcmp(cmd, "nr_feature") == 0) {
-            FSCANF(fp, "%d", &nr_feature);
-            model_->nr_feature = nr_feature;
-        } else if (strcmp(cmd, "bias") == 0) {
-            FSCANF(fp, "%lf", &bias);
-            model_->bias = bias;
-        } else if (strcmp(cmd, "w") == 0) {
-            break;
+        } else if (first == "INTERCEPT") {
+            model_->w.push_back(std::stod(second));
         } else {
-            fprintf(stderr, "unknown text in model file: [%s]\n", cmd);
-            return nullptr;
+            f_names.push_back(first);
+            model_->w.push_back(std::stod(second));
         }
     }
 
-    nr_feature = model_->nr_feature;
-    if (model_->bias >= 0)
-        n = nr_feature + 1;
-    else
-        n = nr_feature;
-    int w_size = n;
-
-    model_->w.resize(w_size);
-    for (int i = 0; i < w_size; i++) {
-        FSCANF(fp, "%lf ", &model_->w[i]);
-    }
-
-    if (ferror(fp) != 0 || fclose(fp) != 0) exit(1);
+    ifs.close();
     return model_;
 }
 
@@ -954,7 +923,7 @@ NEWTON::NEWTON(const function *fun_obj, double eps, double eps_cg, int max_iter)
 
 void NEWTON::newton(double *w) {
     int n = fun_obj->get_nr_variable();
-    int i, cg_iter;
+    int i;
     double step_size;
     double f, fold, actred;
     double init_step_size = 1;
@@ -977,36 +946,36 @@ void NEWTON::newton(double *w) {
     f = fun_obj->fun(w);
     fun_obj->grad(w, g);
     double gnorm = dnrm2_(&n, g, &inc);
-    printf("init f %5.3e |g| %5.3e\n", f, gnorm);
+    if (verbose) printf("init f %5.3e |g| %5.3e\n", f, gnorm);
 
     if (gnorm <= eps * gnorm0) search = 0;
 
     while (iter <= max_iter && search) {
         fun_obj->get_diag_preconditioner(M);
         for (i = 0; i < n; i++) M[i] = (1 - alpha_pcg) + alpha_pcg * M[i];
-        cg_iter = pcg(g, M, s, r);
+        pcg(g, M, s, r);
 
         fold = f;
         step_size = fun_obj->linesearch_and_update(w, s, &f, g, init_step_size);
 
         if (step_size == 0) {
-            printf("WARNING: line search fails\n");
+            if (verbose) printf("WARNING: line search fails\n");
             break;
         }
 
         fun_obj->grad(w, g);
         gnorm = dnrm2_(&n, g, &inc);
 
-        printf("iter %2d f %5.3e |g| %5.3e CG %3d step_size %4.2e \n", iter, f, gnorm, cg_iter, step_size);
+        // printf("iter %2d f %5.3e |g| %5.3e CG %3d step_size %4.2e \n", iter, f, gnorm, cg_iter, step_size);
 
         if (gnorm <= eps * gnorm0) break;
         if (f < -1.0e+32) {
-            printf("WARNING: f < -1.0e+32\n");
+            if (verbose) printf("WARNING: f < -1.0e+32\n");
             break;
         }
         actred = fold - f;
         if (fabs(actred) <= 1.0e-12 * fabs(f)) {
-            printf("WARNING: actred too small\n");
+            if (verbose) printf("WARNING: actred too small\n");
             break;
         }
 
@@ -1085,6 +1054,10 @@ int NEWTON::pcg(double *g, double *M, double *s, double *r) {
     return cg_iter;
 }
 
+double LinearSvm::predict_x(const double* x) {
+    return predict(&model_, x);
+}
+
 void LinearSvm::predict_test() {
     std::vector<double> predicts(prob.l);
     for (int i = 0; i < prob.l; ++i) {
@@ -1110,19 +1083,35 @@ void LinearSvm::predict_test() {
     }
 
     printf("Mean squared error = %g (regression)\n", error / total);
-    printf("Squared correlation coefficient = %g (regression)\n",
+    printf("R2 = %g (regression)\n",
            ((total * sumpt - sump * sumt) * (total * sumpt - sump * sumt)) /
                ((total * sumpp - sump * sump) * (total * sumtt - sumt * sumt)));
 }
 
-void LinearSvm::train_model_with_param() {
-    model_ = train(&prob, &param);
-    if (save_model(model_file_name.c_str(), &model_)) {
+bool LinearSvm::load(std::string model_file_name, std::vector<std::string>& f_names) {
+    model* model_tmp = load_model(model_file_name.c_str(), f_names);
+
+    if (model_tmp) {
+        model_ = *model_tmp;
+        delete model_tmp;
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool LinearSvm::save(std::string model_file_name, const std::vector<std::string>& f_names) {
+    if (save_model(model_file_name.c_str(), &model_, f_names)) {
         fprintf(stderr, "can't save model to file %s\n", model_file_name.c_str());
-        exit(1);
+        return false;
     } else {
         printf("save model to %s\n", model_file_name.c_str());
+        return true;
     }
+}
+
+void LinearSvm::train_model_with_param() {
+    model_ = train(&prob, &param);
 }
 
 void LinearSvm::work() {
@@ -1201,8 +1190,6 @@ void LinearSvm::do_cross_validation() {
 }
 
 void LinearSvm::init() {
-    model_file_name = "/tmp/lsvm.model";
-
     // default solver for parameter selection is L2R_L2LOSS_SVC
     if (flag_find_parameters) {
         if (!flag_cross_validation) nr_fold = 5;
