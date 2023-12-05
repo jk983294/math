@@ -2,7 +2,7 @@ library(data.table)
 library(arrow)
 library(fst)
 
-in_path_ <- "/tmp/20210914.feather"
+in_path_ <- "/home/aaron/junk/y_eval/output/result.feather"
 out_path_ <- "/tmp/20210914.1.feather"
 dt <- read_feather(in_path_)
 write_feather(dt, out_path_)

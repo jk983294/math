@@ -10,6 +10,10 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/)
 
+find_package(OpenMP REQUIRED)
+find_library(FST_LIB libfst.a HINTS /opt/version/latest/cppfst/lib REQUIRED)
+find_library(LZ4_LIB libliblz4.a HINTS /opt/version/latest/cppfst/lib REQUIRED)
+find_library(ZSTD_LIB liblibzstd.a HINTS /opt/version/latest/cppfst/lib REQUIRED)
 
 SET(CMAKE_CXX_FLAGS "-std=c++17 -O3 -s -Wall -Werror")
 #SET(CMAKE_CXX_FLAGS "-std=c++17 -g -Wall -Werror -fsanitize=address -fno-omit-frame-pointer")
@@ -25,6 +29,7 @@ include_directories(SYSTEM /opt/3rd/Eigen)
 include_directories(SYSTEM /opt/3rd/gcem)
 include_directories(SYSTEM /opt/3rd/stats)
 include_directories(/opt/version/latest/zergtool/include)
+include_directories(SYSTEM /opt/version/latest/cppfst/include)
 
 link_directories(/opt/3rd/common/lib)
 
