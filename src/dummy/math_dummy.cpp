@@ -423,4 +423,19 @@ std::vector<double> ts_lte_sum(const std::vector<double> &cond, const std::vecto
     std::vector<double> output = ts_cond_stat(cond_sum, lte, method, cond, value, n, q, fill, least, partial);
     return output;
 }
+
+double ts_rank(const double *x, int len, double new_val) {
+    if (std::isnan(new_val)) {
+        return NAN;
+    }
+    int nlte = 0, neq = 0, nv = 0;
+    for (int i = 0; i < len; ++i) {
+        double val = x[i];
+        if (std::isnan(val)) continue;
+        if (val <= new_val) nlte++;
+        if (val == new_val) neq++;
+        nv++;
+    }
+    return nv <= 1 ? NAN : (nlte - 1.0) / (nv - 1.0);
+}
 }  // namespace ornate

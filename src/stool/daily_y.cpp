@@ -33,6 +33,10 @@ struct DailyY {
         save_reduce_result();
     }
     void work() {
+        if (threads == 0) threads = omp_get_max_threads();
+        printf("thread num = %d\n", threads);
+        omp_set_num_threads(threads);
+
         if (m_reduce) {
             reduce_work();
             return;
@@ -349,7 +353,7 @@ void DailyY::work_single(const string& date_str, const string& path) {
     std::vector<double> result_pcor(total_len, NAN), result_pcor_pos(total_len, NAN);
     std::vector<double> result_rcor(total_len, NAN), result_rcor_pos(total_len, NAN);
 
-#pragma omp parallel for num_threads(threads == 0 ? omp_get_max_threads():threads)
+#pragma omp parallel for
     for (size_t k = 0; k < key_len; ++k) {
         size_t key_ = keys[k];
         auto itr1 = m_y_tick_date_pos.find(key_); // must exist

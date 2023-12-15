@@ -21,8 +21,9 @@ inline double get_valid_price_field(double val) {
         return val;
 }
 
-inline float calc_return(float p, float p0) {
-    float r = NAN;
+template <typename T>
+inline T calc_return(T p, T p0) {
+    T r = NAN;
     if (is_valid_price(p) && is_valid_price(p0)) r = p / p0 - 1;
     if (!std::isfinite(r) || std::fabs(r) > 0.3) r = 0;
     return r * 10000;

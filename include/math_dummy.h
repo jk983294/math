@@ -40,6 +40,8 @@ double dummy_decay(const std::vector<T>& data_) {
     }
 }
 
+double ts_rank(const double *x, int len, double new_val);
+
 namespace dminner {
 double mean(const double *x, int start, int end, double fill);
 

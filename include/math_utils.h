@@ -109,6 +109,11 @@ inline int get_sign(double val) {
     else
         return -1;
 }
+inline int get_sign(int val) {
+    if (val > 0) return 1;
+    else if (val < 0) return -1;
+    else return 0;
+}
 
 /**
  * value div down to 0.1 * sd
