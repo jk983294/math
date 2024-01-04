@@ -298,7 +298,7 @@ struct regression2_once {
 struct rolling_all_once {
     long double total_sum{0}, total_square_sum{0}, total_cube_sum{0}, total_x4{0};
     double high{NAN}, low{NAN}, last{NAN}, first{NAN};
-    int cnt{0}, nan_cnt{0};
+    int cnt{0}, nan_cnt{0}, pos_cnt{0}, neg_cnt{0};
 
     void operator()(double x) {
         if (std::isfinite(x)) {
@@ -318,6 +318,9 @@ struct rolling_all_once {
             total_x4 += x * x * x * x;
             ++cnt;
 
+            if (x > 0) ++pos_cnt;
+            if (x < 0) ++neg_cnt;
+
             if (cnt == 1) {
                 first = x;
             }
@@ -329,6 +332,15 @@ struct rolling_all_once {
     double na_ratio() {
         size_t total = nan_cnt + cnt;
         if (total > 0) return cnt / (double)total;
+        else return NAN;
+    }
+
+    double pos_ratio() {
+        if (cnt > 0) return pos_cnt / (double)cnt;
+        else return NAN;
+    }
+    double neg_ratio() {
+        if (cnt > 0) return neg_cnt / (double)cnt;
         else return NAN;
     }
 

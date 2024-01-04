@@ -8,12 +8,15 @@
 
 using namespace ztool;
 
+/**
+ * remove pcor_pos/rcor_pos because pos need to adjust feature to positively correlated to y.
+ * in reduce mode, we don't have global pcor sign, we cannot perform sign adjust.
+ */
+
 struct DailyY {
     struct DailyYOnceStats {
         ornate::rolling_all_once pcor;
-        ornate::rolling_all_once pcor_pos;
         ornate::rolling_all_once rcor;
-        ornate::rolling_all_once rcor_pos;
     };
     void reduce_work() {
         read_names();
@@ -90,7 +93,7 @@ struct DailyY {
     int m_start_date{-1}, m_end_date{-1};
     int threads{0};
     std::vector<int> m_result_date, m_result_tick, m_y_idx, m_x_idx;
-    std::vector<double> m_result_pcor, m_result_pcor_pos, m_result_rcor, m_result_rcor_pos;
+    std::vector<double> m_result_pcor, m_result_rcor;
     bool m_reduce{false};
     std::vector<DailyYOnceStats> m_once_stats;
 
@@ -113,6 +116,7 @@ static void help() {
     std::cout << "  -e arg (=-1)                          end date" << std::endl;
     std::cout << "  -t arg (=0)                          thread num" << std::endl;
     std::cout << "  -d arg (=false)                          reduce mode" << std::endl;
+    printf("daily_y -q cneq_ -y ~/junk/y_eval/y.fst -x ~/junk/y_eval/data/ -o ~/junk/y_eval/output/ -d\n");
 }
 
 int main(int argc, char** argv) {
@@ -164,15 +168,9 @@ void DailyY::save_reduce_result() {
     std::vector<double> pcor_mean(len, NAN);
     std::vector<double> pcor_sd(len, NAN);
     std::vector<double> pcor_na(len, NAN);
-    std::vector<double> pcor_pos_mean(len, NAN);
-    std::vector<double> pcor_pos_sd(len, NAN);
-    std::vector<double> pcor_pos_na(len, NAN);
     std::vector<double> rcor_mean(len, NAN);
     std::vector<double> rcor_sd(len, NAN);
     std::vector<double> rcor_na(len, NAN);
-    std::vector<double> rcor_pos_mean(len, NAN);
-    std::vector<double> rcor_pos_sd(len, NAN);
-    std::vector<double> rcor_pos_na(len, NAN);
     std::vector<std::string> x_names(len);
     std::vector<std::string> y_names(len);
     for (size_t i = 0; i < m_yNames.size(); ++i) {
@@ -181,15 +179,9 @@ void DailyY::save_reduce_result() {
             pcor_mean[idx] = m_once_stats[idx].pcor.get_mean_sd().first;
             pcor_sd[idx] = m_once_stats[idx].pcor.get_mean_sd().second;
             pcor_na[idx] = m_once_stats[idx].pcor.na_ratio();
-            pcor_pos_mean[idx] = m_once_stats[idx].pcor_pos.get_mean_sd().first;
-            pcor_pos_sd[idx] = m_once_stats[idx].pcor_pos.get_mean_sd().second;
-            pcor_pos_na[idx] = m_once_stats[idx].pcor_pos.na_ratio();
             rcor_mean[idx] = m_once_stats[idx].rcor.get_mean_sd().first;
             rcor_sd[idx] = m_once_stats[idx].rcor.get_mean_sd().second;
             rcor_na[idx] = m_once_stats[idx].rcor.na_ratio();
-            rcor_pos_mean[idx] = m_once_stats[idx].rcor_pos.get_mean_sd().first;
-            rcor_pos_sd[idx] = m_once_stats[idx].rcor_pos.get_mean_sd().second;
-            rcor_pos_na[idx] = m_once_stats[idx].rcor_pos.na_ratio();
             x_names[idx] = m_xNames[j];
             y_names[idx] = m_yNames[i];
         }
@@ -200,15 +192,9 @@ void DailyY::save_reduce_result() {
     options.push_back({1, pcor_mean.data(), "pcor_mean"});
     options.push_back({1, pcor_sd.data(), "pcor_sd"});
     options.push_back({1, pcor_na.data(), "pcor_na"});
-    options.push_back({1, pcor_pos_mean.data(), "pcor_pos_mean"});
-    options.push_back({1, pcor_pos_sd.data(), "pcor_pos_sd"});
-    options.push_back({1, pcor_pos_na.data(), "pcor_pos_na"});
     options.push_back({1, rcor_mean.data(), "rcor_mean"});
     options.push_back({1, rcor_sd.data(), "rcor_sd"});
     options.push_back({1, rcor_na.data(), "rcor_na"});
-    options.push_back({1, rcor_pos_mean.data(), "rcor_pos_mean"});
-    options.push_back({1, rcor_pos_sd.data(), "rcor_pos_sd"});
-    options.push_back({1, rcor_pos_na.data(), "rcor_pos_na"});
     write_feather(ztool::path_join(m_output_dir, "reduced.feather"), pcor_mean.size(), options);
 }
 
@@ -219,9 +205,7 @@ void DailyY::save_result() {
     options.push_back({3, m_y_idx.data(), "y_idx"});
     options.push_back({3, m_x_idx.data(), "x_idx"});
     options.push_back({1, m_result_pcor.data(), "pcor"});
-    options.push_back({1, m_result_pcor_pos.data(), "pcor_pos"});
     options.push_back({1, m_result_rcor.data(), "rcor"});
-    options.push_back({1, m_result_rcor_pos.data(), "rcor_pos"});
     write_feather(ztool::path_join(m_output_dir, "result.feather"), m_result_date.size(), options);
 
     options.clear();
@@ -249,16 +233,12 @@ void DailyY::reduce_single(const string& name, const string& path) {
     std::vector<int>* y_idx{nullptr};
     std::vector<int>* x_idx{nullptr};
     std::vector<double>* pcor{nullptr};
-    std::vector<double>* pcor_pos{nullptr};
     std::vector<double>* rcor{nullptr};
-    std::vector<double>* rcor_pos{nullptr};
     for (auto& col : reader.cols) {
         if (col.type == 1) {
             auto& vec = *reinterpret_cast<std::vector<double>*>(col.data);
             if (col.name == "pcor") pcor = &vec;
-            else if (col.name == "pcor_pos") pcor_pos = &vec;
             else if (col.name == "rcor") rcor = &vec;
-            else if (col.name == "rcor_pos") rcor_pos = &vec;
         } else if (col.type == 3) {
             auto& vec = *reinterpret_cast<std::vector<int>*>(col.data);
             if (col.name == "y_idx") y_idx = &vec;
@@ -266,17 +246,15 @@ void DailyY::reduce_single(const string& name, const string& path) {
         }
     }
 
-    if (y_idx == nullptr || x_idx == nullptr || pcor == nullptr|| pcor_pos == nullptr
-        || rcor == nullptr|| rcor_pos == nullptr) {
+    if (y_idx == nullptr || x_idx == nullptr || pcor == nullptr
+        || rcor == nullptr) {
         throw std::runtime_error("no required column");
     }
 
     for (size_t i = 0; i < reader.rows; ++i) {
         size_t idx = (*y_idx)[i] * m_xNames.size() + (*x_idx)[i];
         m_once_stats[idx].pcor((*pcor)[i]);
-        m_once_stats[idx].pcor_pos((*pcor_pos)[i]);
         m_once_stats[idx].rcor((*rcor)[i]);
-        m_once_stats[idx].rcor_pos((*rcor_pos)[i]);
     }
 }
 void DailyY::work_single(const string& date_str, const string& path) {
@@ -350,8 +328,8 @@ void DailyY::work_single(const string& date_str, const string& path) {
     size_t total_len = key_len * cor_len;
 
     std::vector<int> result_date(total_len, date), result_tick(total_len), y_idx(total_len), x_idx(total_len);
-    std::vector<double> result_pcor(total_len, NAN), result_pcor_pos(total_len, NAN);
-    std::vector<double> result_rcor(total_len, NAN), result_rcor_pos(total_len, NAN);
+    std::vector<double> result_pcor(total_len, NAN);
+    std::vector<double> result_rcor(total_len, NAN);
 
 #pragma omp parallel for
     for (size_t k = 0; k < key_len; ++k) {
@@ -386,18 +364,14 @@ void DailyY::work_single(const string& date_str, const string& path) {
                 }
 
                 double pcor = detail::corr(xs, ys);
-                double pcor_pos = detail::corr(xs, ys, 0, 1);
                 double rcor = detail::rcor(xs, ys);
-                double rcor_pos = detail::rcor(xs, ys, 0, 1);
-                //printf("yi=%zu xi=%zu %d %zu pcor %f,%f,%f,%f\n", i, j, date, key_ % 1000000000, pcor, pcor_pos, rcor, rcor_pos);
+                //printf("yi=%zu xi=%zu %d %zu pcor %f,%f\n", i, j, date, key_ % 1000000000, pcor, rcor);
 
                 result_tick[k * cor_len + i * pXs.size() + j] = key_ % 1000000000;
                 y_idx[k * cor_len + i * pXs.size() + j] = i;
                 x_idx[k * cor_len + i * pXs.size() + j] = j;
                 result_pcor[k * cor_len + i * pXs.size() + j] = pcor;
-                result_pcor_pos[k * cor_len + i * pXs.size() + j] = pcor_pos;
                 result_rcor[k * cor_len + i * pXs.size() + j] = rcor;
-                result_rcor_pos[k * cor_len + i * pXs.size() + j] = rcor_pos;
             }
         }
     }
@@ -407,9 +381,7 @@ void DailyY::work_single(const string& date_str, const string& path) {
     m_y_idx.insert(m_y_idx.end(), y_idx.begin(), y_idx.end());
     m_x_idx.insert(m_x_idx.end(), x_idx.begin(), x_idx.end());
     m_result_pcor.insert(m_result_pcor.end(), result_pcor.begin(), result_pcor.end());
-    m_result_pcor_pos.insert(m_result_pcor_pos.end(), result_pcor_pos.begin(), result_pcor_pos.end());
     m_result_rcor.insert(m_result_rcor.end(), result_rcor.begin(), result_rcor.end());
-    m_result_rcor_pos.insert(m_result_rcor_pos.end(), result_rcor_pos.begin(), result_rcor_pos.end());
 }
 
 void DailyY::reserve(size_t len) {
@@ -418,9 +390,7 @@ void DailyY::reserve(size_t len) {
     m_y_idx.reserve(len);
     m_x_idx.reserve(len);
     m_result_pcor.reserve(len);
-    m_result_pcor_pos.reserve(len);
     m_result_rcor.reserve(len);
-    m_result_rcor_pos.reserve(len);
 }
 
 void DailyY::read_names() {
