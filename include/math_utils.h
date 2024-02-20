@@ -38,6 +38,24 @@ bool FloatVecEqual(T1 a, T2 b, double epsilon_ = lp_epsilon) {
     return true;
 }
 
+template <typename T1, typename T2>
+bool FloatGt(T1 a, T2 b, double epsilon_ = lp_epsilon) {
+    return a > b + epsilon_;
+}
+template <typename T1, typename T2>
+bool FloatLt(T1 a, T2 b, double epsilon_ = lp_epsilon) {
+    return FloatGt(b, a, epsilon_);
+}
+
+template <typename T1, typename T2>
+bool FloatGte(T1 a, T2 b, double epsilon_ = lp_epsilon) {
+    return FloatGt(a, b, epsilon_) || FloatEqual(a, b, epsilon_);
+}
+template <typename T1, typename T2>
+bool FloatLte(T1 a, T2 b, double epsilon_ = lp_epsilon) {
+    return FloatGte(b, a, epsilon_);
+}
+
 template <typename T, typename T1>
 void add_window_vector(std::vector<T>& y, size_t window, T1 val) {
     if (y.size() < window)

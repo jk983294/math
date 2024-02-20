@@ -2,8 +2,10 @@
 #include <iostream>
 #include <stats.hpp>
 #include <vector>
+#include <math_dist.h>
 
 using namespace std;
+using namespace ornate;
 
 /**
  * Gaussian distribution, continuous
@@ -19,22 +21,24 @@ int main() {
     /**
      * f(x;μ,σ)
      */
-    cout << "density " << stats::dnorm(1.0, mu, sigma) << endl;  // 0.241971
-    cout << "density " << stats::dnorm(0, mu, sigma) << endl;    // 0.398942
+    printf("density %f,%f\n", stats::dnorm(1.0, mu, sigma), norm_pdf(1.0, mu, sigma)); // 0.241971
+    printf("density %f,%f\n", stats::dnorm(0, mu, sigma), norm_pdf(0, mu, sigma)); // 0.398942
+    printf("density %f,%f\n", stats::dnorm(-1., mu, sigma), norm_pdf(-1., mu, sigma)); // 0.241971
 
     /**
      * P(X <= x)
      */
-    cout << "cdf " << stats::pnorm(1.0, mu, sigma) << endl;  // 0.841345
-    cout << "cdf " << stats::pnorm(0, mu, sigma) << endl;    // 0.5
+    printf("cdf %f,%f\n", stats::pnorm(1.0, mu, sigma), norm_cdf(1.0, mu, sigma)); // 0.841345
+    printf("cdf %f,%f\n", stats::pnorm(0, mu, sigma), norm_cdf(0, mu, sigma)); // 0.5
+    printf("cdf %f,%f\n", stats::pnorm(-1., mu, sigma), norm_cdf(-1., mu, sigma)); // 0.158655
 
     /**
      * find x such that cdf(x) = a
      */
-    cout << "quantile " << stats::qnorm(0.841345, mu, sigma) << endl;  // 1
-    cout << "quantile " << stats::qnorm(0.5, mu, sigma) << endl;       // 0
-    cout << "quantile " << stats::qnorm(0.4, mu, sigma) << endl;       // -0.253347
-    cout << "quantile " << stats::qnorm(0.3, mu, sigma) << endl;       // -0.524401
+    printf("icdf %f,%f\n", stats::qnorm(0.841345, mu, sigma), norm_icdf(0.841345, mu, sigma)); // 1
+    printf("icdf %f,%f\n", stats::qnorm(0.5, mu, sigma), norm_icdf(0.5, mu, sigma)); // 0
+    printf("icdf %f,%f\n", stats::qnorm(0.4, mu, sigma), norm_icdf(0.4, mu, sigma)); // -0.253347
+    printf("icdf %f,%f\n", stats::qnorm(0.3, mu, sigma), norm_icdf(0.3, mu, sigma)); // -0.524401
 
     /**
      * Random Sampling

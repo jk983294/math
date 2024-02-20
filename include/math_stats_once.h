@@ -331,7 +331,7 @@ struct rolling_all_once {
 
     double na_ratio() {
         size_t total = nan_cnt + cnt;
-        if (total > 0) return cnt / (double)total;
+        if (total > 0) return nan_cnt / (double)total;
         else return NAN;
     }
 

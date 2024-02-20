@@ -74,7 +74,7 @@ struct DailyY {
     void reserve(size_t len);
     void read_names();
 
-    FstReader y_reader;
+    InputData y_reader;
     std::string m_y_path, m_x_dir;
     std::string m_output_dir{"./"};
     std::string m_y_pattern = "^y";
@@ -228,8 +228,8 @@ static double rcor(const std::vector<double> &x, const std::vector<double> &y, i
 static double corr(const std::vector<double> &x, const std::vector<double> &y, int x_sign = 0, int y_sign = 0);
 }
 void DailyY::reduce_single(const string& name, const string& path) {
-    FstReader reader;
-    reader.read(path);
+    InputData reader;
+    FstReader::read(path, reader);
     std::vector<int>* y_idx{nullptr};
     std::vector<int>* x_idx{nullptr};
     std::vector<double>* pcor{nullptr};
@@ -258,8 +258,8 @@ void DailyY::reduce_single(const string& name, const string& path) {
     }
 }
 void DailyY::work_single(const string& date_str, const string& path) {
-    FstReader x_reader;
-    x_reader.read(path);
+    InputData x_reader;
+    FstReader::read(path, x_reader);
     std::regex x_regex(m_x_pattern);
     std::vector<int>* x_ukeys{nullptr};
     std::vector<int>* x_dates{nullptr};
@@ -394,8 +394,8 @@ void DailyY::reserve(size_t len) {
 }
 
 void DailyY::read_names() {
-    FeatherReader reader;
-    reader.read(ztool::path_join(m_output_dir, "x_name.feather"));
+    InputData reader;
+    FeatherReader::read(ztool::path_join(m_output_dir, "x_name.feather"), reader);
     for (auto& col : reader.cols) {
         if (col.name == "x_name") {
             auto& vec = *reinterpret_cast<std::vector<std::string>*>(col.data);
@@ -403,8 +403,8 @@ void DailyY::read_names() {
         }
     }
 
-    FeatherReader reader1;
-    reader1.read(ztool::path_join(m_output_dir, "y_name.feather"));
+    InputData reader1;
+    FeatherReader::read(ztool::path_join(m_output_dir, "y_name.feather"), reader1);
     for (auto& col : reader1.cols) {
         if (col.name == "y_name") {
             auto& vec = *reinterpret_cast<std::vector<std::string>*>(col.data);
@@ -416,7 +416,7 @@ void DailyY::read_names() {
 }
 void DailyY::read_y() {
     std::regex y_regex(m_y_pattern);
-    y_reader.read(m_y_path);
+    FstReader::read(m_y_path, y_reader);
     printf("load y rows=%zu\n", y_reader.rows);
     for (auto& col : y_reader.cols) {
         if (col.type == 1) {

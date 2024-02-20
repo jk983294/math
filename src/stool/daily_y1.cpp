@@ -165,8 +165,8 @@ void DailyY1::save_result() {
 }
 
 void DailyY1::work_single(const string& date_str, const string& path) {
-    FstReader x_reader;
-    x_reader.read(path);
+    InputData x_reader;
+    FstReader::read(path, x_reader);
     std::regex x_regex(m_x_pattern);
     std::regex y_regex(m_y_pattern);
     std::vector<int>* x_ukeys{nullptr};
