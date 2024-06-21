@@ -4,6 +4,9 @@
 * q = 分位数函数(quantile function)
 * r = 生成随机数(随机偏差)
 
+## help
+help(distributions)
+
 ## distribution
 | name        | abbr   |
 | --------    | :----:  |

@@ -6,7 +6,9 @@ C <- function(n, k) {
 }
 
 factorial(9) # 9!
+lfactorial(9) # log factorial for big number
 choose(9, 2) # C(n, k)
+lchoose(9, 2) # log C(n, k)
 C(9, 2) # C(n, k)
 A(9, 2) # A(n, k)
 

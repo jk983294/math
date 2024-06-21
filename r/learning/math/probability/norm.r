@@ -2,6 +2,7 @@
 x <- seq(-5, 5, by = 0.1)
 density <- dnorm(x, mean = 0, sd = 1)
 plot(x, density)
+curve(dnorm, from=-3, to=3, n=1000)
 
 cdf <- pnorm(x, mean = 0, sd = 1)  # Cumulative Distribution Function
 plot(x, cdf)
