@@ -1,3 +1,8 @@
+# A random vector follows a multivariate normal distribution if every linear combination
+# of its components has a univariate normal distribution.
+# X=(X_1, ..., X_n)^T
+# pdf: f(x)= 1 / ((2π)^n/2 * ∣Σ∣^1/2) exp(-1/2 * (x−μ)^T * Σ^−1 * (x−μ))
+
 library(mvtnorm)
 
 mean_vec <- c(0, 0)
