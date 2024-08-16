@@ -1228,6 +1228,33 @@ template <typename T = float>
 double skip_acf(const std::vector<T> &x, int ins_num, int shift) {
     return skip_acf(x.data(), (int)x.size(), ins_num, shift);
 }
+
+template <typename T>
+double winsorized_mean(const T *data, uint64_t n, double portion = 0.01) {
+    std::vector<double> vec;
+    vec.reserve(n);
+    uint64_t count = 0;
+    for (uint64_t i = 0; i < n; i++) {
+        if (isvalid(data[i])) {
+            vec.push_back(data[i]);
+            count++;
+        }
+    }
+    if (count == 0) return NAN;
+    std::sort(vec.begin(), vec.end());
+    uint64_t side_count = count * portion;
+    if (side_count * 2 >= count) {
+        if (count % 2 == 0) return (vec[count / 2 - 1] + vec[count / 2]) / 2.;
+        else return vec[count / 2];
+    }
+    double sum = 0;
+    for (uint64_t i = side_count; i < count - side_count; i++) {
+        sum += vec[i];
+    }
+    sum += vec[side_count] * side_count;
+    sum += vec[count - side_count - 1] * side_count;
+    return sum / count;
+}
 }  // namespace ornate
 
 #endif

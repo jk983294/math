@@ -156,4 +156,16 @@ TEST_CASE("math_stats", "[MathStats]") {
         data_new.push_back(7);
         REQUIRE(FloatEqual(ornate::median(data_new), 4));
     }
+
+    SECTION("winsorized_mean", "[MathStats]") {
+        std::vector<double> v = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+        double ret = ornate::winsorized_mean(v.data(), v.size(), 0.5);
+        REQUIRE(FloatEqual(ret, 4.5));
+        REQUIRE(FloatEqual(ornate::winsorized_mean(v.data(), v.size(), 0.1), 4.5));
+        REQUIRE(FloatEqual(ornate::winsorized_mean(v.data(), v.size(), 0.2), 4.5));
+        REQUIRE(FloatEqual(ornate::winsorized_mean(v.data(), v.size(), 0.3), 4.5));
+        REQUIRE(FloatEqual(ornate::winsorized_mean(v.data(), v.size(), 0.4), 4.5));
+        REQUIRE(FloatEqual(ornate::winsorized_mean(v.data(), v.size(), 0.5), 4.5));
+        REQUIRE(FloatEqual(ornate::winsorized_mean(v.data(), v.size(), 0.6), 4.5));
+    }
 }
