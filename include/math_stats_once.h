@@ -428,6 +428,10 @@ struct rolling_all_once {
         } else
             return NAN;
     }
+
+    double get_sum() {
+        return cnt > 0 ? total_sum : NAN;
+    }
 };
 
 template <typename T>
