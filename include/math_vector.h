@@ -435,6 +435,19 @@ inline double mean(IN const std::vector<T>& n, int32_t start_idx = -1, int32_t e
     return mean(n.data() + start_idx, end_idx - start_idx);
 }
 
+template <typename T>
+double sum(const T* data, int32_t n) {
+    double ret = 0;
+    int32_t cnt = 0;
+    for (int32_t i = 0; i < n; i++) {
+        if (isvalid(data[i])) {
+            ret += data[i];
+            cnt++;
+        }
+    }
+    return cnt > 0 ? ret : NAN;
+}
+
 /**
  * get sum. will consider nan.  [start_idx, end_idx), -1 to use all
  */
@@ -443,10 +456,14 @@ double sum(IN const std::vector<T>& n, int32_t start_idx = -1, int32_t end_idx =
     if (start_idx < 0) start_idx = 0;
     if (end_idx < 0) end_idx = static_cast<int32_t>(n.size());
     double ret = 0;
+    int32_t cnt = 0;
     for (int32_t i = start_idx; i < end_idx; i++) {
-        if (isvalid(n[i])) ret += n[i];
+        if (isvalid(n[i])) {
+            ret += n[i];
+            cnt++;
+        }
     }
-    return ret;
+    return cnt > 0 ? ret : NAN;
 }
 
 /**
