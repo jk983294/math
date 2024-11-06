@@ -368,12 +368,12 @@ int __weighted_rcov(const T *x, const T1 *y, const T *weight, int num, double &c
 }
 
 template <typename T = float, typename T1 = float>
-double weighted_rcor(const T *x, const T1 *y, const T *weight, int num, int sign = 0) {
+double weighted_rcor(const T *x, const T1 *y, const T *weight, int num, int y_sign, int x_sign) {
     double cov_, std_x, std_y;
     if (weight == nullptr) {
-        if (__rcov(x, y, num, cov_, std_x, std_y, sign) < 2) return NAN;
+        if (__rcov(x, y, num, cov_, std_x, std_y, y_sign, x_sign) < 2) return NAN;
     } else {
-        if (__weighted_rcov(x, y, weight, num, cov_, std_x, std_y, sign) < 2) return NAN;
+        if (__weighted_rcov(x, y, weight, num, cov_, std_x, std_y, y_sign) < 2) return NAN;
     }
     if (std_x < epsilon || std_y < epsilon) return NAN;
     return cov_ / std_x / std_y;
