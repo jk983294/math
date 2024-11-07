@@ -38,7 +38,7 @@ inline Eigen::VectorXd eigen_mean(const Eigen::MatrixXd& a, int dim) {
     if (dim == 0)
         return a.rowwise().mean();
     else
-        a.colwise().mean();
+        return a.colwise().mean();
 }
 
 inline double eigen_dot(const Eigen::VectorXd& a, const Eigen::VectorXd& b) { return a.transpose() * b; }
