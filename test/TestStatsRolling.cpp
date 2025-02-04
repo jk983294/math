@@ -567,11 +567,13 @@ void test_quantile_by_window(const vector<double>& x_, int window, double percen
         rqrr.init();
 
         rolling_quantile_rb<double> rrrb(window, percent);
+        rolling_weighted_quantile_rb<double> rwqrb(window, percent);
         vector<double> y;
-        double ret = 0;
+        double ret = 0, ret1 = 0;
         for (double d : x_) {
             add_window_vector(y, window, d);
             ret = rrrb(d);
+            ret1 = rwqrb(d, 1.0);
 
             row[0] = d;
             row[1] = d;
@@ -582,6 +584,7 @@ void test_quantile_by_window(const vector<double>& x_, int window, double percen
             double expected = ornate::quantile(tmp, percent);
 
             REQUIRE(FloatEqual(ret, expected));
+            REQUIRE(FloatEqual(ret1, expected));
             REQUIRE(FloatEqual(row[0], expected));
             REQUIRE(FloatEqual(row[1], expected));
         }

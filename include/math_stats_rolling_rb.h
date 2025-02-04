@@ -806,6 +806,162 @@ struct rolling_ols3_rb {
     }
 };
 
+
+template <typename T>
+struct rolling_weighted_rank_base_rb {
+    struct SortItem {
+        T data = T();
+        double wgt = 0;
+        int seq{-1};
+        SortItem() = default;
+        explicit SortItem(T data_, double wgt_, int seq_) : data{data_}, wgt{wgt_}, seq{seq_} {}
+        bool operator<(const SortItem& a) const { return data < a.data; }
+        bool operator==(const SortItem& a) const { return data == a.data; }
+        bool operator<(const T& a) const { return data < a; }
+        bool operator==(const T& a) const { return data == a; }
+        bool is_valid() const { return isvalid(data) && isvalid(wgt); }
+    };
+
+    int window_size;
+    int m_count{0}, m_valid_count{0};
+    double m_total_wgt{0};
+    std::vector<SortItem> m_sorted_data;
+
+    explicit rolling_weighted_rank_base_rb(int size) : window_size{size + 1} {
+        m_sorted_data.resize(size);
+    }
+
+    int get_old_element_index() {
+        int old_index = m_count - window_size;
+        for (int i = 0; i < m_valid_count; ++i) {
+            if (m_sorted_data[i].seq == old_index) return i;
+        }
+        return -1;
+    }
+
+    /**
+     * upper_bound 向左找到比data大的位置，然后 rotate 把 m_sorted_data[idx] 挪到该位置
+     * 每次找比data大的位置插入，这样还保证了seq维度上的stable insert
+     * @return idx where new data reside
+     */
+    int insert_left(const SortItem& item, int idx) {
+        m_sorted_data[idx] = item;
+        auto itr = std::upper_bound(m_sorted_data.begin(), m_sorted_data.begin() + idx, item);
+        std::rotate(itr, m_sorted_data.begin() + idx, m_sorted_data.begin() + idx + 1);
+        return itr - m_sorted_data.begin();
+    }
+
+    /**
+     * upper_bound 向右找到比data大的位置，然后 rotate 把 m_sorted_data[idx] 挪到该位置
+     * 每次找比data大的位置插入，这样还保证了seq维度上的stable insert
+     * @return idx where new data reside
+     */
+    int insert_right(const SortItem& item, int idx) {
+        m_sorted_data[idx] = item;
+        auto itr = std::upper_bound(m_sorted_data.begin() + idx, m_sorted_data.begin() + m_valid_count, item);
+        std::rotate(m_sorted_data.begin() + idx, m_sorted_data.begin() + idx + 1, itr);
+        return int(itr - m_sorted_data.begin()) - 1;
+    }
+
+    int find_insert_point(T data, int seq) {
+        auto itr = std::lower_bound(m_sorted_data.begin(), m_sorted_data.begin() + m_valid_count, data);
+        int pos = itr - m_sorted_data.begin();
+        while (pos < m_valid_count && m_sorted_data[pos].seq != seq && m_sorted_data[pos].data == data) pos++;
+        return pos;
+    }
+
+    /**
+     * 因为新插入的值是在相等值的最右边(stable sort)，向前找到地一个不等于它的位置 + 1就是 lower bound
+     */
+    int lower_bound(T data, int idx) {
+        while (idx >= 0 && m_sorted_data[idx].data == data) --idx;
+        return idx + 1;
+    }
+
+    std::pair<int, int> handle(T new_value, double wgt) {
+        ++m_count;
+        SortItem new_item{new_value, wgt, m_count - 1};
+
+        int idx = -1, lower = -1;
+        if (m_count >= window_size) {
+            int old_index = get_old_element_index();
+            if (old_index >= 0) {
+                SortItem old_item = m_sorted_data[old_index];
+                m_total_wgt -= old_item.wgt;
+                int insert_pos_index = find_insert_point(old_item.data, m_count - window_size);
+
+                if (new_item.is_valid()) {
+                    if (new_value > old_item.data) {
+                        idx = insert_right(new_item, insert_pos_index);
+                    } else {
+                        idx = insert_left(new_item, insert_pos_index);
+                    }
+
+                    lower = lower_bound(new_value, idx);
+                    m_total_wgt += new_item.wgt;
+                } else {
+                    // as new_value is NAN, move back data one step forward
+                    std::rotate(m_sorted_data.begin() + insert_pos_index, m_sorted_data.begin() + insert_pos_index + 1,
+                                m_sorted_data.begin() + m_valid_count);
+                    --m_valid_count;
+                }
+            } else {
+                if (new_item.is_valid()) {
+                    idx = insert_left(new_item, m_valid_count);
+                    lower = lower_bound(new_value, idx);
+                    m_valid_count++;
+                    m_total_wgt += new_item.wgt;
+                }
+            }
+        } else {  // 数据还不够，直接 insert sort
+            if (new_item.is_valid()) {
+                idx = insert_left(new_item, m_valid_count);
+                lower = lower_bound(new_value, idx);
+                m_valid_count++;
+                m_total_wgt += new_item.wgt;
+            }
+        }
+
+        return {lower, idx};
+    }
+};
+
+template <typename T>
+struct rolling_weighted_quantile_rb : public rolling_weighted_rank_base_rb<T> {
+    double percent{0};
+    explicit rolling_weighted_quantile_rb(int size, double percent_)
+        : rolling_weighted_rank_base_rb<T>(size), percent{percent_} {}
+
+    using rolling_weighted_rank_base_rb<T>::m_valid_count;
+    using rolling_weighted_rank_base_rb<T>::handle;
+    using rolling_weighted_rank_base_rb<T>::m_sorted_data;
+    using rolling_weighted_rank_base_rb<T>::m_total_wgt;
+
+    double operator()(T new_value, double wgt) {
+        handle(new_value, wgt);
+        if (m_valid_count > 0 && m_total_wgt > 1e-6) {
+            double tgt = m_total_wgt * percent;
+            double cum_wgt = 0;
+            int i = 0;
+            for (; i < m_valid_count; ++i) {
+                cum_wgt += m_sorted_data[i].wgt;
+                if (cum_wgt >= tgt) break;
+            }
+            if (std::abs(cum_wgt - tgt) < 1e-9) {
+                if (i >= m_valid_count - 1) return m_sorted_data[m_valid_count - 1].data;
+                else {
+                    double sum_wgt = m_sorted_data[i].wgt + m_sorted_data[i + 1].wgt;
+                    double right_wgt = m_sorted_data[i].wgt / sum_wgt;
+                    return m_sorted_data[i].data * (1. - right_wgt) + m_sorted_data[i + 1].data * right_wgt;
+                }
+            } else {
+                return m_sorted_data[i].data;
+            }
+        } else
+            return NAN;
+    }
+};
+
 }  // namespace ornate
 
 #endif
