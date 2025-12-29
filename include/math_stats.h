@@ -909,6 +909,27 @@ int calc_na_count(const T *x, int num) {
     return cnt;
 }
 
+template <typename T = double>
+double calc_na_ratio(const T *x, int num) {
+    int cnt = calc_na_count(x, num);
+    return num > 0 ? (double(cnt) / num) : 1.0;
+}
+
+template <typename T = double>
+int calc_zero_count(const T *x, int num) {
+    int cnt = 0;
+    for (int i = 0; i < num; ++i) {
+        if (std::isfinite(x[i]) && std::abs(x[i]) < 1e-9) cnt++;
+    }
+    return cnt;
+}
+
+template <typename T = double>
+double calc_zero_ratio(const T *x, int num) {
+    int cnt = calc_zero_count(x, num);
+    return num > 0 ? (double(cnt) / num) : 1.0;
+}
+
 template <typename T, typename T1>
 double calc_r_square(const T *y, const T1 *y_hat, int num) {
     double mean_y = 0;
