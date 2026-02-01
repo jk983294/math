@@ -169,8 +169,8 @@ struct rolling_pcor_once {
     double final_rcor() {
         if (m_valid_count > 2) {
             double cov = sumxy;
-            double std_x = std::sqrt(sum_x2);
-            double std_y = std::sqrt(sum_y2);
+            double std_x = sum_x2 > 0 ? std::sqrt(sum_x2) : 0;
+            double std_y = sum_y2 > 0 ? std::sqrt(sum_y2) : 0;
             double numerator = std_x * std_y;
             if (numerator >= epsilon) return cov / numerator;
         }

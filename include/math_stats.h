@@ -329,8 +329,8 @@ int __rcov(const T *x, const T1 *y, size_t num, double &cov_, double &std_x, dou
     }
     if (count < 2) return count;
     cov_ = sum_xy;
-    std_x = std::sqrt(sum_x2);
-    std_y = std::sqrt(sum_y2);
+    std_x = sum_x2 > 0 ? std::sqrt(sum_x2) : 0;
+    std_y = sum_y2 > 0 ? std::sqrt(sum_y2) : 0;
     return count;
 }
 
@@ -362,8 +362,8 @@ int __weighted_rcov(const T *x, const T1 *y, const T *weight, int num, double &c
     }
     if (count < 2) return count;
     cov_ = sum_xy;
-    std_x = std::sqrt(sum_x2);
-    std_y = std::sqrt(sum_y2);
+    std_x = sum_x2 > 0 ? std::sqrt(sum_x2) : 0;
+    std_y = sum_y2 > 0 ? std::sqrt(sum_y2) : 0;
     return count;
 }
 
