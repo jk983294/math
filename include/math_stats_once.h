@@ -365,11 +365,10 @@ struct rolling_all_once {
     }
 
     void clear() {
-        high = NAN;
-        low = NAN;
-        last = NAN;
+        high = low = NAN;
+        first = last = NAN;
         total_x4 = total_cube_sum = total_square_sum = total_sum = 0;
-        cnt = 0;
+        cnt = nan_cnt = pos_cnt = neg_cnt = 0;
     }
 
     std::pair<double, double> get_high_low() { return {high, low}; }
