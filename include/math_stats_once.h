@@ -22,7 +22,7 @@ struct rolling_mean_once {
         cnt = 0;
     }
 
-    double final() {
+    double final() const {
         if (cnt > 0)
             return total_sum / cnt;
         else
@@ -48,21 +48,21 @@ struct rolling_sign_once {
 
     void clear() { pos_cnt = neg_cnt = nan_cnt = zero_cnt = 0; }
 
-    double full_neg_ratio() {
+    double full_neg_ratio() const {
         size_t total = pos_cnt + neg_cnt + zero_cnt;
         if (total > 0)
             return static_cast<double>(neg_cnt) / total;
         else
             return NAN;
     }
-    double neg_ratio() {
+    double neg_ratio() const {
         size_t total = pos_cnt + neg_cnt;
         if (total > 0)
             return static_cast<double>(neg_cnt) / total;
         else
             return NAN;
     }
-    double zero_ratio() {
+    double zero_ratio() const {
         size_t total = pos_cnt + neg_cnt + zero_cnt;
         if (total > 0)
             return static_cast<double>(zero_cnt) / total;
@@ -88,7 +88,7 @@ struct rolling_sd_once {
         cnt = 0;
     }
 
-    double final() {
+    double final() const {
         if (cnt > 1) {
             double mean = total_sum / cnt;
             double variance = (total_square_sum - mean * mean * cnt) / (cnt - 1);
@@ -116,7 +116,7 @@ struct rolling_sm_once {
         cnt = 0;
     }
 
-    std::pair<double, double> final() {
+    std::pair<double, double> final() const {
         double mean = NAN, sd = NAN;
         if (cnt > 0) {
             mean = total_sum / cnt;
@@ -151,7 +151,7 @@ struct rolling_pcor_once {
         }
     }
 
-    double final() {
+    double final() const {
         if (m_valid_count > 1) {
             double mean_x = sumx / m_valid_count;
             double mean_y = sumy / m_valid_count;
@@ -166,7 +166,7 @@ struct rolling_pcor_once {
         return NAN;
     }
 
-    double final_rcor() {
+    double final_rcor() const {
         if (m_valid_count > 2) {
             double cov = sumxy;
             double std_x = sum_x2 > 0 ? std::sqrt(sum_x2) : 0;
@@ -198,7 +198,7 @@ struct rolling_rcor_once {
         }
     }
 
-    double final() {
+    double final() const {
         if (m_valid_count > 2) {
             double cov = sumxy;
             double std_x = std::sqrt(sum_x2);
@@ -231,7 +231,7 @@ struct rolling_hl_once {
         low = NAN;
     }
 
-    std::pair<double, double> final() { return {high, low}; }
+    std::pair<double, double> final() const { return {high, low}; }
 };
 
 struct regression2_once {
@@ -329,17 +329,17 @@ struct rolling_all_once {
         }
     }
 
-    double na_ratio() {
+    double na_ratio() const {
         size_t total = nan_cnt + cnt;
         if (total > 0) return nan_cnt / (double)total;
         else return NAN;
     }
 
-    double pos_ratio() {
+    double pos_ratio() const {
         if (cnt > 0) return pos_cnt / (double)cnt;
         else return NAN;
     }
-    double neg_ratio() {
+    double neg_ratio() const {
         if (cnt > 0) return neg_cnt / (double)cnt;
         else return NAN;
     }
@@ -371,9 +371,9 @@ struct rolling_all_once {
         cnt = nan_cnt = pos_cnt = neg_cnt = 0;
     }
 
-    std::pair<double, double> get_high_low() { return {high, low}; }
+    std::pair<double, double> get_high_low() const { return {high, low}; }
 
-    std::pair<double, double> get_mean_sd() {
+    std::pair<double, double> get_mean_sd() const {
         double mean = NAN, sd = NAN;
         if (cnt > 0) {
             mean = total_sum / cnt;
@@ -385,7 +385,7 @@ struct rolling_all_once {
         return {mean, sd};
     }
 
-    double get_rsd() {
+    double get_rsd() const {
         double mean, sd;
         std::tie(mean, sd) = get_mean_sd();
         if (std::abs(mean) > 1e-9)
@@ -394,7 +394,7 @@ struct rolling_all_once {
             return NAN;
     }
 
-    double get_skew() {
+    double get_skew() const {
         if (cnt >= 2) {
             double mean = total_sum / cnt;
             double mean2 = mean * mean;
@@ -410,7 +410,7 @@ struct rolling_all_once {
             return NAN;
     }
 
-    double get_kurt() {
+    double get_kurt() const {
         if (cnt >= 2) {
             double mean = total_sum / cnt;
             double mean2 = mean * mean;
@@ -428,7 +428,7 @@ struct rolling_all_once {
             return NAN;
     }
 
-    double get_sum() {
+    double get_sum() const {
         return cnt > 0 ? total_sum : NAN;
     }
 };
