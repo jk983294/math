@@ -4,6 +4,7 @@
 #include <algorithm>
 #include "math_type.h"
 #include "math_vector.h"
+#include "math_stats.h"
 
 namespace ornate {
 /**
@@ -31,5 +32,16 @@ inline void daily2intra(const int32_t* d_univ, const int32_t* i_univ,
       out[i_idx] = val[itr->second];
     }
   }
+}
+
+template <typename T, typename T1>
+std::vector<double> bar_corr(const T* py, const T1* y_hat, std::vector<size_t> m_ns, int sign = 0) {
+  std::vector<double> ret(m_ns.size());
+  size_t offset0 = 0;
+  for (size_t i = 0; i < m_ns.size(); i++) {
+    ret[i] = ornate::corr(y_hat + offset0, py + offset0, m_ns[i], sign, 0);
+    offset0 += m_ns[i];
+  }
+  return ret;
 }
 }
