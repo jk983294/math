@@ -6,9 +6,9 @@
 #include <stats.hpp>
 #include <tuple>
 #include <Eigen/Dense>
-#include <zerg_template.h>
+#include <zerg/template.h>
 #include <fstream>
-#include <zerg_file.h>
+#include <zerg/io/file.h>
 #include <math_lasso.h>
 
 namespace ornate {
@@ -58,9 +58,9 @@ double LmModel::train_lm() {
     }
 
     printf("train_whole r_squared=%f\n", r_squared);
-    printf("f: intercept,%s\n", ztool::head(m_param.m_f_names, 0).c_str());
-    printf("coef: %s\n", ztool::head(m_coefs, 0).c_str());
-    printf("pvalue: %s\n", ztool::head(m_pvalues, 0).c_str());
+    printf("f: intercept,%s\n", zerg::head(m_param.m_f_names, 0).c_str());
+    printf("coef: %s\n", zerg::head(m_coefs, 0).c_str());
+    printf("pvalue: %s\n", zerg::head(m_pvalues, 0).c_str());
     return r_squared;
 }
 
@@ -119,9 +119,9 @@ double LmModel::train_lasso() {
     }
 
     printf("train_whole r_squared=%f\n", r_squared);
-    printf("f: intercept,%s\n", ztool::head(m_param.m_f_names, 0).c_str());
-    printf("coef: %s\n", ztool::head(m_coefs, 0).c_str());
-    printf("pvalue: %s\n", ztool::head(m_pvalues, 0).c_str());
+    printf("f: intercept,%s\n", zerg::head(m_param.m_f_names, 0).c_str());
+    printf("coef: %s\n", zerg::head(m_coefs, 0).c_str());
+    printf("pvalue: %s\n", zerg::head(m_pvalues, 0).c_str());
     return r_squared;
 }
 
@@ -243,7 +243,7 @@ bool LmModel::if_all_feature_valid(size_t row_id) {
 }
 
 bool LmModel::save(std::string path) {
-    path = ztool::FileExpandUser(path);
+    path = zerg::FileExpandUser(path);
     std::ofstream ofs(path, std::ofstream::out | std::ofstream::trunc);
 
     if (!ofs) {
@@ -262,7 +262,7 @@ bool LmModel::save(std::string path) {
     return true;
 }
 bool LmModel::load(std::string path) {
-    path = ztool::FileExpandUser(path);
+    path = zerg::FileExpandUser(path);
     std::ifstream ifs(path, std::ifstream::in);
 
     if (!ifs) {

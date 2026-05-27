@@ -28,10 +28,11 @@ include_directories(include)
 include_directories(SYSTEM /opt/3rd/Eigen)
 include_directories(SYSTEM /opt/3rd/gcem)
 include_directories(SYSTEM /opt/3rd/stats)
-include_directories(/opt/version/latest/zergtool/include)
+include_directories(SYSTEM /opt/version/latest/zerg/include)
 include_directories(SYSTEM /opt/version/latest/cppfst/include)
 
 link_directories(/opt/3rd/common/lib)
+link_directories(/opt/version/latest/zerg/lib)
 
 install(DIRECTORY include/ DESTINATION include)
 

@@ -1,6 +1,6 @@
 #include <math_random.h>
 #include <math_stats.h>
-#include <zerg_template.h>
+#include <zerg/template.h>
 #include <cstdlib>
 #include <iostream>
 
@@ -32,8 +32,8 @@ int main() {
         }
     }
 
-    printf("%s\n", ztool::head(ret, 12).c_str());
-    printf("%s\n", ztool::head(fwd_sum_ret, 12).c_str());
+    printf("%s\n", zerg::head(ret, 12).c_str());
+    printf("%s\n", zerg::head(fwd_sum_ret, 12).c_str());
 
     for (int i = 0; i < window; ++i) {
         double pcor = ornate::corr(fwd_sum_ret.data(), fwd_sum_ret.data() + i * ins_num, (n - i) * ins_num);

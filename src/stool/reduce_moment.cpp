@@ -13,7 +13,7 @@ struct ReduceMoment {
         printf("thread num = %d\n", threads);
         omp_set_num_threads(threads);
 
-        auto xs = ztool::path_wildcard(ztool::path_join(m_dir, "FeatureCorr.*.csv"));
+        auto xs = zerg::path_wildcard(zerg::path_join(m_dir, "FeatureCorr.*.csv"));
         std::vector<std::pair<std::string, std::string>> todos;
         for (auto& item : xs) {
             int cob = std::stoi(item.first);
@@ -80,7 +80,7 @@ int main(int argc, char** argv) {
 
 void ReduceMoment::reduce_single(const string& name, const string& path) {
     printf("reduce_single %s %s\n", name.c_str(), path.c_str());
-    string xx_path = ztool::path_join(m_dir, "XX." + name + ".csv");
+    string xx_path = zerg::path_join(m_dir, "XX." + name + ".csv");
     if (!IsFileExisted(xx_path)) return;
 
     std::vector<std::vector<double>> xx;
@@ -129,7 +129,7 @@ size_t ReduceMoment::read_xx(const string& path, std::vector<std::vector<double>
     std::ifstream ifs(path);
     string line;
     ifs >> line;
-    auto lets = ztool::split(line, ',');
+    auto lets = zerg::split(line, ',');
     int N = (int)lets.size() - 1;
     mx = std::vector<double>(N, NAN);
     xx = std::vector<std::vector<double>>(N, std::vector<double>(N, NAN));
@@ -137,7 +137,7 @@ size_t ReduceMoment::read_xx(const string& path, std::vector<std::vector<double>
     for (int i = 0; i < N; ++i) {
         mx[i] = std::stod(lets[i + 1]);
         ifs >> line;
-        auto lets1 = ztool::split(line, ',');
+        auto lets1 = zerg::split(line, ',');
         for (int j = 0; j <= i; ++j) {
             xx[i][j] = std::stod(lets1[j]);
             if (i != j) xx[j][i] = xx[i][j];

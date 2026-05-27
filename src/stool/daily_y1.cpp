@@ -26,7 +26,7 @@ struct DailyY1 {
         printf("thread num = %d\n", threads);
         omp_set_num_threads(threads);
 
-        auto xs = ztool::path_wildcard(ztool::path_join(m_x_dir, "*.fst"));
+        auto xs = zerg::path_wildcard(zerg::path_join(m_x_dir, "*.fst"));
         std::vector<std::pair<std::string, std::string>> todos;
         for (auto& item : xs) {
             int cob = std::stoi(item.first);
@@ -161,7 +161,7 @@ void DailyY1::save_result() {
     options.push_back({1, na_ratio.data(), "na_ratio"});
     options.push_back({1, pos_ratio.data(), "pos_ratio"});
     options.push_back({1, neg_ratio.data(), "neg_ratio"});
-    write_fst(ztool::path_join(m_output_dir, "result.fst"), m_x_len, options);
+    write_fst(zerg::path_join(m_output_dir, "result.fst"), m_x_len, options);
 }
 
 void DailyY1::work_single(const string& date_str, const string& path) {
