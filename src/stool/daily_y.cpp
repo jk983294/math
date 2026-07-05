@@ -20,7 +20,7 @@ struct DailyY {
     };
     void reduce_work() {
         read_names();
-        auto xs = ztool::path_wildcard(ztool::path_join(m_x_dir, "*.feather"));
+        auto xs = zerg::path_wildcard(zerg::path_join(m_x_dir, "*.feather"));
         std::vector<std::pair<std::string, std::string>> todos;
         for (auto& item : xs) {
             if (item.first == "x_name" || item.first == "y_name") continue;
@@ -46,7 +46,7 @@ struct DailyY {
         }
 
         read_y();
-        auto xs = ztool::path_wildcard(ztool::path_join(m_x_dir, "*.fst"));
+        auto xs = zerg::path_wildcard(zerg::path_join(m_x_dir, "*.fst"));
         std::vector<std::pair<std::string, std::string>> todos;
         for (auto& item : xs) {
             int cob = std::stoi(item.first);
@@ -195,7 +195,7 @@ void DailyY::save_reduce_result() {
     options.push_back({1, rcor_mean.data(), "rcor_mean"});
     options.push_back({1, rcor_sd.data(), "rcor_sd"});
     options.push_back({1, rcor_na.data(), "rcor_na"});
-    write_feather(ztool::path_join(m_output_dir, "reduced.feather"), pcor_mean.size(), options);
+    write_feather(zerg::path_join(m_output_dir, "reduced.feather"), pcor_mean.size(), options);
 }
 
 void DailyY::save_result() {
@@ -206,21 +206,21 @@ void DailyY::save_result() {
     options.push_back({3, m_x_idx.data(), "x_idx"});
     options.push_back({1, m_result_pcor.data(), "pcor"});
     options.push_back({1, m_result_rcor.data(), "rcor"});
-    write_feather(ztool::path_join(m_output_dir, "result.feather"), m_result_date.size(), options);
+    write_feather(zerg::path_join(m_output_dir, "result.feather"), m_result_date.size(), options);
 
     options.clear();
     std::vector<int> seq(m_yNames.size());
     std::iota(seq.begin(), seq.end(), 0);
     options.push_back({3, seq.data(), "y_idx"});
     options.push_back({4, &m_yNames, "y_name"});
-    write_feather(ztool::path_join(m_output_dir, "y_name.feather"), m_yNames.size(), options);
+    write_feather(zerg::path_join(m_output_dir, "y_name.feather"), m_yNames.size(), options);
 
     options.clear();
     std::vector<int> seq1(m_xNames.size());
     std::iota(seq1.begin(), seq1.end(), 0);
     options.push_back({3, seq1.data(), "x_idx"});
     options.push_back({4, &m_xNames, "x_name"});
-    write_feather(ztool::path_join(m_output_dir, "x_name.feather"), m_xNames.size(), options);
+    write_feather(zerg::path_join(m_output_dir, "x_name.feather"), m_xNames.size(), options);
 }
 
 namespace detail {
@@ -395,7 +395,7 @@ void DailyY::reserve(size_t len) {
 
 void DailyY::read_names() {
     InputData reader;
-    FeatherReader::read(ztool::path_join(m_output_dir, "x_name.feather"), reader);
+    FeatherReader::read(zerg::path_join(m_output_dir, "x_name.feather"), reader);
     for (auto& col : reader.cols) {
         if (col.name == "x_name") {
             auto& vec = *reinterpret_cast<std::vector<std::string>*>(col.data);
@@ -404,7 +404,7 @@ void DailyY::read_names() {
     }
 
     InputData reader1;
-    FeatherReader::read(ztool::path_join(m_output_dir, "y_name.feather"), reader1);
+    FeatherReader::read(zerg::path_join(m_output_dir, "y_name.feather"), reader1);
     for (auto& col : reader1.cols) {
         if (col.name == "y_name") {
             auto& vec = *reinterpret_cast<std::vector<std::string>*>(col.data);

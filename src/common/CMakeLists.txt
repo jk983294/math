@@ -1,10 +1,10 @@
 file(GLOB CommonSrc *.cpp ../dummy/*.cpp)
 add_library(ornate SHARED ${CommonSrc})
-target_link_libraries( ornate blas pthread )
+target_link_libraries( ornate zerg blas pthread )
 set_property(TARGET ornate PROPERTY POSITION_INDEPENDENT_CODE ON)
 install(TARGETS ornate LIBRARY DESTINATION lib)
 
 add_library(ornate_static STATIC ${CommonSrc})
-target_link_libraries( ornate_static blas pthread )
+target_link_libraries( ornate_static zerg blas pthread )
 set_property(TARGET ornate_static PROPERTY POSITION_INDEPENDENT_CODE ON)
 install(TARGETS ornate_static LIBRARY DESTINATION lib)

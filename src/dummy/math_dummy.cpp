@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <stdexcept>
 
 namespace ornate {
 int dummy_add(int x, int y) { return x + y; }
