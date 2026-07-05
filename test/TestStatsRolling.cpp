@@ -26,7 +26,7 @@ void test_variance_rolling(const vector<double>& _data, int window) {
             int from = to - window;
             if (from < 0) from = 0;
             double std_naive = ornate::std(_data.data() + from, to - from);
-            double s = sqrtf(vr(_data[i]));
+            vr(_data[i]);
             rvr(_data[i]);
             row[0] = _data[i];
             container.push(row);
@@ -70,7 +70,7 @@ void test_covariance_rolling(const vector<double>& _data1, const vector<double>&
             int from = to - window;
             if (from < 0) from = 0;
             double cov_naive = ornate::cov(_data1.data() + from, _data2.data() + from, to - from);
-            double s = cvr(_data1[i], _data2[i]);
+            cvr(_data1[i], _data2[i]);
             rcr(_data1[i], _data2[i]);
             row[0] = _data1[i];
             container.push(row);
@@ -325,7 +325,6 @@ void test_regression_by_window(const vector<double>& x_, const vector<double>& y
         vector<double> _x, _y;
         rolling_regression2_rb rrrb(window);
 
-        double ret = 0;
         for (size_t i = 0; i < x_.size(); ++i) {
             add_window_vector(_x, window, x_[i]);
             add_window_vector(_y, window, y_[i]);
@@ -473,7 +472,6 @@ void test_regression3_by_window(const vector<double>& x1_, const vector<double>&
         vector<double> _x1, _x2, _y;
         rolling_regression3_rb rrrb(window);
 
-        double ret = 0;
         for (size_t i = 0; i < x1_.size(); ++i) {
             add_window_vector(_x1, window, x1_[i]);
             add_window_vector(_x2, window, x2_[i]);
@@ -609,7 +607,6 @@ void test_ema_hl_pp_by_window(const vector<double>& x_, int window) {
         rqrr.init();
         nrerr.init();
 
-        double ret = 0;
         for (double d : x_) {
             row[0] = d;
             container.push(row);
@@ -651,7 +648,6 @@ void test_ols_by_window(const vector<double>& x_, const vector<double>& y_, int 
         ols2_rolling rr(window);
         vector<double> _x, _y;
         rolling_ols2_rb rrrb(window);
-        double ret = 0;
         for (size_t i = 0; i < x_.size(); ++i) {
             add_window_vector(_x, window, x_[i]);
             add_window_vector(_y, window, y_[i]);
@@ -741,7 +737,6 @@ void test_ols3_by_window(const vector<double>& x1_, const vector<double>& x2_, c
         vector<double> _x1, _x2, _y;
         rolling_ols3_rb rrrb(window);
 
-        double ret = 0;
         for (size_t i = 0; i < x1_.size(); ++i) {
             add_window_vector(_x1, window, x1_[i]);
             add_window_vector(_x2, window, x2_[i]);
@@ -837,7 +832,6 @@ void test_slope_no_intercept_by_window(const vector<double>& y_, int window) {
         slope_no_intercept_rolling rr(window);
         vector<double> _y;
 
-        double ret = 0;
         for (double i : y_) {
             add_window_vector(_y, window, i);
 
@@ -878,7 +872,6 @@ void test_slope_by_window(const vector<double>& y_, int window) {
 
         slope_rolling rr(window);
         vector<double> _y;
-        double ret = 0;
         for (double i : y_) {
             add_window_vector(_y, window, i);
 
@@ -922,7 +915,6 @@ void test_sharpe_by_window(const vector<double>& y_, int window) {
         nrsrr.init();
 
         vector<double> _y;
-        double ret = 0;
         for (double i : y_) {
             add_window_vector(_y, window, i);
 
@@ -966,7 +958,6 @@ void test_scale_by_window(const vector<double>& y_, int window) {
         nrsrr.init();
 
         vector<double> _y;
-        double ret = 0;
         for (double i : y_) {
             add_window_vector(_y, window, i);
 
@@ -1010,7 +1001,6 @@ void test_rank2_by_window(const vector<double>& x_, const vector<double>& x1_, i
         rrrr.init();
 
         vector<double> y;
-        double ret = 0;
         for (size_t i = 0; i < x_.size(); ++i) {
             add_window_vector(y, window, x1_[i]);
 
@@ -1178,7 +1168,6 @@ void test_ts_acp_rolling(const vector<double>& _data1, int window) {
 }
 
 void test_tsargmax_by_window(const vector<double>& _data1, int window) {
-    int lag = 1;
     rolling_data_container<> container(window, 1);
     vector<double> row(1, 0);
     rolling_mq_percent_rb_range<double, std::less<double>> nrdrr(1);

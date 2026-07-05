@@ -1,6 +1,7 @@
 #include <math_utils.h>
 #include <iostream>
 #include <numeric>
+#include <iomanip>
 #include "catch.hpp"
 #include "math_stats.h"
 

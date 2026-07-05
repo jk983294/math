@@ -66,7 +66,8 @@ inline double l2_norm(const vector<T>& a, const vector<T>& b) {
     double ret = 0.0;
     size_t l = a.size();
     for (size_t i = 0; i < l; ++i) {
-        ret += std::pow(a[i] - b[i], 2);
+        double d = a[i] - b[i];
+        ret += d * d;
     }
     return ret;
 }
@@ -482,8 +483,8 @@ inline void powerf(INOUT std::vector<T>& n, T exp) {
     size_t s = n.size();
     for (size_t ii = 0; ii < s; ii++)
         if (isvalid(n[ii])) {
-            if (n[ii] < 0) n[ii] = -std::pow(-n[ii], exp);
-            if (n[ii] > 0) n[ii] = std::pow(n[ii], exp);
+            if (n[ii] < 0) n[ii] = -ornate::Pow(-n[ii], exp);
+            if (n[ii] > 0) n[ii] = ornate::Pow(n[ii], exp);
         }
 }
 

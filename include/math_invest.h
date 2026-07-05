@@ -90,7 +90,7 @@ inline double calc_avg_return(double total_ret, int n) {
     if (n <= 0)
         return 0;
     else
-        return std::pow(1.0 + total_ret, 1.0 / n) - 1.0;
+        return ornate::Pow(1.0 + total_ret, 1.0 / n) - 1.0;
 }
 
 /**

@@ -851,8 +851,9 @@ double math_skew(const T *data_, int num) {
     int valid_count = 0;
     for (int i = 0; i < num; ++i) {
         if (std::isfinite(data_[i])) {
+            double d = data_[i] - mean_;
             ++valid_count;
-            std_ += std::pow((data_[i] - mean_), 2);
+            std_ += d * d;
         }
     }
     if (valid_count <= 2) return NAN;
@@ -861,7 +862,8 @@ double math_skew(const T *data_, int num) {
     double ret = 0;
     for (int i = 0; i < num; ++i) {
         if (std::isfinite(data_[i])) {
-            ret += std::pow((data_[i] - mean_) / std_, 3);
+            double d = (data_[i] - mean_) / std_;
+            ret += d * d * d;
         }
     }
     return ret / valid_count;
@@ -874,8 +876,9 @@ double math_kurtosis(const T *data_, int num) {
     int valid_count = 0;
     for (int i = 0; i < num; ++i) {
         if (std::isfinite(data_[i])) {
+            double d = data_[i] - mean_;
             ++valid_count;
-            std_ += std::pow((data_[i] - mean_), 2);
+            std_ += d * d;
         }
     }
     if (valid_count <= 2) return NAN;
@@ -884,7 +887,9 @@ double math_kurtosis(const T *data_, int num) {
     double ret = 0;
     for (int i = 0; i < num; ++i) {
         if (std::isfinite(data_[i])) {
-            ret += std::pow((data_[i] - mean_) / std_, 4);
+            double d = (data_[i] - mean_) / std_;
+            double d2 = d * d;
+            ret += d2 * d2;
         }
     }
     return ret / valid_count - 3.0;
@@ -945,8 +950,10 @@ double calc_r_square(const T *y, const T1 *y_hat, int num) {
         double ssreg = 0, sstot = 0;
         for (int i = 0; i < num; i++) {
             if (!isfinite(y[i]) || !isfinite(y_hat[i])) continue;
-            ssreg += std::pow((y[i] - y_hat[i]), 2);
-            sstot += std::pow((y[i] - mean_y), 2);
+            double d1 = y[i] - y_hat[i];
+            double d2 = y[i] - mean_y;
+            ssreg += d1 * d1;
+            sstot += d2 * d2;
         }
         return 1. - ssreg / sstot;
     } else

@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <functional>
 #include "math_container.h"
+#include "math_scalar.h"
 
 namespace ornate {
 
@@ -925,7 +926,7 @@ struct rolling_skew_rb_range {
                 if (var > 1e-14) {
                     long double mean3 = mean * mean * mean;
                     long double m3 = total_x3 / m_valid_count - 3 * mean * total_x2 / m_valid_count + 2 * mean3;
-                    return m3 / std::pow(var, 1.5);
+                    return m3 / (var * std::sqrt(var));
                 }
             }
             return NAN;
@@ -1025,7 +1026,7 @@ struct rolling_kurtosis_rb_range {
                     double mean4 = mean3 * mean;
                     double m4 = total_x4 / m_valid_count - 4 * mean * total_x3 / m_valid_count +
                                 6 * mean2 * total_x2 / m_valid_count - 3 * mean4;
-                    return m4 / std::pow(var, 2) - 3.0;
+                    return m4 / (var * var) - 3.0;
                 }
             }
             return NAN;
@@ -2025,10 +2026,10 @@ struct rolling_ema_hl_rb_range {
     }
 
     void calc_cached_coeff() {
-        remove_coeff = std::pow(decay_coeff, m_row_size - 1);
+        remove_coeff = ornate::Pow(decay_coeff, m_row_size - 1);
         cached_coeff.resize(m_row_size);
         for (int i = 0; i < m_row_size; ++i) {
-            cached_coeff[i] = std::pow(decay_coeff, i);
+            cached_coeff[i] = ornate::Pow(decay_coeff, i);
         }
     }
 
@@ -2131,17 +2132,17 @@ struct rolling_ema_hl2_rb_range {
     void set_param(const std::string& key, const std::string& value) {
         if (key == "arg1") {
             decay_coeff = ema_hl2decay(std::stod(value));
-            remove_coeff = std::pow(decay_coeff, m_row_size - 1);
+            remove_coeff = ornate::Pow(decay_coeff, m_row_size - 1);
             cached_coeff.resize(m_row_size);
             for (int i = 0; i < m_row_size; ++i) {
-                cached_coeff[i] = std::pow(decay_coeff, i);
+                cached_coeff[i] = ornate::Pow(decay_coeff, i);
             }
         } else if (key == "arg2") {
             decay_coeff2 = ema_hl2decay(std::stod(value));
-            remove_coeff2 = std::pow(decay_coeff2, m_row_size - 1);
+            remove_coeff2 = ornate::Pow(decay_coeff2, m_row_size - 1);
             cached_coeff2.resize(m_row_size);
             for (int i = 0; i < m_row_size; ++i) {
-                cached_coeff2[i] = std::pow(decay_coeff2, i);
+                cached_coeff2[i] = ornate::Pow(decay_coeff2, i);
             }
         }
     }

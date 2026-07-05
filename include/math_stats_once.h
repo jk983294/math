@@ -28,6 +28,12 @@ struct rolling_mean_once {
         else
             return NAN;
     }
+    double get_sum() const {
+        if (cnt > 0)
+            return total_sum;
+        else
+            return NAN;
+    }
 };
 
 struct rolling_sign_once {
@@ -161,6 +167,7 @@ struct rolling_pcor_once {
             if (std::isfinite(var1) && std::isfinite(var2)) {
                 double numerator = sqrt(var1) * sqrt(var2);
                 if (numerator >= epsilon) return cov / numerator;
+                else return 0.0;
             }
         }
         return NAN;
@@ -173,6 +180,7 @@ struct rolling_pcor_once {
             double std_y = sum_y2 > 0 ? std::sqrt(sum_y2) : 0;
             double numerator = std_x * std_y;
             if (numerator >= epsilon) return cov / numerator;
+            else return 0.0;
         }
         return NAN;
     }
@@ -205,6 +213,7 @@ struct rolling_rcor_once {
             double std_y = std::sqrt(sum_y2);
             double numerator = std_x * std_y;
             if (numerator >= epsilon) return cov / numerator;
+            else return 0.0;
         }
         return NAN;
     }
@@ -404,7 +413,7 @@ struct rolling_all_once {
             else {
                 double mean3 = mean * mean * mean;
                 double m3 = total_cube_sum / cnt - 3 * mean * total_square_sum / cnt + 2 * mean3;
-                return m3 / std::pow(var, 1.5);
+                return m3 / (var * std::sqrt(var));
             }
         } else
             return NAN;
@@ -422,7 +431,7 @@ struct rolling_all_once {
                 double mean4 = mean3 * mean;
                 double m4 = total_x4 / cnt - 4 * mean * total_cube_sum / cnt +
                             6 * mean2 * total_square_sum / cnt - 3 * mean4;
-                return m4 / std::pow(var, 2) - 3.0;
+                return m4 / (var * var) - 3.0;
             }
         } else
             return NAN;

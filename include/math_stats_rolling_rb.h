@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <functional>
+#include "math_scalar.h"
 #include "math_utils.h"
 
 namespace ornate {
@@ -274,7 +275,7 @@ struct rolling_skew_rb : public rolling_rb_base<double> {
             else {
                 double mean3 = mean * mean * mean;
                 double m3 = total_x3 / m_valid_count - 3 * mean * total_x2 / m_valid_count + 2 * mean3;
-                skew = m3 / std::pow(var, 1.5);
+                skew = m3 / (var * std::sqrt(var));
             }
         } else
             skew = NAN;
@@ -330,7 +331,7 @@ struct rolling_kurtosis_rb : public rolling_rb_base<double> {
                 double mean4 = mean3 * mean;
                 double m4 = total_x4 / m_valid_count - 4 * mean * total_x3 / m_valid_count +
                             6 * mean2 * total_x2 / m_valid_count - 3 * mean4;
-                kurtosis = m4 / std::pow(var, 2) - 3.0;
+                kurtosis = m4 / (var * var) - 3.0;
             }
         } else
             kurtosis = NAN;
@@ -658,7 +659,7 @@ struct rolling_ema_hl_rb : public rolling_rb_base<double> {
 
     rolling_ema_hl_rb(int size, double hl) : rolling_rb_base<double>(size) {
         decay_coeff = ema_hl2decay(hl);
-        remove_coeff = std::pow(decay_coeff, window_size - 2);
+        remove_coeff = ornate::Pow(decay_coeff, window_size - 2);
     }
 
     void delete_old() {

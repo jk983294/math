@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include "math_type.h"
+#include "math_scalar.h"
 
 namespace ornate {
 
@@ -72,7 +73,7 @@ void add_window_vector(std::vector<T>& y, size_t window, T1 val) {
  * round_up(1.3456, 2) -> 1.35
  */
 inline double round_up(double value, int decimal_places) {
-    const double multiplier = std::pow(10.0, decimal_places);
+    const double multiplier = ornate::Pow(10.0, decimal_places);
     return static_cast<double>(std::lround(value * multiplier + .5)) / multiplier;
 }
 
@@ -142,13 +143,13 @@ inline int get_sign(int val) {
  */
 inline double div_down(double value, double sd, int down = 1) {
     value = std::abs(value);
-    if (value < std::pow(10., -down) * sd) return value;
+    if (value < ornate::Pow(10., -down) * sd) return value;
     int multiplier1 = (int)std::log10(sd);
     if (multiplier1 <= 0) --multiplier1;
     int multiplier2 = (int)std::log10(value);
     int total_multiplier = multiplier2 - multiplier1 + down;
     // printf("%d,%d,%d\n", multiplier1, multiplier2, total_multiplier);
-    return value / std::pow(10., total_multiplier);
+    return value / ornate::Pow(10., total_multiplier);
 }
 
 template <class T>
